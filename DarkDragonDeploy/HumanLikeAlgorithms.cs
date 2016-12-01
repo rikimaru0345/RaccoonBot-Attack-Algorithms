@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CoC_Bot.API.Buildings;
-using System.Drawing;
 
 namespace SharedCode
 {
