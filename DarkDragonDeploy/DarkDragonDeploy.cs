@@ -59,6 +59,26 @@ namespace DarkDragonDeploy
                 return 0;
             }
 
+            //Verify that there are enough spells to take out at least ONE air defense.
+            var lightningSpells = _deployElements.FirstOrDefault(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Lightning);
+            List<DeployElement> earthquakeSpells = _deployElements.Where(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Earthquake).ToList();
+
+            var lightningCount = lightningSpells?.Count ?? 0;
+            var earthquakeCount = 0;
+
+            //Get a count of all earthquake spells... donated, or brewed...
+            foreach (var spell in earthquakeSpells.Where(s => s.Count > 0))
+            {
+                earthquakeCount += spell.Count;
+            }
+
+            if (lightningCount < 2 || lightningCount < 3 && earthquakeCount < 1)
+            {
+                //We dont have the Spells to take out the Closest Air Defense... Surrender before we drop any Dragons!
+                Log.Error($"{_tag} We don't have enough spells to take out at least 1 air defense... Lightning Spells:{lightningCount}, Earthquake Spells:{earthquakeCount}");
+                return 0;
+            }
+
             if (_deployElements.Count >= 11)
             {
                 //Possibly Too Many Deployment Elements!  Bot Doesnt Scroll - Change Army Composition to have less than 12 unit types!
@@ -356,84 +376,76 @@ namespace DarkDragonDeploy
                 earthquakeCount += spell.Count;
             }
 
-            if (lightningCount < 3 || (lightningCount < 2 && earthquakeCount < 1))
+            if (earthquakeCount < 1 && lightningCount >= 3 && _airDefenses.Count() >= 1)
             {
-                //We dont have the Spells to take out the Closest Air Defense... Surrender before we drop any Dragons!
-                Log.Error($"{_tag} We dont have the Spells to take out the Closest Air Defense... Surrender");
-                Attack.Surrender();
+                _zapped1 = true;
+                Log.Info($"{_tag} Dropping 3 Lightning Spells to take out closest Air Defense...");
+                //Drop 3 Lightning on the closest Air Defense.
+                foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(0).Location.GetCenter(), 3))
+                    yield return t;
             }
-            else
-            {
-                if (earthquakeCount < 1 && lightningCount >= 3 && _airDefenses.Count() >= 1)
-                {
-                    _zapped1 = true;
-                    Log.Info($"{_tag} Dropping 3 Lightning Spells to take out closest Air Defense...");
-                    //Drop 3 Lightning on the closest Air Defense.
-                    foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(0).Location.GetCenter(), 3))
-                        yield return t;
-                }
 
-                if (earthquakeCount >= 1 && lightningCount >= 2 && _airDefenses.Count() >= 1)
+            if (earthquakeCount >= 1 && lightningCount >= 2 && _airDefenses.Count() >= 1)
+            {
+                _zapped1 = true;
+                Log.Info($"{_tag} Dropping 2 Lightning Spells & 1 Earthquake to take out closest Air Defense...");
+                //Drop 2 Lightning on the closest Air Defense.
+                var beforeDrop = lightningSpells.Count;
+                foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(0).Location.GetCenter(), 1))
+                    yield return t;
+
+                lightningSpells.Recount();
+                yield return Rand.Int(500, 1000);
+
+                //Only Deploy a 2nd lightning spell if we successfully deployed 1... Seems to be sticking and deploying Two on the first Click. - not sure why, but this fixes it.
+                if (beforeDrop - 1 == lightningSpells.Count)
                 {
-                    _zapped1 = true;
-                    Log.Info($"{_tag} Dropping 2 Lightning Spells & 1 Earthquake to take out closest Air Defense...");
-                    //Drop 2 Lightning on the closest Air Defense.
-                    var beforeDrop = lightningSpells.Count;
                     foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(0).Location.GetCenter(), 1))
                         yield return t;
-
-                    lightningSpells.Recount();
-                    yield return Rand.Int(500, 1000);
-
-                    //Only Deploy a 2nd lightning spell if we successfully deployed 1... Seems to be sticking and deploying Two on the first Click. - not sure why, but this fixes it.
-                    if (beforeDrop - 1 == lightningSpells.Count)
-                    {
-                        foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(0).Location.GetCenter(), 1))
-                            yield return t;
-                    }
-                    else
-                    {
-                        Log.Error($"{_tag} First Drop of Lightning actually dropped {beforeDrop - lightningSpells.Count} Lightning Spells. Attempting to Recover & Continue.");
-                    }
-
-                    yield return Rand.Int(500, 1000); // pause a little...
-
-                    //Drop 1 Earthquake on the closest Air Defense.
-                    foreach (var spell in earthquakeSpells.Where(s => s.Count > 0))
-                    {
-                        foreach (var t in Deploy.AtPoint(spell, _airDefenses.ElementAt(0).Location.GetCenter(), 1))
-                            yield return t;
-
-                        break; //Only deploy one.
-                    }
+                }
+                else
+                {
+                    Log.Error($"{_tag} First Drop of Lightning actually dropped {beforeDrop - lightningSpells.Count} Lightning Spells. Attempting to Recover & Continue.");
                 }
 
-                if (earthquakeCount >= 2 && lightningCount >= 4 && _airDefenses.Count() >= 2)
+                yield return Rand.Int(500, 1000); // pause a little...
+
+                //Drop 1 Earthquake on the closest Air Defense.
+                foreach (var spell in earthquakeSpells.Where(s => s.Count > 0))
                 {
-                    _zapped2 = true;
-                    Log.Info($"{_tag} Dropping 2 Lightning Spells & 1 Earthquake to take out 2nd closest Air Defense...");
-                    //Drop 2 Lightning on the 2nd closest Air Defense.
-                    foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(1).Location.GetCenter(), 1))
+                    foreach (var t in Deploy.AtPoint(spell, _airDefenses.ElementAt(0).Location.GetCenter(), 1))
                         yield return t;
 
-                    yield return Rand.Int(500, 1000);
+                    break; //Only deploy one.
+                }
+            }
 
-                    foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(1).Location.GetCenter(), 1))
+            if (earthquakeCount >= 2 && lightningCount >= 4 && _airDefenses.Count() >= 2)
+            {
+                _zapped2 = true;
+                Log.Info($"{_tag} Dropping 2 Lightning Spells & 1 Earthquake to take out 2nd closest Air Defense...");
+                //Drop 2 Lightning on the 2nd closest Air Defense.
+                foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(1).Location.GetCenter(), 1))
+                    yield return t;
+
+                yield return Rand.Int(500, 1000);
+
+                foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(1).Location.GetCenter(), 1))
+                    yield return t;
+
+                yield return Rand.Int(500, 1000); // pause a little...
+
+                //Drop 1 Earthquake on the 2nd closest Air Defense.
+                foreach (var spell in earthquakeSpells.Where(s => s.Count > 0))
+                {
+                    foreach (var t in Deploy.AtPoint(spell, _airDefenses.ElementAt(1).Location.GetCenter(), 1))
                         yield return t;
 
-                    yield return Rand.Int(500, 1000); // pause a little...
-
-                    //Drop 1 Earthquake on the 2nd closest Air Defense.
-                    foreach (var spell in earthquakeSpells.Where(s => s.Count > 0))
-                    {
-                        foreach (var t in Deploy.AtPoint(spell, _airDefenses.ElementAt(1).Location.GetCenter(), 1))
-                            yield return t;
-
-                        break; //Only deploy one.
-                    }
+                    break; //Only deploy one.
                 }
             }
         }
+        
         #endregion
 
         #region DeployDragons
@@ -637,7 +649,7 @@ namespace DarkDragonDeploy
         #region WatchHeros
         private void WatchHeros()
         {
-            var allHeroes = (List<DeployElement>)_deployElements.Where(u => u.IsHero);
+            var allHeroes = _deployElements.Where(u => u.IsHero).ToList();
 
             if (_watchHeroes)
             {
