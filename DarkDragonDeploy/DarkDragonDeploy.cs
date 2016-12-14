@@ -13,21 +13,22 @@ using System.Reflection;
 namespace DarkDragonDeploy
 {
     [AttackAlgorithm("DarkDragonDeploy", "Deploys Dragons and use Zap Quake To Maximize chance of Getting Dark Elixir Storage.")]
-    class DarkDragonDeploy : BaseAttack
+    internal class DarkDragonDeploy : BaseAttack
     {
 
         public DarkDragonDeploy(Opponent opponent) : base(opponent) { }
 
         #region Private Member Variables
-        private List<DeployElement>_deployElements = null;
-        private const string _tag = "[Dark Dragon]";
-        private Target _darkElixirStorage;
-        private PointFT[] _deFunnelPoints;
-        private PointFT[] _balloonFunnelPoints;
-        private AirDefense[] _airDefenses;
-        private bool _zapped1 = false;
-        private bool _zapped2 = false;
-        private bool _watchHeroes = false;
+
+        List<DeployElement>deployElements = null;
+        const string Tag = "[Dark Dragon]";
+        Target darkElixirStorage;
+        PointFT[] deFunnelPoints;
+        PointFT[] balloonFunnelPoints;
+        AirDefense[] airDefenses;
+        bool zapped1 = false;
+        bool zapped2 = false;
+        bool watchHeroes = false;
         #endregion
 
         #region Name of Deploy
@@ -36,7 +37,6 @@ namespace DarkDragonDeploy
             return "Dark Dragon Deploy";
         }
         #endregion
-
 
         #region *******  ShouldAccept  *******
         public override double ShouldAccept()
@@ -51,17 +51,17 @@ namespace DarkDragonDeploy
             //TODO - From Collector/Storage fill levels, determine if loot is in Collectors, or Storages... (Will help to decide which alg to use.)
 
             //Verify that the Attacking Army contains at least 6 Dragons.
-            _deployElements = Deploy.GetTroops();
-            var dragons = _deployElements.FirstOrDefault(u => u.Id == DeployId.Dragon);
+            deployElements = Deploy.GetTroops();
+            var dragons = deployElements.FirstOrDefault(u => u.Id == DeployId.Dragon);
             if (dragons == null || dragons?.Count < 6)
             {
-                Log.Error($"{_tag} Army not correct! - Dark Dragon Deploy Requires at least 6 Dragons to function Properly. (You have {dragons?.Count ?? 0} dragons)");
+                Log.Error($"{Tag} Army not correct! - Dark Dragon Deploy Requires at least 6 Dragons to function Properly. (You have {dragons?.Count ?? 0} dragons)");
                 return 0;
             }
 
             //Verify that there are enough spells to take out at least ONE air defense.
-            var lightningSpells = _deployElements.FirstOrDefault(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Lightning);
-            List<DeployElement> earthquakeSpells = _deployElements.Where(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Earthquake).ToList();
+            var lightningSpells = deployElements.FirstOrDefault(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Lightning);
+            List<DeployElement> earthquakeSpells = deployElements.Where(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Earthquake).ToList();
 
             var lightningCount = lightningSpells?.Count ?? 0;
             var earthquakeCount = 0;
@@ -75,54 +75,54 @@ namespace DarkDragonDeploy
             if (lightningCount < 2 || lightningCount < 3 && earthquakeCount < 1)
             {
                 //We dont have the Spells to take out the Closest Air Defense... Surrender before we drop any Dragons!
-                Log.Error($"{_tag} We don't have enough spells to take out at least 1 air defense... Lightning Spells:{lightningCount}, Earthquake Spells:{earthquakeCount}");
+                Log.Error($"{Tag} We don't have enough spells to take out at least 1 air defense... Lightning Spells:{lightningCount}, Earthquake Spells:{earthquakeCount}");
                 return 0;
             }
 
-            if (_deployElements.Count >= 11)
+            if (deployElements.Count >= 11)
             {
                 //Possibly Too Many Deployment Elements!  Bot Doesnt Scroll - Change Army Composition to have less than 12 unit types!
-                Log.Warning($"{_tag} Warning! Full Army! - The Bot does not scroll through choices when deploying units... If your army has more than 11 unit types, The bot will not see them all, and cannot deploy everything!)");
+                Log.Warning($"{Tag} Warning! Full Army! - The Bot does not scroll through choices when deploying units... If your army has more than 11 unit types, The bot will not see them all, and cannot deploy everything!)");
             }
 
             //Write out all the unit pretty names we found...
-            Log.Debug($"{_tag} Deployable Troops: {ToUnitString(_deployElements)}");
+            Log.Debug($"{Tag} Deployable Troops: {ToUnitString(deployElements)}");
 
-            Log.Info($"{_tag} Base meets minimum Requirements... Checking DE Storage/Air Defense Locations...");
+            Log.Info($"{Tag} Base meets minimum Requirements... Checking DE Storage/Air Defense Locations...");
 
             //Grab the Locations of the DE Storage
-            _darkElixirStorage = HumanLikeAlgorithms.TargetDarkElixirStorage();
+            darkElixirStorage = HumanLikeAlgorithms.TargetDarkElixirStorage();
 
-            if (!_darkElixirStorage.ValidTarget)
+            if (!darkElixirStorage.ValidTarget)
             {
-                Log.Warning($"{_tag} No Dark Elixir Storage Found - Skipping");
+                Log.Warning($"{Tag} No Dark Elixir Storage Found - Skipping");
                 return 0;
             }
 
             //Get the locaiton of all Air Defenses
-            _airDefenses = AirDefense.Find(CacheBehavior.Default);
+            var airDefensesTest = AirDefense.Find();
 
-            if (_airDefenses.Length == 0)
+            if (airDefensesTest.Length == 0)
             {
-                Log.Warning($"{_tag} Could not find ANY air defenses - Skipping");
+                Log.Warning($"{Tag} Could not find ANY air defenses - Skipping");
                 return 0;
             }
 
-            Log.Info($"{_tag} Found {_airDefenses.Length} Air Defense Buildings.. Continuing Attack..");
+            Log.Info($"{Tag} Found {airDefensesTest.Length} Air Defense Buildings.. Continuing Attack..");
 
-            if (_airDefenses.Length > 1)
+            if (airDefensesTest.Length > 1)
             {
                 //Now that we found all Air Defenses, order them in the array with closest AD to Target first.
-                Array.Sort(_airDefenses, delegate (AirDefense ad1, AirDefense ad2)
+                Array.Sort(airDefensesTest, delegate (AirDefense ad1, AirDefense ad2)
                 {
-                    return HumanLikeAlgorithms.DistanceFromPoint(ad1, _darkElixirStorage.DeployGrunts)
-                    .CompareTo(HumanLikeAlgorithms.DistanceFromPoint(ad2, _darkElixirStorage.DeployGrunts));
+                    return HumanLikeAlgorithms.DistanceFromPoint(ad1, darkElixirStorage.DeployGrunts)
+                    .CompareTo(HumanLikeAlgorithms.DistanceFromPoint(ad2, darkElixirStorage.DeployGrunts));
                 });
             }
 
             //Create the Funnel Points
-            _deFunnelPoints = _darkElixirStorage.GetFunnelingPoints(30);
-            _balloonFunnelPoints = _darkElixirStorage.GetFunnelingPoints(20);
+            deFunnelPoints = darkElixirStorage.GetFunnelingPoints(30);
+            balloonFunnelPoints = darkElixirStorage.GetFunnelingPoints(20);
 
 #if DEBUG
             //During Debug, Create an Image of the base including what we found.
@@ -137,7 +137,16 @@ namespace DarkDragonDeploy
         #region *******  AttackRoutine  *******
         public override IEnumerable<int> AttackRoutine()
         {
-            Log.Info($"{_tag} Deploy start - V.{Assembly.GetExecutingAssembly().GetName().Version.ToString()}");
+            Log.Info($"{Tag} Deploy start - V.{Assembly.GetExecutingAssembly().GetName().Version.ToString()}");
+
+            // Prepare:
+            // Find the airDefenses again.
+            // We cannot use the airDefenses from ShouldAttack, because the bot wil move
+            // the camera after accepting an opponent.
+            // Then the cache gets invalidated
+            // So we have to find the air defenses again
+            airDefenses = AirDefense.Find();
+            
 
             //STEP 1 ******* Destroy all air defenses using Lightling & Quake if needed. *******
             foreach (var t in DestroyAirDefenses())
@@ -230,36 +239,37 @@ namespace DarkDragonDeploy
 
 
         #region PassesBasicAcceptRequirements
-        private bool PassesBasicAcceptRequirements()
+
+        bool PassesBasicAcceptRequirements()
         {
             // check if the base meets ALL the user's requirements (One at a time, and log a warning for WHY its skipping)
             if (!Opponent.MeetsRequirements(BaseRequirements.Elixir))
             {
-                Log.Warning($"{_tag} Elixir Requirements not Met - Skipping");
+                Log.Warning($"{Tag} Elixir Requirements not Met - Skipping");
                 return false;
             }
 
             if (!Opponent.MeetsRequirements(BaseRequirements.Gold))
             {
-                Log.Warning($"{_tag} Gold Requirements not Met - Skipping");
+                Log.Warning($"{Tag} Gold Requirements not Met - Skipping");
                 return false;
             }
 
             if (!Opponent.MeetsRequirements(BaseRequirements.DarkElixir))
             {
-                Log.Warning($"{_tag} Dark Elixir Requirements not Met - Skipping");
+                Log.Warning($"{Tag} Dark Elixir Requirements not Met - Skipping");
                 return false;
             }
 
             if (!Opponent.MeetsRequirements(BaseRequirements.MaxThLevel))
             {
-                Log.Warning($"{_tag} Base Over Town Hall Max - Skipping");
+                Log.Warning($"{Tag} Base Over Town Hall Max - Skipping");
                 return false;
             }
 
             if (!Opponent.MeetsRequirements(BaseRequirements.AvoidStrongBases))
             {
-                Log.Warning($"{_tag} Strong Base Detected - Skipping");
+                Log.Warning($"{Tag} Strong Base Detected - Skipping");
                 return false;
             }
 
@@ -269,7 +279,8 @@ namespace DarkDragonDeploy
         #endregion
 
         #region CreateDebugImages
-        private void CreateDebugImages()
+
+        void CreateDebugImages()
         {
             List<InfernoTower> infernos = InfernoTower.Find(CacheBehavior.Default).ToList();
             List<WizardTower> wizTowers = WizardTower.Find(CacheBehavior.Default).ToList();
@@ -287,20 +298,20 @@ namespace DarkDragonDeploy
                 //Draw some stuff on it.
                 Visualize.Axes(canvas);
                 Visualize.Grid(canvas, redZone: true);
-                Visualize.Target(canvas, _darkElixirStorage.Center, 40, Color.Red);
-                Visualize.Target(canvas, _deFunnelPoints[0], 40, Color.White);
-                Visualize.Target(canvas, _deFunnelPoints[1], 40, Color.White);
-                Visualize.Target(canvas, _balloonFunnelPoints[0], 40, Color.Pink);
-                Visualize.Target(canvas, _balloonFunnelPoints[1], 40, Color.Pink);
+                Visualize.Target(canvas, darkElixirStorage.Center, 40, Color.Red);
+                Visualize.Target(canvas, deFunnelPoints[0], 40, Color.White);
+                Visualize.Target(canvas, deFunnelPoints[1], 40, Color.White);
+                Visualize.Target(canvas, balloonFunnelPoints[0], 40, Color.Pink);
+                Visualize.Target(canvas, balloonFunnelPoints[1], 40, Color.Pink);
 
                 for (int i = 0; i < infernos.Count(); i++)
                 {
                     Visualize.Target(canvas, infernos.ElementAt(i).Location.GetCenter(), 30, Color.Orange);
                 }
 
-                for (int i = 0; i < _airDefenses.Count(); i++)
+                for (int i = 0; i < airDefenses.Count(); i++)
                 {
-                    Visualize.Target(canvas, _airDefenses.ElementAt(i).Location.GetCenter(), 30, Color.Cyan);
+                    Visualize.Target(canvas, airDefenses.ElementAt(i).Location.GetCenter(), 30, Color.Cyan);
                 }
 
                 for (int i = 0; i < wizTowers.Count(); i++)
@@ -318,7 +329,7 @@ namespace DarkDragonDeploy
                     Visualize.Target(canvas, eagle.Location.GetCenter(), 30, Color.YellowGreen);
                 }
 
-                Visualize.Target(canvas, _darkElixirStorage.DeployGrunts, 40, Color.Beige);
+                Visualize.Target(canvas, darkElixirStorage.DeployGrunts, 40, Color.Beige);
 
                 Screenshot.Save(canvas, $"{debugFileName}_2");
             }
@@ -326,11 +337,11 @@ namespace DarkDragonDeploy
             //Write a text file that goes with all images that shows what is in the image.
             StringBuilder sb = new StringBuilder();
 
-            sb.AppendLine($"Town Hall - Level:{_darkElixirStorage.TargetBuilding.Level}");
+            sb.AppendLine($"Town Hall - Level:{darkElixirStorage.TargetBuilding.Level}");
 
-            for (int i = 0; i < _airDefenses.Count(); i++)
+            for (int i = 0; i < airDefenses.Count(); i++)
             {
-                sb.AppendLine($"Air Defense {i + 1} - Level:{_airDefenses.ElementAt(i).Level}");
+                sb.AppendLine($"Air Defense {i + 1} - Level:{airDefenses.ElementAt(i).Level}");
             }
 
             for (int i = 0; i < infernos.Count(); i++)
@@ -355,17 +366,18 @@ namespace DarkDragonDeploy
 
             //System.IO.File.WriteAllText($@"C:\RaccoonBot\Debug Screenshots\{debugFileName}_3.txt", sb.ToString());
 
-            Log.Info($"{_tag} Deploy Debug Image Saved!");
+            Log.Info($"{Tag} Deploy Debug Image Saved!");
 
         }
         #endregion
 
 
         #region DestroyAirDefenses
-        private IEnumerable<int> DestroyAirDefenses()
+
+        IEnumerable<int> DestroyAirDefenses()
         {
-            var lightningSpells = _deployElements.FirstOrDefault(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Lightning);
-            List<DeployElement> earthquakeSpells = _deployElements.Where(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Earthquake).ToList();
+            var lightningSpells = deployElements.FirstOrDefault(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Lightning);
+            List<DeployElement> earthquakeSpells = deployElements.Where(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Earthquake).ToList();
 
             var lightningCount = lightningSpells?.Count ?? 0;
             var earthquakeCount = 0;
@@ -376,22 +388,22 @@ namespace DarkDragonDeploy
                 earthquakeCount += spell.Count;
             }
 
-            if (earthquakeCount < 1 && lightningCount >= 3 && _airDefenses.Count() >= 1)
+            if (earthquakeCount < 1 && lightningCount >= 3 && airDefenses.Count() >= 1)
             {
-                _zapped1 = true;
-                Log.Info($"{_tag} Dropping 3 Lightning Spells to take out closest Air Defense...");
+                zapped1 = true;
+                Log.Info($"{Tag} Dropping 3 Lightning Spells to take out closest Air Defense...");
                 //Drop 3 Lightning on the closest Air Defense.
-                foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(0).Location.GetCenter(), 3))
+                foreach (var t in Deploy.AtPoint(lightningSpells, airDefenses.ElementAt(0).Location.GetCenter(), 3))
                     yield return t;
             }
 
-            if (earthquakeCount >= 1 && lightningCount >= 2 && _airDefenses.Count() >= 1)
+            if (earthquakeCount >= 1 && lightningCount >= 2 && airDefenses.Count() >= 1)
             {
-                _zapped1 = true;
-                Log.Info($"{_tag} Dropping 2 Lightning Spells & 1 Earthquake to take out closest Air Defense...");
+                zapped1 = true;
+                Log.Info($"{Tag} Dropping 2 Lightning Spells & 1 Earthquake to take out closest Air Defense...");
                 //Drop 2 Lightning on the closest Air Defense.
                 var beforeDrop = lightningSpells.Count;
-                foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(0).Location.GetCenter(), 1))
+                foreach (var t in Deploy.AtPoint(lightningSpells, airDefenses.ElementAt(0).Location.GetCenter(), 1))
                     yield return t;
 
                 lightningSpells.Recount();
@@ -400,12 +412,12 @@ namespace DarkDragonDeploy
                 //Only Deploy a 2nd lightning spell if we successfully deployed 1... Seems to be sticking and deploying Two on the first Click. - not sure why, but this fixes it.
                 if (beforeDrop - 1 == lightningSpells.Count)
                 {
-                    foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(0).Location.GetCenter(), 1))
+                    foreach (var t in Deploy.AtPoint(lightningSpells, airDefenses.ElementAt(0).Location.GetCenter(), 1))
                         yield return t;
                 }
                 else
                 {
-                    Log.Error($"{_tag} First Drop of Lightning actually dropped {beforeDrop - lightningSpells.Count} Lightning Spells. Attempting to Recover & Continue.");
+                    Log.Error($"{Tag} First Drop of Lightning actually dropped {beforeDrop - lightningSpells.Count} Lightning Spells. Attempting to Recover & Continue.");
                 }
 
                 yield return Rand.Int(500, 1000); // pause a little...
@@ -413,24 +425,24 @@ namespace DarkDragonDeploy
                 //Drop 1 Earthquake on the closest Air Defense.
                 foreach (var spell in earthquakeSpells.Where(s => s.Count > 0))
                 {
-                    foreach (var t in Deploy.AtPoint(spell, _airDefenses.ElementAt(0).Location.GetCenter(), 1))
+                    foreach (var t in Deploy.AtPoint(spell, airDefenses.ElementAt(0).Location.GetCenter(), 1))
                         yield return t;
 
                     break; //Only deploy one.
                 }
             }
 
-            if (earthquakeCount >= 2 && lightningCount >= 4 && _airDefenses.Count() >= 2)
+            if (earthquakeCount >= 2 && lightningCount >= 4 && airDefenses.Count() >= 2)
             {
-                _zapped2 = true;
-                Log.Info($"{_tag} Dropping 2 Lightning Spells & 1 Earthquake to take out 2nd closest Air Defense...");
+                zapped2 = true;
+                Log.Info($"{Tag} Dropping 2 Lightning Spells & 1 Earthquake to take out 2nd closest Air Defense...");
                 //Drop 2 Lightning on the 2nd closest Air Defense.
-                foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(1).Location.GetCenter(), 1))
+                foreach (var t in Deploy.AtPoint(lightningSpells, airDefenses.ElementAt(1).Location.GetCenter(), 1))
                     yield return t;
 
                 yield return Rand.Int(500, 1000);
 
-                foreach (var t in Deploy.AtPoint(lightningSpells, _airDefenses.ElementAt(1).Location.GetCenter(), 1))
+                foreach (var t in Deploy.AtPoint(lightningSpells, airDefenses.ElementAt(1).Location.GetCenter(), 1))
                     yield return t;
 
                 yield return Rand.Int(500, 1000); // pause a little...
@@ -438,7 +450,7 @@ namespace DarkDragonDeploy
                 //Drop 1 Earthquake on the 2nd closest Air Defense.
                 foreach (var spell in earthquakeSpells.Where(s => s.Count > 0))
                 {
-                    foreach (var t in Deploy.AtPoint(spell, _airDefenses.ElementAt(1).Location.GetCenter(), 1))
+                    foreach (var t in Deploy.AtPoint(spell, airDefenses.ElementAt(1).Location.GetCenter(), 1))
                         yield return t;
 
                     break; //Only deploy one.
@@ -449,45 +461,46 @@ namespace DarkDragonDeploy
         #endregion
 
         #region DeployDragons
-        private IEnumerable<int> DeployDragons()
+
+        IEnumerable<int> DeployDragons()
         {
-            var dragons = _deployElements.FirstOrDefault(u => u.Id == DeployId.Dragon);
+            var dragons = deployElements.FirstOrDefault(u => u.Id == DeployId.Dragon);
 
             if (dragons?.Count > 2)
             {
-                Log.Info($"{_tag} Deploying two Dragons to Create a funnel to direct main force at Dark Elixer Storage...");
+                Log.Info($"{Tag} Deploying two Dragons to Create a funnel to direct main force at Dark Elixer Storage...");
                 //Deploy two dragons - one at each funel point.
-                foreach (var t in Deploy.AtPoint(dragons, _deFunnelPoints[0], 1))
+                foreach (var t in Deploy.AtPoint(dragons, deFunnelPoints[0], 1))
                     yield return t;
 
                 yield return Rand.Int(500, 1500);
 
-                foreach (var t in Deploy.AtPoint(dragons, _deFunnelPoints[1], 1))
+                foreach (var t in Deploy.AtPoint(dragons, deFunnelPoints[1], 1))
                     yield return t;
 
                 yield return Rand.Int(1000, 1500); // pause for a little while... - Long enought for dragons to begin to create the funnel.
             }
             else {
-                Log.Error($"{_tag} Two Dragons to create the funnel do not exist. {dragons?.Count ?? 0} exists...");
+                Log.Error($"{Tag} Two Dragons to create the funnel do not exist. {dragons?.Count ?? 0} exists...");
             }
 
             if (dragons?.Count > 0)
             {
                 //Deploy our main force of dragons all on one spot...
-                Log.Info($"{_tag} Deploying Main Force of Dragons...");
-                foreach (var t in Deploy.AtPoint(dragons, _darkElixirStorage.DeployGrunts, dragons.Count))
+                Log.Info($"{Tag} Deploying Main Force of Dragons...");
+                foreach (var t in Deploy.AtPoint(dragons, darkElixirStorage.DeployGrunts, dragons.Count))
                     yield return t;
             }
             else
             {
-                Log.Error($"{_tag} When Trying to deploy Main Force of Dragons - None Exist!");
+                Log.Error($"{Tag} When Trying to deploy Main Force of Dragons - None Exist!");
             }
 
             if (dragons?.Count > 0)
             {
-                Log.Error($"{_tag} Main Force of Dragons Not Fully Deployed! Trying to drop them on the Edge of the map...");
+                Log.Error($"{Tag} Main Force of Dragons Not Fully Deployed! Trying to drop them on the Edge of the map...");
                 //Find the edge, by adding an arbitrary large distance to the point, and the function will return a safe point always on the map.
-                var mapEdge = HumanLikeAlgorithms.Origin.PointOnLineAwayFromEnd(_darkElixirStorage.DeployGrunts, 30);
+                var mapEdge = HumanLikeAlgorithms.Origin.PointOnLineAwayFromEnd(darkElixirStorage.DeployGrunts, 30);
 
                 foreach (var t in Deploy.AtPoint(dragons, mapEdge, dragons.Count))
                     yield return t;
@@ -496,29 +509,31 @@ namespace DarkDragonDeploy
         #endregion
 
         #region DeployLavaHounds
-        private IEnumerable<int> DeployLavaHounds()
+
+        IEnumerable<int> DeployLavaHounds()
         {
-            var lavaHounds = _deployElements.FirstOrDefault(u => u.Id == DeployId.LavaHound);
+            var lavaHounds = deployElements.FirstOrDefault(u => u.Id == DeployId.LavaHound);
 
             //Deploy Lava Hounds - TODO Make the Drop position better for these guys...
             if (lavaHounds?.Count > 0)
             {
-                Log.Info($"{_tag} Deploying Lava Hounds...");
-                foreach (var t in Deploy.AtPoint(lavaHounds, _darkElixirStorage.DeployGrunts, lavaHounds.Count))
+                Log.Info($"{Tag} Deploying Lava Hounds...");
+                foreach (var t in Deploy.AtPoint(lavaHounds, darkElixirStorage.DeployGrunts, lavaHounds.Count))
                     yield return t;
             }
             else
             {
-                Log.Info($"{_tag} No LavaHounds found to Deploy...");
+                Log.Info($"{Tag} No LavaHounds found to Deploy...");
             }
         }
         #endregion
 
         #region DeployBalloonsAndHogs
-        private IEnumerable<int> DeployBalloonsAndHogs()
+
+        IEnumerable<int> DeployBalloonsAndHogs()
         {
-            var balloons = _deployElements.FirstOrDefault(u => u.Id == DeployId.Balloon);
-            var hogs = _deployElements.FirstOrDefault(u => u.Id == DeployId.HogRider);
+            var balloons = deployElements.FirstOrDefault(u => u.Id == DeployId.Balloon);
+            var hogs = deployElements.FirstOrDefault(u => u.Id == DeployId.HogRider);
 
             //Add all defense seeeking units to the same list.
             List<DeployElement> defenseSeakers = new List<DeployElement>();
@@ -528,7 +543,7 @@ namespace DarkDragonDeploy
             }
             else
             {
-                Log.Info($"{_tag} No Balloons found to Deploy...");
+                Log.Info($"{Tag} No Balloons found to Deploy...");
             }
             if (hogs?.Count > 0)
             {
@@ -536,7 +551,7 @@ namespace DarkDragonDeploy
             }
             else
             {
-                Log.Info($"{_tag} No HogRiders found to Deploy...");
+                Log.Info($"{Tag} No HogRiders found to Deploy...");
             }
 
             //If we have balloons, and/or Hogs, deploy them now near the Air Defenses...
@@ -549,16 +564,16 @@ namespace DarkDragonDeploy
                     var firstThirdUnitCount = int.Parse(Math.Floor((decimal)unitCount / 3).ToString());
                     if (firstThirdUnitCount > 0)
                     {
-                        Log.Info($"{_tag} Deploying First Third of {deploymentElement.PrettyName}({firstThirdUnitCount}) on 1st Funnel Point...");
-                        foreach (var t in Deploy.AtPoint(deploymentElement, _balloonFunnelPoints[0], firstThirdUnitCount))
+                        Log.Info($"{Tag} Deploying First Third of {deploymentElement.PrettyName}({firstThirdUnitCount}) on 1st Funnel Point...");
+                        foreach (var t in Deploy.AtPoint(deploymentElement, balloonFunnelPoints[0], firstThirdUnitCount))
                             yield return t;
                     }
 
                     var secondThirdUnitCount = int.Parse(Math.Floor((decimal)unitCount / 2).ToString());
                     if (secondThirdUnitCount > 0)
                     {
-                        Log.Info($"{_tag} Deploying Second Third of {deploymentElement.PrettyName}({secondThirdUnitCount}) on Main Deploy Point...");
-                        foreach (var t in Deploy.AtPoint(deploymentElement, _darkElixirStorage.DeployGrunts, secondThirdUnitCount))
+                        Log.Info($"{Tag} Deploying Second Third of {deploymentElement.PrettyName}({secondThirdUnitCount}) on Main Deploy Point...");
+                        foreach (var t in Deploy.AtPoint(deploymentElement, darkElixirStorage.DeployGrunts, secondThirdUnitCount))
                             yield return t;
                     }
 
@@ -566,8 +581,8 @@ namespace DarkDragonDeploy
                     var remainder = deploymentElement.Count; //Whats left
                     if (remainder > 0)
                     {
-                        Log.Info($"{_tag} Deploying Remainder of {deploymentElement.PrettyName}({remainder}) on 2nd Funnel Point...");
-                        foreach (var t in Deploy.AtPoint(deploymentElement, _balloonFunnelPoints[1], remainder))
+                        Log.Info($"{Tag} Deploying Remainder of {deploymentElement.PrettyName}({remainder}) on 2nd Funnel Point...");
+                        foreach (var t in Deploy.AtPoint(deploymentElement, balloonFunnelPoints[1], remainder))
                             yield return t;
                     }
                 }
@@ -576,19 +591,20 @@ namespace DarkDragonDeploy
         #endregion
 
         #region DeployWallBreakers
-        private IEnumerable<int> DeployWallBreakers()
+
+        IEnumerable<int> DeployWallBreakers()
         {
-            var wallBreakers = _deployElements.FirstOrDefault(u => u.Id == DeployId.WallBreaker);
+            var wallBreakers = deployElements.FirstOrDefault(u => u.Id == DeployId.WallBreaker);
 
             if (wallBreakers?.Count > 0)
             {
-                Log.Info($"{_tag} Deploying {wallBreakers.Count} {wallBreakers.PrettyName}...");
-                foreach (var t in Deploy.AtPoint(wallBreakers, _darkElixirStorage.DeployGrunts, wallBreakers.Count))
+                Log.Info($"{Tag} Deploying {wallBreakers.Count} {wallBreakers.PrettyName}...");
+                foreach (var t in Deploy.AtPoint(wallBreakers, darkElixirStorage.DeployGrunts, wallBreakers.Count))
                     yield return t;
             }
             else
             {
-                Log.Info($"{_tag} No WallBreakers found to Deploy...");
+                Log.Info($"{Tag} No WallBreakers found to Deploy...");
             }
         }
         #endregion
@@ -596,65 +612,69 @@ namespace DarkDragonDeploy
         #region DeployHeros
 
         #region DeployKing
-        private IEnumerable<int> DeployKing()
+
+        IEnumerable<int> DeployKing()
         {
-            var king = _deployElements.FirstOrDefault(u => u.IsHero && u.Id == DeployId.King);
+            var king = deployElements.FirstOrDefault(u => u.IsHero && u.Id == DeployId.King);
 
             if (UserSettings.UseKing && king != null)
             {
                 //Deploy the king
-                Log.Info($"{_tag} Deploying King...");
-                foreach (var t in Deploy.AtPoint(king, _darkElixirStorage.DeployGrunts))
+                Log.Info($"{Tag} Deploying King...");
+                foreach (var t in Deploy.AtPoint(king, darkElixirStorage.DeployGrunts))
                     yield return t;
 
-                _watchHeroes = true;
+                watchHeroes = true;
             }
         }
         #endregion
 
         #region DeployWarden
-        private IEnumerable<int> DeployWarden()
+
+        IEnumerable<int> DeployWarden()
         {
-            var warden = _deployElements.FirstOrDefault(u => u.IsHero && u.Id == DeployId.Warden);
+            var warden = deployElements.FirstOrDefault(u => u.IsHero && u.Id == DeployId.Warden);
 
             if (UserSettings.UseWarden && warden != null)
             {
-                Log.Info($"{_tag} Deploying Warden...");
-                foreach (var t in Deploy.AtPoint(warden, _darkElixirStorage.DeployRanged))
+                Log.Info($"{Tag} Deploying Warden...");
+                foreach (var t in Deploy.AtPoint(warden, darkElixirStorage.DeployRanged))
                     yield return t;
                 yield return Rand.Int(500, 1000); //Wait
 
-                _watchHeroes = true;
+                watchHeroes = true;
             }
         }
         #endregion
 
         #region DeployQueen
-        private IEnumerable<int> DeployQueen()
+
+        IEnumerable<int> DeployQueen()
         {
-            var queen = _deployElements.FirstOrDefault(u => u.IsHero  && u.Id == DeployId.Queen);
+            var queen = deployElements.FirstOrDefault(u => u.IsHero  && u.Id == DeployId.Queen);
 
             if (UserSettings.UseQueen && queen != null)
             {
-                Log.Info($"{_tag} Deploying Queen...");
-                foreach (var t in Deploy.AtPoint(queen, _darkElixirStorage.DeployGrunts))
+                Log.Info($"{Tag} Deploying Queen...");
+                foreach (var t in Deploy.AtPoint(queen, darkElixirStorage.DeployGrunts))
                     yield return t;
                 yield return Rand.Int(500, 1000); //Wait
 
-                _watchHeroes = true;
+                watchHeroes = true;
             }
         }
         #endregion
 
         #region WatchHeros
-        private void WatchHeros()
-        {
-            var allHeroes = _deployElements.Where(u => u.IsHero).ToList();
 
-            if (_watchHeroes)
+        void WatchHeros()
+        {
+            var allHeroes = deployElements.Where(u => u.IsHero).ToList();
+
+            if (watchHeroes)
             {
                 //Watch Heros and Hit ability when they get low.
-                Log.Info($"{_tag} Watching Heros to activate Abilities...");
+                Log.Info($"{Tag} Watching Heros to activate Abilities...");
                 Deploy.WatchHeroes(allHeroes);
             }
         }
@@ -663,65 +683,69 @@ namespace DarkDragonDeploy
         #endregion
 
         #region DeployClanCastle
-        private IEnumerable<int> DeployClanCastle()
+
+        IEnumerable<int> DeployClanCastle()
         {
-            var clanCastle = _deployElements.FirstOrDefault(u => u.ElementType == DeployElementType.ClanTroops);
+            var clanCastle = deployElements.FirstOrDefault(u => u.ElementType == DeployElementType.ClanTroops);
 
             if (clanCastle?.Count > 0 && UserSettings.UseClanTroops)
             {
-                Log.Info($"{_tag} Deploying Clan Castle Behind Heros...");
-                foreach (var t in Deploy.AtPoint(clanCastle, _darkElixirStorage.DeployGrunts, clanCastle.Count))
+                Log.Info($"{Tag} Deploying Clan Castle Behind Heros...");
+                foreach (var t in Deploy.AtPoint(clanCastle, darkElixirStorage.DeployGrunts, clanCastle.Count))
                     yield return t;
             }
             else
             {
-                Log.Info($"{_tag} No Clan Castle Troops found to Deploy...");
+                Log.Info($"{Tag} No Clan Castle Troops found to Deploy...");
             }
         }
         #endregion
 
         #region DeployRageSpell
-        private IEnumerable<int> DeployRageSpell()
+
+        IEnumerable<int> DeployRageSpell()
         {
-            var rageSpells = _deployElements.FirstOrDefault(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Rage);
+            var rageSpells = deployElements.FirstOrDefault(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Rage);
 
             if (rageSpells?.Count > 0)
             {
                 //Point on line between Center of DE Storage, and The Deploy Point of the Dragons... Such that the spell edge is near the DE Storage.
-                var rageDropPoint = _darkElixirStorage.Center.PointOnLineAwayFromStart(_darkElixirStorage.DeployGrunts, 6f);
-                Log.Info($"{_tag} Deploying ONE Rage Spell Close to DE Storage....");
+                var rageDropPoint = darkElixirStorage.Center.PointOnLineAwayFromStart(darkElixirStorage.DeployGrunts, 6f);
+                Log.Info($"{Tag} Deploying ONE Rage Spell Close to DE Storage....");
                 foreach (var t in Deploy.AtPoint(rageSpells, rageDropPoint, 1))
                     yield return t;
             }
             else
             {
-                Log.Info($"{_tag} No Rage Spells found to Deploy...");
+                Log.Info($"{Tag} No Rage Spells found to Deploy...");
             }
         }
         #endregion
 
         #region DeployHealers
-        private IEnumerable<int> DeployHealers()
+
+        IEnumerable<int> DeployHealers()
         {
-            var healers = _deployElements.FirstOrDefault(u => u.Id == DeployId.Healer);
+            var healers = deployElements.FirstOrDefault(u => u.Id == DeployId.Healer);
 
             if (healers?.Count > 0)
             {
-                Log.Info($"{_tag} Deploying Healers near Heros...");
-                foreach (var t in Deploy.AtPoint(healers, _darkElixirStorage.DeployGrunts, healers.Count))
+                Log.Info($"{Tag} Deploying Healers near Heros...");
+                foreach (var t in Deploy.AtPoint(healers, darkElixirStorage.DeployGrunts, healers.Count))
                     yield return t;
             }
             else
             {
-                Log.Info($"{_tag} No Healers found to Deploy...");
+                Log.Info($"{Tag} No Healers found to Deploy...");
             }
         }
         #endregion
 
         #region DeployOthers
-        private IEnumerable<int> DeployOthers()
+
+        IEnumerable<int> DeployOthers()
         {
-            var minions = _deployElements.FirstOrDefault(u => u.Id == DeployId.Minion);
+            var minions = deployElements.FirstOrDefault(u => u.Id == DeployId.Minion);
 
             List<DeployElement> otherUnits = new List<DeployElement>();
             if (minions?.Count > 0)
@@ -730,7 +754,7 @@ namespace DarkDragonDeploy
             }
             else
             {
-                Log.Info($"{_tag} No Minions found to Deploy...");
+                Log.Info($"{Tag} No Minions found to Deploy...");
             }
 
             //Deploy the Rest of the units in as Cleanup.
@@ -743,15 +767,15 @@ namespace DarkDragonDeploy
                     var firstQuarterCount = int.Parse(Math.Floor((decimal)unitCount / 4).ToString());
                     if (firstQuarterCount > 0)
                     {
-                        Log.Info($"{_tag} Deploying First Quarter of {deploymentElement.PrettyName}({firstQuarterCount}) on 1st Funnel Point...");
-                        foreach (var t in Deploy.AtPoint(deploymentElement, _deFunnelPoints[0], firstQuarterCount))
+                        Log.Info($"{Tag} Deploying First Quarter of {deploymentElement.PrettyName}({firstQuarterCount}) on 1st Funnel Point...");
+                        foreach (var t in Deploy.AtPoint(deploymentElement, deFunnelPoints[0], firstQuarterCount))
                             yield return t;
                     }
 
                     if (firstQuarterCount > 0) //Second quarter should always be same as first quarter... no need to recalc...
                     {
-                        Log.Info($"{_tag} Deploying Second Quarter of {deploymentElement.PrettyName}({firstQuarterCount}) on 2nd Funnel Point...");
-                        foreach (var t in Deploy.AtPoint(deploymentElement, _balloonFunnelPoints[0], firstQuarterCount))
+                        Log.Info($"{Tag} Deploying Second Quarter of {deploymentElement.PrettyName}({firstQuarterCount}) on 2nd Funnel Point...");
+                        foreach (var t in Deploy.AtPoint(deploymentElement, balloonFunnelPoints[0], firstQuarterCount))
                             yield return t;
                     }
 
@@ -759,8 +783,8 @@ namespace DarkDragonDeploy
                     var thirdQuarterCount = int.Parse(Math.Floor((decimal)deploymentElement.Count / 2).ToString());
                     if (thirdQuarterCount > 0)
                     {
-                        Log.Info($"{_tag} Deploying Third Quarter of {deploymentElement.PrettyName}({thirdQuarterCount}) on 3st Funnel Point...");
-                        foreach (var t in Deploy.AtPoint(deploymentElement, _balloonFunnelPoints[1], thirdQuarterCount))
+                        Log.Info($"{Tag} Deploying Third Quarter of {deploymentElement.PrettyName}({thirdQuarterCount}) on 3st Funnel Point...");
+                        foreach (var t in Deploy.AtPoint(deploymentElement, balloonFunnelPoints[1], thirdQuarterCount))
                             yield return t;
                     }
 
@@ -768,8 +792,8 @@ namespace DarkDragonDeploy
                     var remainder = deploymentElement.Count; //Whats left after Dropping on the First AD.
                     if (remainder > 0)
                     {
-                        Log.Info($"{_tag} Deploying Remainder of {deploymentElement.PrettyName}({remainder}) on Last Funnel Point...");
-                        foreach (var t in Deploy.AtPoint(deploymentElement, _deFunnelPoints[1], remainder))
+                        Log.Info($"{Tag} Deploying Remainder of {deploymentElement.PrettyName}({remainder}) on Last Funnel Point...");
+                        foreach (var t in Deploy.AtPoint(deploymentElement, deFunnelPoints[1], remainder))
                             yield return t;
                     }
 
@@ -779,11 +803,12 @@ namespace DarkDragonDeploy
         #endregion
 
         #region DeployLeftoverSpells
-        private IEnumerable<int> DeployLeftoverSpells()
+
+        IEnumerable<int> DeployLeftoverSpells()
         {
-            var lightningSpells = _deployElements.FirstOrDefault(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Lightning);
-            List<DeployElement> earthquakeSpells = _deployElements.Where(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Earthquake).ToList();
-            List<DeployElement> skeletonSpells = _deployElements.Where(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Skeleton).ToList();
+            var lightningSpells = deployElements.FirstOrDefault(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Lightning);
+            List<DeployElement> earthquakeSpells = deployElements.Where(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Earthquake).ToList();
+            List<DeployElement> skeletonSpells = deployElements.Where(u => u.ElementType == DeployElementType.Spell && u.Id == DeployId.Skeleton).ToList();
 
             List<DeployElement> leftoverSpells = new List<DeployElement>();
 
@@ -798,15 +823,15 @@ namespace DarkDragonDeploy
                 yield return Rand.Int(4000, 6000); // pause a while longer... Dragons should be getting close to this one now...
 
                 var adToDistract = 0;
-                if (_zapped1)
+                if (zapped1)
                     adToDistract = 1;
-                if (_zapped2)
+                if (zapped2)
                     adToDistract = 2;
 
                 PointFT dropPoint = new PointFT();
                 string locationDesc = string.Empty;
 
-                if (_airDefenses.Length < adToDistract + 1)
+                if (airDefenses.Length < adToDistract + 1)
                 {
                     //Only two Air Defenses were found? No Third to use spells on... drop them on A DE Collector.
 
@@ -828,34 +853,35 @@ namespace DarkDragonDeploy
                 else
                 {
                     //There were aditional air defenses found... drop them on the next one.
-                    dropPoint = _airDefenses[adToDistract].Location.GetCenter();
+                    dropPoint = airDefenses[adToDistract].Location.GetCenter();
                     locationDesc = $"Air Defense #{adToDistract + 1}";
                 }
 
                 foreach (var spell in leftoverSpells)
                 {
-                    Log.Info($"{_tag} Deploying {spell.Count} left over {spell.PrettyName} Spell(s) to {locationDesc}...");
+                    Log.Info($"{Tag} Deploying {spell.Count} left over {spell.PrettyName} Spell(s) to {locationDesc}...");
                     foreach (var t in Deploy.AtPoint(spell, dropPoint, spell.Count))
                         yield return t;
                 }
             }
             else
             {
-                Log.Info($"{_tag} All Spells Successfully Deployed...");
+                Log.Info($"{Tag} All Spells Successfully Deployed...");
             }
         }
         #endregion
 
         #region DeployLeftoverTroops
-        private IEnumerable<int> DeployLeftoverTroops()
+
+        IEnumerable<int> DeployLeftoverTroops()
         {
-            var dragons = _deployElements.FirstOrDefault(u => u.Id == DeployId.Dragon);
-            var balloons = _deployElements.FirstOrDefault(u => u.Id == DeployId.Balloon);
-            var hogs = _deployElements.FirstOrDefault(u => u.Id == DeployId.HogRider);
-            var lavaHounds = _deployElements.FirstOrDefault(u => u.Id == DeployId.LavaHound);
-            var minions = _deployElements.FirstOrDefault(u => u.Id == DeployId.Minion);
-            var wallBreakers = _deployElements.FirstOrDefault(u => u.Id == DeployId.WallBreaker);
-            var healers = _deployElements.FirstOrDefault(u => u.Id == DeployId.Healer);
+            var dragons = deployElements.FirstOrDefault(u => u.Id == DeployId.Dragon);
+            var balloons = deployElements.FirstOrDefault(u => u.Id == DeployId.Balloon);
+            var hogs = deployElements.FirstOrDefault(u => u.Id == DeployId.HogRider);
+            var lavaHounds = deployElements.FirstOrDefault(u => u.Id == DeployId.LavaHound);
+            var minions = deployElements.FirstOrDefault(u => u.Id == DeployId.Minion);
+            var wallBreakers = deployElements.FirstOrDefault(u => u.Id == DeployId.WallBreaker);
+            var healers = deployElements.FirstOrDefault(u => u.Id == DeployId.Healer);
 
             //Do a last check for ANY units that we have left... at this point if they haven't been deployed, Its probably an error. 
             //Try and dump anything that is left on the edge of the map so the next time Troops are built, it doesnt hang the bot.
@@ -876,14 +902,14 @@ namespace DarkDragonDeploy
 
                 foreach (var troop in leftoverTroops)
                 {
-                    Log.Error($"{_tag} Deploying {troop.Count} left over {troop.PrettyName}s to edge of map, to get rid of troops.  This should not happen, but does sometimes when troops are not properly deployed in earlier phases of the algorithm.");
+                    Log.Error($"{Tag} Deploying {troop.Count} left over {troop.PrettyName}s to edge of map, to get rid of troops.  This should not happen, but does sometimes when troops are not properly deployed in earlier phases of the algorithm.");
                     foreach (var t in Deploy.AtPoint(troop, dumpSpot, troop.Count))
                         yield return t;
                 }
             }
             else
             {
-                Log.Info($"{_tag} All Troops Successfully Deployed...");
+                Log.Info($"{Tag} All Troops Successfully Deployed...");
             }
         }
         #endregion
