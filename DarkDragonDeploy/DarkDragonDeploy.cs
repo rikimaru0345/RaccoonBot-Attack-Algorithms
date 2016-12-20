@@ -20,15 +20,16 @@ namespace DarkDragonDeploy
 
         #region Private Member Variables
 
-        List<DeployElement>deployElements = null;
+        List<DeployElement> deployElements = null;
         const string Tag = "[Dark Dragon]";
-        Target darkElixirStorage;
+        Target mainTarget;
         PointFT[] deFunnelPoints;
         PointFT[] balloonFunnelPoints;
         AirDefense[] airDefenses;
         bool zapped1 = false;
         bool zapped2 = false;
         bool watchHeroes = false;
+        bool surrender = false;
         #endregion
 
         #region Name of Deploy
@@ -90,16 +91,8 @@ namespace DarkDragonDeploy
 
             Log.Info($"{Tag} Base meets minimum Requirements... Checking DE Storage/Air Defense Locations...");
 
-            //Grab the Locations of the DE Storage
-            darkElixirStorage = HumanLikeAlgorithms.TargetDarkElixirStorage();
 
-            if (!darkElixirStorage.ValidTarget)
-            {
-                Log.Warning($"{Tag} No Dark Elixir Storage Found - Skipping");
-                return 0;
-            }
-
-            //Get the locaiton of all Air Defenses
+            //Check to see if we can find ANY air Defenses... (Could Skip here if not all are found.)
             var airDefensesTest = AirDefense.Find();
 
             if (airDefensesTest.Length == 0)
@@ -108,26 +101,20 @@ namespace DarkDragonDeploy
                 return 0;
             }
 
-            Log.Info($"{Tag} Found {airDefensesTest.Length} Air Defense Buildings.. Continuing Attack..");
-
-            if (airDefensesTest.Length > 1)
+            //For now just log the Trophy counts...
+            //TODO - Later we will want to use these to see if the base is worth attacking when we are in Trophy mode...
+            try
             {
-                //Now that we found all Air Defenses, order them in the array with closest AD to Target first.
-                Array.Sort(airDefensesTest, delegate (AirDefense ad1, AirDefense ad2)
-                {
-                    return HumanLikeAlgorithms.DistanceFromPoint(ad1, darkElixirStorage.DeployGrunts)
-                    .CompareTo(HumanLikeAlgorithms.DistanceFromPoint(ad2, darkElixirStorage.DeployGrunts));
-                });
+                int trophiesWin, trophiesDefeat = -1;
+                if (Opponent.GetLootableTrophies(out trophiesWin, out trophiesDefeat))
+                    Log.Info($"Trophies if we Win: {trophiesWin}, Trophies if we lose: {trophiesDefeat}");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Error getting trophy values... - {ex.Message} - {ex.StackTrace}");
             }
 
-            //Create the Funnel Points
-            deFunnelPoints = darkElixirStorage.GetFunnelingPoints(30);
-            balloonFunnelPoints = darkElixirStorage.GetFunnelingPoints(20);
-
-#if DEBUG
-            //During Debug, Create an Image of the base including what we found.
-            CreateDebugImages();
-#endif
+            Log.Info($"{Tag} Found {airDefensesTest.Length} Air Defense Buildings.. Continuing Attack..");
 
             //We are Good to attack!
             return 1;
@@ -139,14 +126,28 @@ namespace DarkDragonDeploy
         {
             Log.Info($"{Tag} Deploy start - V.{Assembly.GetExecutingAssembly().GetName().Version.ToString()}");
 
-            // Prepare:
-            // Find the airDefenses again.
-            // We cannot use the airDefenses from ShouldAttack, because the bot wil move
-            // the camera after accepting an opponent.
-            // Then the cache gets invalidated
-            // So we have to find the air defenses again
-            airDefenses = AirDefense.Find();
-            
+            //##### Prepare Phase #####
+
+            //Find the Dark Elixir Storage / Or Town Hall, and set funnel points.
+            foreach (var t in FindMainTarget())
+                yield return t;
+
+            //Find and Sort the Air Defenses.
+            foreach (var t in FindAirDefenses())
+                yield return t;
+
+            if (surrender) //If something went wrong finding Air Defenses - surrender.
+            {
+                Attack.Surrender();
+                yield break;
+            }
+
+#if DEBUG
+            //During Debug, Create an Image of the base including what we found.
+            CreateDebugImages();
+#endif
+
+            //##### Attack Phase #####
 
             //STEP 1 ******* Destroy all air defenses using Lightling & Quake if needed. *******
             foreach (var t in DestroyAirDefenses())
@@ -165,7 +166,7 @@ namespace DarkDragonDeploy
             //STEP 3 ******* Deploy Lava Hounds (if any Exist). *******
             foreach (var t in DeployLavaHounds())
                 yield return t;
-            
+
             //Pause for a little while... - Long enough for main dragons to begin to enter the base.
             yield return Rand.Int(3000, 4000);
 
@@ -216,7 +217,7 @@ namespace DarkDragonDeploy
                 yield return t;
 
             //Pause for a little while longer...  waiting for things to develop
-            yield return Rand.Int(4000, 6000); 
+            yield return Rand.Int(4000, 6000);
 
             //STEP 13 ******* Deploy Minions & Others? *******
             foreach (var t in DeployOthers())
@@ -236,7 +237,6 @@ namespace DarkDragonDeploy
 
         }
         #endregion
-
 
         #region PassesBasicAcceptRequirements
 
@@ -298,7 +298,7 @@ namespace DarkDragonDeploy
                 //Draw some stuff on it.
                 Visualize.Axes(canvas);
                 Visualize.Grid(canvas, redZone: true);
-                Visualize.Target(canvas, darkElixirStorage.Center, 40, Color.Red);
+                Visualize.Target(canvas, mainTarget.Center, 40, Color.Red);
                 Visualize.Target(canvas, deFunnelPoints[0], 40, Color.White);
                 Visualize.Target(canvas, deFunnelPoints[1], 40, Color.White);
                 Visualize.Target(canvas, balloonFunnelPoints[0], 40, Color.Pink);
@@ -329,15 +329,13 @@ namespace DarkDragonDeploy
                     Visualize.Target(canvas, eagle.Location.GetCenter(), 30, Color.YellowGreen);
                 }
 
-                Visualize.Target(canvas, darkElixirStorage.DeployGrunts, 40, Color.Beige);
+                Visualize.Target(canvas, mainTarget.DeployGrunts, 40, Color.Beige);
 
                 Screenshot.Save(canvas, $"{debugFileName}_2");
             }
 
             //Write a text file that goes with all images that shows what is in the image.
             StringBuilder sb = new StringBuilder();
-
-            sb.AppendLine($"Town Hall - Level:{darkElixirStorage.TargetBuilding.Level}");
 
             for (int i = 0; i < airDefenses.Count(); i++)
             {
@@ -368,6 +366,115 @@ namespace DarkDragonDeploy
 
             Log.Info($"{Tag} Deploy Debug Image Saved!");
 
+        }
+        #endregion
+
+
+        #region FindMainTarget
+
+        IEnumerable<int> FindMainTarget()
+        {
+
+            if ((UserSettings.DeadSearch.MinDarkElixir == 0 && Opponent.IsDead()) || (UserSettings.ActiveSearch.MinDarkElixir == 0 && !Opponent.IsDead()))
+            {
+                //Trophy Push Mode!
+                Log.Warning($"{Tag} Min Dark Elixir Setting = 0 - Trophy Push Mode - Target Town Hall Instead of Dark Elixir Storage.");
+
+                var townHall = TownHall.Find(); //start with Cached.. usually always works.
+
+                for (int i = 1; i < 11; i++)
+                {
+                    if (townHall != null)
+                        break;
+
+                    Log.Warning($"{Tag} Town Hall Cannot be found. Attempt:{i}  Retrying to Find Town Hall...");
+                    //Somehow Town Hall is not found...  (Mabye Hero Walked in Front of it?)
+                    yield return 1000; //Wait a little between each try
+                    townHall = TownHall.Find(CacheBehavior.ForceScan); //Scan again - up to 10 times untill its found.
+                }
+
+                if (townHall == null)
+                {
+                    Log.Error($"{Tag} Town Hall Cannot be found in Attack Phase after 10 attempts! - Targeting the CENTER of the Map instead.");
+                    TargetPoint(HumanLikeAlgorithms.Origin);
+                }
+                else
+                {
+                    TargetPoint(townHall.Location.GetCenter());
+                    Log.Info($"{Tag} Town Hall targeted successfully.");
+                }
+            }
+            else
+            {
+                mainTarget = HumanLikeAlgorithms.TargetDarkElixirStorage();
+
+                for (int i = 1; i < 11; i++)
+                {
+                    if (mainTarget.ValidTarget)
+                        break;
+
+                    Log.Warning($"{Tag} Dark Elixir Storage Cannot be found. Attempt:{i}  Retrying to Find DE Storage...");
+                    //Somehow DE Storage is not found on the rescan...  (Mabye Hero Walked in Front of it on Rescan?)
+                    yield return 1000; //Wait a little between each try
+                    mainTarget = HumanLikeAlgorithms.TargetDarkElixirStorage(CacheBehavior.ForceScan); //Scan again - up to 10 times untill its found.
+                }
+
+                //If DE Storage is STILL not valid... Use the Center of the Map!.
+                if (!mainTarget.ValidTarget)
+                {
+                    Log.Error($"{Tag} Dark Elixir Storage Cannot be found in Attack Phase after 10 attempts! - Targeting the CENTER of the Map instead.");
+                    TargetPoint(HumanLikeAlgorithms.Origin);
+                }
+                else
+                {
+                    Log.Info($"{Tag} Dark Elixir Storage targeted successfully.");
+                }
+            }
+
+            //Create the Funnel Points
+            deFunnelPoints = mainTarget.GetFunnelingPoints(30);
+            balloonFunnelPoints = mainTarget.GetFunnelingPoints(20);
+        }
+        #endregion
+
+        #region TargetPoint
+        private void TargetPoint(PointFT point) {
+            mainTarget = new Target();
+
+            mainTarget.ValidTarget = true;
+            mainTarget.Center = point;
+
+            mainTarget.Edge = point;
+            mainTarget.NearestRedLine = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(mainTarget.Edge)).First();
+            mainTarget.EdgeToRedline = mainTarget.Edge.DistanceSq(mainTarget.NearestRedLine);
+
+            //Fill the DeployGrunts Property with where out main dragon force should go.
+            mainTarget.DeployGrunts = HumanLikeAlgorithms.Origin.PointOnLineAwayFromEnd(mainTarget.NearestRedLine, 0.2f); //TODO Move to Constants..
+        }
+        #endregion
+
+        #region FindAirDefenses
+
+        IEnumerable<int> FindAirDefenses()
+        {
+            airDefenses = AirDefense.Find();
+
+            //After finding air Defenses, Sort them.
+            if (airDefenses.Length > 1)
+            {
+                //Now that we found all Air Defenses, order them in the array with closest AD to Target first.
+                Array.Sort(airDefenses, delegate (AirDefense ad1, AirDefense ad2)
+                {
+                    return HumanLikeAlgorithms.DistanceFromPoint(ad1, mainTarget.DeployGrunts)
+                    .CompareTo(HumanLikeAlgorithms.DistanceFromPoint(ad2, mainTarget.DeployGrunts));
+                });
+            }
+            else
+            {
+                Log.Error($"{Tag} Somehow no air defenses were found in Attack Phase. - Surrender.");
+                surrender = true;
+                yield break;
+            }
         }
         #endregion
 
@@ -457,7 +564,7 @@ namespace DarkDragonDeploy
                 }
             }
         }
-        
+
         #endregion
 
         #region DeployDragons
@@ -480,7 +587,8 @@ namespace DarkDragonDeploy
 
                 yield return Rand.Int(1000, 1500); // pause for a little while... - Long enought for dragons to begin to create the funnel.
             }
-            else {
+            else
+            {
                 Log.Error($"{Tag} Two Dragons to create the funnel do not exist. {dragons?.Count ?? 0} exists...");
             }
 
@@ -488,7 +596,7 @@ namespace DarkDragonDeploy
             {
                 //Deploy our main force of dragons all on one spot...
                 Log.Info($"{Tag} Deploying Main Force of Dragons...");
-                foreach (var t in Deploy.AtPoint(dragons, darkElixirStorage.DeployGrunts, dragons.Count))
+                foreach (var t in Deploy.AtPoint(dragons, mainTarget.DeployGrunts, dragons.Count))
                     yield return t;
             }
             else
@@ -500,7 +608,7 @@ namespace DarkDragonDeploy
             {
                 Log.Error($"{Tag} Main Force of Dragons Not Fully Deployed! Trying to drop them on the Edge of the map...");
                 //Find the edge, by adding an arbitrary large distance to the point, and the function will return a safe point always on the map.
-                var mapEdge = HumanLikeAlgorithms.Origin.PointOnLineAwayFromEnd(darkElixirStorage.DeployGrunts, 30);
+                var mapEdge = HumanLikeAlgorithms.Origin.PointOnLineAwayFromEnd(mainTarget.DeployGrunts, 30);
 
                 foreach (var t in Deploy.AtPoint(dragons, mapEdge, dragons.Count))
                     yield return t;
@@ -518,7 +626,7 @@ namespace DarkDragonDeploy
             if (lavaHounds?.Count > 0)
             {
                 Log.Info($"{Tag} Deploying Lava Hounds...");
-                foreach (var t in Deploy.AtPoint(lavaHounds, darkElixirStorage.DeployGrunts, lavaHounds.Count))
+                foreach (var t in Deploy.AtPoint(lavaHounds, mainTarget.DeployGrunts, lavaHounds.Count))
                     yield return t;
             }
             else
@@ -573,7 +681,7 @@ namespace DarkDragonDeploy
                     if (secondThirdUnitCount > 0)
                     {
                         Log.Info($"{Tag} Deploying Second Third of {deploymentElement.PrettyName}({secondThirdUnitCount}) on Main Deploy Point...");
-                        foreach (var t in Deploy.AtPoint(deploymentElement, darkElixirStorage.DeployGrunts, secondThirdUnitCount))
+                        foreach (var t in Deploy.AtPoint(deploymentElement, mainTarget.DeployGrunts, secondThirdUnitCount))
                             yield return t;
                     }
 
@@ -599,7 +707,7 @@ namespace DarkDragonDeploy
             if (wallBreakers?.Count > 0)
             {
                 Log.Info($"{Tag} Deploying {wallBreakers.Count} {wallBreakers.PrettyName}...");
-                foreach (var t in Deploy.AtPoint(wallBreakers, darkElixirStorage.DeployGrunts, wallBreakers.Count))
+                foreach (var t in Deploy.AtPoint(wallBreakers, mainTarget.DeployGrunts, wallBreakers.Count))
                     yield return t;
             }
             else
@@ -621,7 +729,7 @@ namespace DarkDragonDeploy
             {
                 //Deploy the king
                 Log.Info($"{Tag} Deploying King...");
-                foreach (var t in Deploy.AtPoint(king, darkElixirStorage.DeployGrunts))
+                foreach (var t in Deploy.AtPoint(king, mainTarget.DeployGrunts))
                     yield return t;
 
                 watchHeroes = true;
@@ -638,7 +746,7 @@ namespace DarkDragonDeploy
             if (UserSettings.UseWarden && warden != null)
             {
                 Log.Info($"{Tag} Deploying Warden...");
-                foreach (var t in Deploy.AtPoint(warden, darkElixirStorage.DeployRanged))
+                foreach (var t in Deploy.AtPoint(warden, mainTarget.DeployRanged))
                     yield return t;
                 yield return Rand.Int(500, 1000); //Wait
 
@@ -651,12 +759,12 @@ namespace DarkDragonDeploy
 
         IEnumerable<int> DeployQueen()
         {
-            var queen = deployElements.FirstOrDefault(u => u.IsHero  && u.Id == DeployId.Queen);
+            var queen = deployElements.FirstOrDefault(u => u.IsHero && u.Id == DeployId.Queen);
 
             if (UserSettings.UseQueen && queen != null)
             {
                 Log.Info($"{Tag} Deploying Queen...");
-                foreach (var t in Deploy.AtPoint(queen, darkElixirStorage.DeployGrunts))
+                foreach (var t in Deploy.AtPoint(queen, mainTarget.DeployGrunts))
                     yield return t;
                 yield return Rand.Int(500, 1000); //Wait
 
@@ -691,7 +799,7 @@ namespace DarkDragonDeploy
             if (clanCastle?.Count > 0 && UserSettings.UseClanTroops)
             {
                 Log.Info($"{Tag} Deploying Clan Castle Behind Heros...");
-                foreach (var t in Deploy.AtPoint(clanCastle, darkElixirStorage.DeployGrunts, clanCastle.Count))
+                foreach (var t in Deploy.AtPoint(clanCastle, mainTarget.DeployGrunts, clanCastle.Count))
                     yield return t;
             }
             else
@@ -710,7 +818,7 @@ namespace DarkDragonDeploy
             if (rageSpells?.Count > 0)
             {
                 //Point on line between Center of DE Storage, and The Deploy Point of the Dragons... Such that the spell edge is near the DE Storage.
-                var rageDropPoint = darkElixirStorage.Center.PointOnLineAwayFromStart(darkElixirStorage.DeployGrunts, 6f);
+                var rageDropPoint = mainTarget.Center.PointOnLineAwayFromStart(mainTarget.DeployGrunts, 6f);
                 Log.Info($"{Tag} Deploying ONE Rage Spell Close to DE Storage....");
                 foreach (var t in Deploy.AtPoint(rageSpells, rageDropPoint, 1))
                     yield return t;
@@ -731,7 +839,7 @@ namespace DarkDragonDeploy
             if (healers?.Count > 0)
             {
                 Log.Info($"{Tag} Deploying Healers near Heros...");
-                foreach (var t in Deploy.AtPoint(healers, darkElixirStorage.DeployGrunts, healers.Count))
+                foreach (var t in Deploy.AtPoint(healers, mainTarget.DeployGrunts, healers.Count))
                     yield return t;
             }
             else
@@ -772,10 +880,12 @@ namespace DarkDragonDeploy
                             yield return t;
                     }
 
+                    //NOTE: Changed this 12/14/16 - to Drop minions in two waves - to have a better chance of them going to the middle, and getting the DE Storage.
+                    //      Deploying them at the balloon funnel points was not effective.
                     if (firstQuarterCount > 0) //Second quarter should always be same as first quarter... no need to recalc...
                     {
-                        Log.Info($"{Tag} Deploying Second Quarter of {deploymentElement.PrettyName}({firstQuarterCount}) on 2nd Funnel Point...");
-                        foreach (var t in Deploy.AtPoint(deploymentElement, balloonFunnelPoints[0], firstQuarterCount))
+                        Log.Info($"{Tag} Deploying Second Quarter of {deploymentElement.PrettyName}({firstQuarterCount}) on Main Deploy Point...");
+                        foreach (var t in Deploy.AtPoint(deploymentElement, mainTarget.DeployGrunts, firstQuarterCount))
                             yield return t;
                     }
 
@@ -783,8 +893,8 @@ namespace DarkDragonDeploy
                     var thirdQuarterCount = int.Parse(Math.Floor((decimal)deploymentElement.Count / 2).ToString());
                     if (thirdQuarterCount > 0)
                     {
-                        Log.Info($"{Tag} Deploying Third Quarter of {deploymentElement.PrettyName}({thirdQuarterCount}) on 3st Funnel Point...");
-                        foreach (var t in Deploy.AtPoint(deploymentElement, balloonFunnelPoints[1], thirdQuarterCount))
+                        Log.Info($"{Tag} Deploying Third Quarter of {deploymentElement.PrettyName}({thirdQuarterCount}) on Main Deploy Point...");
+                        foreach (var t in Deploy.AtPoint(deploymentElement, mainTarget.DeployGrunts, thirdQuarterCount))
                             yield return t;
                     }
 

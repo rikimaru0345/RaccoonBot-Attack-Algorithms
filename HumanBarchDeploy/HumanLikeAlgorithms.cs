@@ -3,9 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CoC_Bot.API.Buildings;
+using System.Drawing;
 
 namespace SharedCode
 {
+
     public static class HumanLikeAlgorithms
     {
         //Not the exact center of the map, but close. (This is how to create a point using a float value, otherwise, if you create it at 0,0, it uses a different coordinates system, and shows up at the top left corner of the screen.)
@@ -16,6 +18,7 @@ namespace SharedCode
         private readonly static float _townHallCenterToOuterEdgeDistance = 2.1f;
         private readonly static float _gruntDeployDistanceFromRedline = 0.5f;
         private readonly static float _rangedDeployDistanceFromRedline = 1.5f;
+        private readonly static float _DEStorageCenterToOuterEdgeDistance = 1f;
 
         /// <summary>
         /// Takes a single Object of whatever type and returns it wrapped in an IEnumerable.
@@ -35,7 +38,7 @@ namespace SharedCode
         /// <param name="endPoint">The ending Point where the line is drawn.</param>
         /// <param name="distanceOutInTiles">The length in Tiles to extend the line past the end point.</param>
         /// <returns>PointFT that is on the same line as the start and end points.</returns>
-        private static PointFT PointOnLineAwayFrom(this PointFT startPoint, PointFT endPoint, float distanceOutInTiles)
+        public static PointFT PointOnLineAwayFromEnd(this PointFT startPoint, PointFT endPoint, float distanceOutInTiles)
         {
             //calculate a point on the line x1-y1 to x2-y2 that is distance from x2-y2
 
@@ -53,6 +56,75 @@ namespace SharedCode
             float py = (endPoint.Y + vy * -distanceOutInTiles);
 
             return SafePoint(px, py);  //Point that is {distanceOutInTiles} away from endPoint on the same line as StartPont and endPoint.
+        }
+
+        /// <summary>
+        /// Determines a line from the StartPoint, to the EndPoint. Then extends the line by the specified number of tiles beyond the end point and returns those coordiantes as a PointFT.
+        /// </summary>
+        /// <param name="startPoint">The Starting Point to begin Drawing the line.</param>
+        /// <param name="endPoint">The ending Point where the line is drawn.</param>
+        /// <param name="distanceOutInTiles">The length in Tiles to extend the line past the end point.</param>
+        /// <returns>PointFT that is on the same line as the start and end points.</returns>
+        public static PointFT PointOnLineAwayFromStart(this PointFT startPoint, PointFT endPoint, float distanceOutInTiles)
+        {
+            //calculate a point on the line x1-y1 to x2-y2 that is distance from x2-y2
+
+            float vx = startPoint.X - endPoint.X; // x vector
+            float vy = startPoint.Y - endPoint.Y; // y vector
+
+            float mag = (float)Math.Sqrt(vx * vx + vy * vy); // length
+
+            //Normalize to unit length
+            vx /= mag;
+            vy /= mag;
+
+            //Calculate the point
+            float px = (startPoint.X + vx * -distanceOutInTiles);
+            float py = (startPoint.Y + vy * -distanceOutInTiles);
+
+            return SafePoint(px, py);  //Point that is {distanceOutInTiles} away from startPoint on the same line as StartPont and endPoint.
+        }
+
+
+        /// <summary>
+        /// Checks to see if the item is null, and if it has any troops left to deploy, if so, it adds it to the List.
+        /// </summary>
+        /// <param name="remainingElements">List to add the items to</param>
+        /// <param name="item">Deployment Element to add if it is not used up.</param>
+        public static void RecountAndAddIfAny(this List<DeployElement> remainingElements, DeployElement item) {
+            if (remainingElements == null)
+                remainingElements = new List<DeployElement>();
+
+            if (item == null) return;
+
+            item.Recount();
+
+            if (item.Count > 0) {
+                remainingElements.Add(item);
+            }
+        }
+
+        /// <summary>
+        /// Checks to see if each item in the list is null, and if it has any troops left to deploy, if so, it adds it to the List.
+        /// </summary>
+        /// <param name="remainingElements">List to add the items to</param>
+        /// <param name="item">Deployment Element to add if it is not used up.</param>
+        public static void RecountAndAddIfAny(this List<DeployElement> remainingElements, List<DeployElement> items)
+        {
+            if (remainingElements == null)
+                remainingElements = new List<DeployElement>();
+
+            foreach (var item in items)
+            {
+                if (item == null) return;
+
+                item.Recount();
+
+                if (item.Count > 0)
+                {
+                    remainingElements.Add(item);
+                }
+            }
         }
 
         /// <summary>
@@ -81,6 +153,7 @@ namespace SharedCode
 
             return retval;
         }
+
 
         /// <summary>
         /// Given a Set of Attack Targets this will re-order the Array Starting at the target Index, and then finding the closest neighboring point to add to the output next 
@@ -290,6 +363,22 @@ namespace SharedCode
                 Log.Debug($"[Berts Agorithms] Town Hall Outer Edge Location: X:{target.Edge.X} Y:{target.Edge.Y}");
                 Log.Debug($"[Berts Agorithms] DistanceSq from Town Hall to closest outer red point: {target.EdgeToRedline.ToString("F1")}");
 
+#if DEBUG
+                //Get a screen Capture...
+                using (Bitmap canvas = Screenshot.Capture())
+                    {
+                        //Draw some stuff on it.
+                        Visualize.Target(canvas, Origin, 40, Color.White);
+                        Visualize.Target(canvas, target.Center, 40, Color.Orange);
+                        Visualize.Target(canvas, target.Edge, 40, Color.Red);
+
+                        //Save the Image to the Debug Folder...
+                        var d = DateTime.UtcNow;
+                        Screenshot.Save(canvas, $"CanSnipe TownHall {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
+                    }
+                    Log.Debug("[Berts Algorithms] Snipe Townhall Debug Image Saved!");
+#endif
+
                 if (target.EdgeToRedline < _townHallToRedZoneMinDistance)  // means there is no wall or building between us and the OUTSIDE of the Town Hall
                 {
                     return true;
@@ -310,14 +399,14 @@ namespace SharedCode
 
                 if (target.EdgeToRedline == 0)
                 {
-                    target.DeployGrunts = target.Center.PointOnLineAwayFrom(target.Edge, 0.5f);  //TODO Move to Constants..
-                    target.DeployRanged = target.Center.PointOnLineAwayFrom(target.Edge, 2.0f); //TODO Move to Constants..
+                    target.DeployGrunts = target.Center.PointOnLineAwayFromEnd(target.Edge, 0.5f);  //TODO Move to Constants..
+                    target.DeployRanged = target.Center.PointOnLineAwayFromEnd(target.Edge, 2.0f); //TODO Move to Constants..
                 }
                 else
                 {
                     //TODO - should this be some sort of functon to find the closest point that is actually outside of the redZone on the line, and within the bounds of the Map. (Not a Guess)
-                    target.DeployGrunts = target.Edge.PointOnLineAwayFrom(target.NearestRedLine, 1.0f); //TODO Move to Constants..
-                    target.DeployRanged = target.Edge.PointOnLineAwayFrom(target.NearestRedLine, 2.5f); //TODO Move to Constants..
+                    target.DeployGrunts = target.Edge.PointOnLineAwayFromEnd(target.NearestRedLine, 1.0f); //TODO Move to Constants..
+                    target.DeployRanged = target.Edge.PointOnLineAwayFromEnd(target.NearestRedLine, 2.5f); //TODO Move to Constants..
                 }
 
                 Log.Debug($"[Berts Agorithms] Towh Hall Grunt Snipe Point:  X:{target.DeployGrunts.X} Y:{target.DeployGrunts.Y}");
@@ -340,7 +429,7 @@ namespace SharedCode
             Target target = new Target();
 
             target.Center = th.Location.GetCenter(); //Center of the Town Hall that was found.
-            target.Edge = Origin.PointOnLineAwayFrom(target.Center, _townHallCenterToOuterEdgeDistance);
+            target.Edge = Origin.PointOnLineAwayFromEnd(target.Center, _townHallCenterToOuterEdgeDistance);
 
             target.NearestRedLine = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(target.Edge)).First();
             target.EdgeToRedline = target.Edge.DistanceSq(target.NearestRedLine);
@@ -355,7 +444,7 @@ namespace SharedCode
             return targets.Length;
         }
 
-        public static Target[] GenerateTargets(float minimumDistance, bool ignoreGold, bool ignoreElixir, CacheBehavior behavior = CacheBehavior.Default)
+        public static Target[] GenerateTargets(float minimumDistance, bool ignoreGold, bool ignoreElixir, CacheBehavior behavior = CacheBehavior.Default, bool outputDebugImage = false)
         {
             // Find all Collectors & storages just sitting around...
             List<Building> buildings = new List<Building>();
@@ -391,17 +480,201 @@ namespace SharedCode
                 Log.Debug($"[Berts Algorithms] DistanceSq from {current.Name} to red point: {current.CenterToRedline.ToString("F1")}");
                 if (current.CenterToRedline < minimumDistance)  //Compare distance to Redline to the Minimum acceptable distance Passed in
                 {
-                    current.DeployGrunts = current.Center.PointOnLineAwayFrom(current.NearestRedLine, _gruntDeployDistanceFromRedline); //Barbs & Goblins
-                    current.DeployRanged = current.Center.PointOnLineAwayFrom(current.NearestRedLine, _rangedDeployDistanceFromRedline); //Archers & Minions
+                    current.DeployGrunts = current.Center.PointOnLineAwayFromEnd(current.NearestRedLine, _gruntDeployDistanceFromRedline); //Barbs & Goblins
+                    current.DeployRanged = current.Center.PointOnLineAwayFromEnd(current.NearestRedLine, _rangedDeployDistanceFromRedline); //Archers & Minions
 
                     targetList.Add(current);
                 }
+            }
+
+            if (outputDebugImage)
+            {
+                var d = DateTime.UtcNow;
+                var debugFileName = $"Human Barch {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}";
+                //Get a screen Capture of all targets we found...
+                using (Bitmap canvas = Screenshot.Capture())
+                {
+
+                    Screenshot.Save(canvas, $"{debugFileName}_1");
+
+                    foreach (var building in buildings)
+                    {
+                        var color = Color.White;
+                        if (building.GetType() == typeof(ElixirCollector) || building.GetType() == typeof(ElixirStorage))
+                        {
+                            color = Color.Violet;
+                        }
+                        if (building.GetType() == typeof(GoldMine) || building.GetType() == typeof(GoldStorage))
+                        {
+                            color = Color.Gold;
+                        }
+                        if (building.GetType() == typeof(DarkElixirDrill) || building.GetType() == typeof(DarkElixirStorage))
+                        {
+                            color = Color.Brown;
+                        }
+
+                        //Draw a target on each building.
+                        Visualize.Target(canvas, building.Location.GetCenter(), 40, color);
+
+                    }
+                    //Save the Image to the Debug Folder...
+                    Screenshot.Save(canvas, $"{debugFileName}_2");
+                }
+
+                //Get a screen Capture of all targets we found...
+                using (Bitmap canvas = Screenshot.Capture())
+                {
+                    foreach (var target in targetList)
+                    {
+                        var color = Color.White;
+                        if (target.TargetBuilding.GetType() == typeof(ElixirCollector) || target.TargetBuilding.GetType() == typeof(ElixirStorage))
+                        {
+                            color = Color.Violet;
+                        }
+                        if (target.TargetBuilding.GetType() == typeof(GoldMine) || target.TargetBuilding.GetType() == typeof(GoldStorage))
+                        {
+                            color = Color.Gold;
+                        }
+                        if (target.TargetBuilding.GetType() == typeof(DarkElixirDrill) || target.TargetBuilding.GetType() == typeof(DarkElixirStorage))
+                        {
+                            color = Color.Brown;
+                        }
+
+                        //Draw a target on each building.
+                        Visualize.Target(canvas, target.TargetBuilding.Location.GetCenter(), 40, color);
+                        Visualize.Target(canvas, target.DeployGrunts, 20, color);
+                        Visualize.Target(canvas, target.DeployRanged, 20, color);
+
+                    }
+                    //Save the Image to the Debug Folder...
+                    Screenshot.Save(canvas, $"{debugFileName}_3");
+                }
+
+                Log.Debug("[Berts Algorithms] Collector/Storage & Target Debug Images Saved!");
             }
 
             Log.Debug($"[Berts Algorithms] Found {targetList.Count} deploy points");
 
             return targetList.ToArray();
         }
+
+        public static Target TargetDarkElixirStorage(CacheBehavior behavior = CacheBehavior.Default)
+        {
+            var target = new Target();
+
+            var des = DarkElixirStorage.Find(behavior);
+            target.ValidTarget = false;
+
+            if (des.Length > 0)
+            {
+                target.ValidTarget = true;
+                target.TargetBuilding = des[0];
+                target.Center = des[0].Location.GetCenter();
+
+                target.Edge = Origin.PointOnLineAwayFromEnd(target.Center, _DEStorageCenterToOuterEdgeDistance);
+                target.NearestRedLine = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(target.Edge)).First();
+                target.EdgeToRedline = target.Edge.DistanceSq(target.NearestRedLine);
+
+                //Fill the DeployGrunts Property with where out main dragon force should go.
+                target.DeployGrunts = Origin.PointOnLineAwayFromEnd(target.NearestRedLine, 0.2f); //TODO Move to Constants..
+            }
+
+            return target;
+        }
+
+        public static PointFT[] GetFunnelingPoints(this Target mainGroupDeployPoint, double angleOfFunnel) {
+
+            //Get the Distance From the Origin to the Center - main deploy point.
+            var distance = Math.Sqrt((Math.Pow(mainGroupDeployPoint.DeployGrunts.X - 0, 2) + Math.Pow(mainGroupDeployPoint.DeployGrunts.Y - 0, 2)));
+
+            Log.Debug($"[Berts Algorithms] Distance {distance.ToString("F1")}");
+
+            Log.Debug($"[Berts Algorithms] Main     ({mainGroupDeployPoint.DeployGrunts.X.ToString("F1")},{mainGroupDeployPoint.DeployGrunts.Y.ToString("F1")})");
+
+            //Determine the angle of the main deploy point from the X-axis.
+            double ang1 = Math.Atan(mainGroupDeployPoint.DeployGrunts.Y / mainGroupDeployPoint.DeployGrunts.X);
+
+            //Determine the Angles of the funnel points from the X-axis, by adding/subtracting half of the desired angle of the funnel.
+            var ang2 = ang1 + (angleOfFunnel / 2);
+            var ang3 = ang1 - (angleOfFunnel / 2);
+
+            Log.Debug($"[Berts Algorithms] Funneling Points - Angles from X:{mainGroupDeployPoint.DeployGrunts.X} Main:{ang1} Funnel1:{ang2} Funnel2:{ang3}");
+
+            //Determine the Funnel Points
+            PointFT funnel1;
+            PointFT funnel2;
+            if (mainGroupDeployPoint.DeployGrunts.X > 0)
+            {
+                funnel1 = SafePoint(-(float)(distance * Math.Cos(ang2)), -(float)(distance * Math.Sin(ang2)));
+                funnel2 = SafePoint(-(float)(distance * Math.Cos(ang3)), -(float)(distance * Math.Sin(ang3)));
+            }
+            else
+            {
+                funnel1 = SafePoint((float)(distance * Math.Cos(ang2)), (float)(distance * Math.Sin(ang2)));
+                funnel2 = SafePoint((float)(distance * Math.Cos(ang3)), (float)(distance * Math.Sin(ang3)));
+            }
+
+            Log.Debug($"[Berts Algorithms] Point1   ({funnel1.X.ToString("F1")},{funnel1.Y.ToString("F1")})");
+            Log.Debug($"[Berts Algorithms] Point2   ({funnel2.X.ToString("F1")},{funnel2.Y.ToString("F1")})");
+
+            //Find the closest Redline points to these two funnel points.
+            var red1 =  GameGrid.RedPoints.OrderBy(p => p.DistanceSq(funnel1)).First();
+            var red2 = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(funnel2)).First();
+
+            //Return the two points
+            List<PointFT> points = new List<PointFT>();
+
+            points.Add(red1);
+            points.Add(red2);
+
+            return points.ToArray();
+        }
+
+        /// <summary>
+        /// Returns the distance away from the origin this building is.
+        /// </summary>
+        /// <param name="building"></param>
+        /// <returns></returns>
+        public static double DistanceFromOrigin(this Building building) {
+            return DistanceFromPoint(building, 0, 0);
+        }
+
+        /// <summary>
+        /// Returns the distance in tiles from the center of a building to a specific X,Y Coordiante Point.
+        /// </summary>
+        /// <param name="building"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
+        public static double DistanceFromPoint(this Building building, PointFT point)
+        {
+            return DistanceFromPoint(building, point.X, point.Y);
+        }
+
+        /// <summary>
+        /// Returns the distance in tiles from the center of a building to a specific X,Y Coordiante Point.
+        /// </summary>
+        /// <param name="building"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
+        public static double DistanceFromPoint(this Building building, float x, float y)
+        {
+            return Math.Sqrt((Math.Pow(building.Location.X - x, 2) + Math.Pow(building.Location.Y - y, 2)));
+        }
+
+
+        private static bool IsPointOutsideRedline(this PointFT start)
+        {
+            var nearestRedLine = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(start)).First();
+            var distance = start.DistanceSq(nearestRedLine);
+
+            if (distance == 0)
+                return true;
+            else
+                return false;
+        }
+
         public static PointFT SafePoint(float x, float y) {
             //Make sure the point is inside the Playing field
             if (x > GameGrid.MaxX + 2) x = GameGrid.MaxX + 1.8f;
@@ -411,5 +684,27 @@ namespace SharedCode
 
             return new PointFT(x, y);
         }
+
+        public static PointFT FindClosestDeployPointOnLine(PointFT origin, PointFT start) {
+
+            PointFT result = new PointFT();
+
+            float counter = .5f;
+
+            while(counter < 50)
+            {
+                var temp = origin.PointOnLineAwayFromEnd(start, counter);
+                if (result.IsPointOutsideRedline())
+                {
+                    result = temp;
+                    break;
+                }
+
+                counter = counter + .5f;
+            }
+
+            return result;
+        }
+
     }
 }
