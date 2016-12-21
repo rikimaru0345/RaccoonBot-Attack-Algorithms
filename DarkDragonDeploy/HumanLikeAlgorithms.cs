@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CoC_Bot.API.Buildings;
+using System.Drawing;
 
 namespace SharedCode
 {
@@ -362,6 +363,22 @@ namespace SharedCode
                 Log.Debug($"[Berts Agorithms] Town Hall Outer Edge Location: X:{target.Edge.X} Y:{target.Edge.Y}");
                 Log.Debug($"[Berts Agorithms] DistanceSq from Town Hall to closest outer red point: {target.EdgeToRedline.ToString("F1")}");
 
+#if DEBUG
+                //Get a screen Capture...
+                using (Bitmap canvas = Screenshot.Capture())
+                    {
+                        //Draw some stuff on it.
+                        Visualize.Target(canvas, Origin, 40, Color.White);
+                        Visualize.Target(canvas, target.Center, 40, Color.Orange);
+                        Visualize.Target(canvas, target.Edge, 40, Color.Red);
+
+                        //Save the Image to the Debug Folder...
+                        var d = DateTime.UtcNow;
+                        Screenshot.Save(canvas, $"CanSnipe TownHall {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
+                    }
+                    Log.Debug("[Berts Algorithms] Snipe Townhall Debug Image Saved!");
+#endif
+
                 if (target.EdgeToRedline < _townHallToRedZoneMinDistance)  // means there is no wall or building between us and the OUTSIDE of the Town Hall
                 {
                     return true;
@@ -427,7 +444,7 @@ namespace SharedCode
             return targets.Length;
         }
 
-        public static Target[] GenerateTargets(float minimumDistance, bool ignoreGold, bool ignoreElixir, CacheBehavior behavior = CacheBehavior.Default)
+        public static Target[] GenerateTargets(float minimumDistance, bool ignoreGold, bool ignoreElixir, CacheBehavior behavior = CacheBehavior.Default, bool outputDebugImage = false)
         {
             // Find all Collectors & storages just sitting around...
             List<Building> buildings = new List<Building>();
@@ -468,6 +485,72 @@ namespace SharedCode
 
                     targetList.Add(current);
                 }
+            }
+
+            if (outputDebugImage)
+            {
+                var d = DateTime.UtcNow;
+                var debugFileName = $"Human Barch {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}";
+                //Get a screen Capture of all targets we found...
+                using (Bitmap canvas = Screenshot.Capture())
+                {
+
+                    Screenshot.Save(canvas, $"{debugFileName}_1");
+
+                    foreach (var building in buildings)
+                    {
+                        var color = Color.White;
+                        if (building.GetType() == typeof(ElixirCollector) || building.GetType() == typeof(ElixirStorage))
+                        {
+                            color = Color.Violet;
+                        }
+                        if (building.GetType() == typeof(GoldMine) || building.GetType() == typeof(GoldStorage))
+                        {
+                            color = Color.Gold;
+                        }
+                        if (building.GetType() == typeof(DarkElixirDrill) || building.GetType() == typeof(DarkElixirStorage))
+                        {
+                            color = Color.Brown;
+                        }
+
+                        //Draw a target on each building.
+                        Visualize.Target(canvas, building.Location.GetCenter(), 40, color);
+
+                    }
+                    //Save the Image to the Debug Folder...
+                    Screenshot.Save(canvas, $"{debugFileName}_2");
+                }
+
+                //Get a screen Capture of all targets we found...
+                using (Bitmap canvas = Screenshot.Capture())
+                {
+                    foreach (var target in targetList)
+                    {
+                        var color = Color.White;
+                        if (target.TargetBuilding.GetType() == typeof(ElixirCollector) || target.TargetBuilding.GetType() == typeof(ElixirStorage))
+                        {
+                            color = Color.Violet;
+                        }
+                        if (target.TargetBuilding.GetType() == typeof(GoldMine) || target.TargetBuilding.GetType() == typeof(GoldStorage))
+                        {
+                            color = Color.Gold;
+                        }
+                        if (target.TargetBuilding.GetType() == typeof(DarkElixirDrill) || target.TargetBuilding.GetType() == typeof(DarkElixirStorage))
+                        {
+                            color = Color.Brown;
+                        }
+
+                        //Draw a target on each building.
+                        Visualize.Target(canvas, target.TargetBuilding.Location.GetCenter(), 40, color);
+                        Visualize.Target(canvas, target.DeployGrunts, 20, color);
+                        Visualize.Target(canvas, target.DeployRanged, 20, color);
+
+                    }
+                    //Save the Image to the Debug Folder...
+                    Screenshot.Save(canvas, $"{debugFileName}_3");
+                }
+
+                Log.Debug("[Berts Algorithms] Collector/Storage & Target Debug Images Saved!");
             }
 
             Log.Debug($"[Berts Algorithms] Found {targetList.Count} deploy points");
