@@ -746,7 +746,7 @@ namespace DarkDragonDeploy
             if (UserSettings.UseWarden && warden != null)
             {
                 Log.Info($"{Tag} Deploying Warden...");
-                foreach (var t in Deploy.AtPoint(warden, mainTarget.DeployRanged))
+                foreach (var t in Deploy.AtPoint(warden, mainTarget.DeployGrunts))
                     yield return t;
                 yield return Rand.Int(500, 1000); //Wait
 
