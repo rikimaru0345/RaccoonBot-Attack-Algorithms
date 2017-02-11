@@ -438,34 +438,77 @@ namespace SharedCode
             return target;
         }
 
-        public static int CountRipeCollectors(float minimumDistance, bool ignoreGold, bool ignoreElixir, CacheBehavior behavior = CacheBehavior.Default)
+        public static int CountRipeCollectors(float minimumDistance, bool ignoreGold, bool ignoreElixir, out double fillState, out double collectorLvl, CacheBehavior behavior = CacheBehavior.Default, bool activeBase = false)
         {
-            Target[] targets = GenerateTargets(minimumDistance, ignoreGold, ignoreElixir, behavior);
+            Target[] targets = GenerateTargets(minimumDistance, ignoreGold, ignoreElixir, out fillState, out collectorLvl, behavior, false, activeBase);
             return targets.Length;
         }
 
-        public static Target[] GenerateTargets(float minimumDistance, bool ignoreGold, bool ignoreElixir, CacheBehavior behavior = CacheBehavior.Default, bool outputDebugImage = false)
+        public static Target[] GenerateTargets(float minimumDistance, bool ignoreGold, bool ignoreElixir, out double avgFillstate, out double avgCollectorLvl, CacheBehavior behavior = CacheBehavior.Default, bool outputDebugImage = false, bool activeBase = false)
         {
             // Find all Collectors & storages just sitting around...
             List<Building> buildings = new List<Building>();
 
-            if (!ignoreGold)
+            //Get a list of Gold Mines.
+            List<GoldMine> goldMines = new List<GoldMine>();
+            goldMines.AddRange(GoldMine.Find(behavior));
+
+            //Get a list of Elixir Collectors.
+            List<ElixirCollector> elixirCollectors = new List<ElixirCollector>();
+            elixirCollectors.AddRange(ElixirCollector.Find(behavior));
+            avgFillstate = 0;
+
+            //Get the Average Fill State of all the Elixir Collectors - From this we can tell what percentage of the loot is in Collectors.
+            if (elixirCollectors.Count > 1)
             {
-                //User has Gold min set to ZERO - which means Dont include Gold Targets
-                buildings.AddRange(GoldMine.Find(behavior));
-                buildings.AddRange(GoldStorage.Find(behavior));
+                avgFillstate = elixirCollectors.Average(c => c.FillState);
             }
 
+            //Log the Average Fill State of aLL elixir Collectors...
+            Log.Debug($"[Berts Algorithms] - Fill State Average of ALL Elixir Collectors: {(avgFillstate * 10).ToString("F1")}");
+
+            if (!ignoreGold)
+            {
+                buildings.AddRange(goldMines);
+                if(activeBase)
+                    buildings.AddRange(GoldStorage.Find(behavior));
+            }
             if (!ignoreElixir)
             {
-                //User has Elixir min set to ZERO - which means Dont include Elixir Targets
-                buildings.AddRange(ElixirCollector.Find(behavior));
-                buildings.AddRange(ElixirStorage.Find(behavior));
+                buildings.AddRange(elixirCollectors);
+                if (activeBase)
+                    buildings.AddRange(ElixirStorage.Find(behavior));
+            }
+
+            //Determine the Average Collector Level.
+            avgCollectorLvl = 0;
+
+            if (ignoreGold && !ignoreElixir)
+            {
+                if (elixirCollectors.Count(c => c.Level.HasValue) > 1)
+                {
+                    avgCollectorLvl = elixirCollectors.Where(c => c.Level.HasValue).Average(c => (int)c.Level);
+                }
+            }
+            else if (ignoreElixir && !ignoreGold)
+            {
+                if (goldMines.Count(c => c.Level.HasValue) > 1)
+                {
+                    avgCollectorLvl = goldMines.Where(c => c.Level.HasValue).Average(c => (int)c.Level);
+                }
+            }
+            else if (!ignoreElixir && !ignoreGold)
+            {
+                if (buildings.Count(c => c.Level.HasValue) > 1)
+                {
+                    avgCollectorLvl = buildings.Where(c => c.Level.HasValue).Average(c => (int)c.Level);
+                }
             }
 
             //We always includ DarkElixir - Because who doesnt love dark Elixir?
             buildings.AddRange(DarkElixirDrill.Find(behavior));
-            buildings.AddRange(DarkElixirStorage.Find(behavior));
+            if (activeBase)
+                buildings.AddRange(DarkElixirStorage.Find(behavior));
 
             List<Target> targetList = new List<Target>();
 
@@ -475,88 +518,97 @@ namespace SharedCode
 
                 current.TargetBuilding = building;
                 current.Center = building.Location.GetCenter();
-                current.NearestRedLine = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(current.Center)).First();
+                current.Edge = Origin.PointOnLineAwayFromEnd(current.Center, 1.0f);
+                current.NearestRedLine = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(current.Edge)).First();
                 current.CenterToRedline = current.Center.DistanceSq(current.NearestRedLine);
-                Log.Debug($"[Berts Algorithms] DistanceSq from {current.Name} to red point: {current.CenterToRedline.ToString("F1")}");
                 if (current.CenterToRedline < minimumDistance)  //Compare distance to Redline to the Minimum acceptable distance Passed in
                 {
+                    Log.Debug($"[Berts Algorithms] Distance from {current.Name} to red point: {Math.Sqrt(current.CenterToRedline).ToString("F1")}, Min Distance: {Math.Sqrt(minimumDistance).ToString("F1")} - GO!");
                     current.DeployGrunts = current.Center.PointOnLineAwayFromEnd(current.NearestRedLine, _gruntDeployDistanceFromRedline); //Barbs & Goblins
                     current.DeployRanged = current.Center.PointOnLineAwayFromEnd(current.NearestRedLine, _rangedDeployDistanceFromRedline); //Archers & Minions
 
                     targetList.Add(current);
                 }
+                else {
+                    Log.Debug($"[Berts Algorithms] Distance from {current.Name} to red point: {Math.Sqrt(current.CenterToRedline).ToString("F1")}, Min Distance: {Math.Sqrt(minimumDistance).ToString("F1")} - TOO FAR!");
+                }
             }
 
             if (outputDebugImage)
             {
-                var d = DateTime.UtcNow;
-                var debugFileName = $"Human Barch {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}";
-                //Get a screen Capture of all targets we found...
-                using (Bitmap canvas = Screenshot.Capture())
-                {
-
-                    Screenshot.Save(canvas, $"{debugFileName}_1");
-
-                    foreach (var building in buildings)
-                    {
-                        var color = Color.White;
-                        if (building.GetType() == typeof(ElixirCollector) || building.GetType() == typeof(ElixirStorage))
-                        {
-                            color = Color.Violet;
-                        }
-                        if (building.GetType() == typeof(GoldMine) || building.GetType() == typeof(GoldStorage))
-                        {
-                            color = Color.Gold;
-                        }
-                        if (building.GetType() == typeof(DarkElixirDrill) || building.GetType() == typeof(DarkElixirStorage))
-                        {
-                            color = Color.Brown;
-                        }
-
-                        //Draw a target on each building.
-                        Visualize.Target(canvas, building.Location.GetCenter(), 40, color);
-
-                    }
-                    //Save the Image to the Debug Folder...
-                    Screenshot.Save(canvas, $"{debugFileName}_2");
-                }
-
-                //Get a screen Capture of all targets we found...
-                using (Bitmap canvas = Screenshot.Capture())
-                {
-                    foreach (var target in targetList)
-                    {
-                        var color = Color.White;
-                        if (target.TargetBuilding.GetType() == typeof(ElixirCollector) || target.TargetBuilding.GetType() == typeof(ElixirStorage))
-                        {
-                            color = Color.Violet;
-                        }
-                        if (target.TargetBuilding.GetType() == typeof(GoldMine) || target.TargetBuilding.GetType() == typeof(GoldStorage))
-                        {
-                            color = Color.Gold;
-                        }
-                        if (target.TargetBuilding.GetType() == typeof(DarkElixirDrill) || target.TargetBuilding.GetType() == typeof(DarkElixirStorage))
-                        {
-                            color = Color.Brown;
-                        }
-
-                        //Draw a target on each building.
-                        Visualize.Target(canvas, target.TargetBuilding.Location.GetCenter(), 40, color);
-                        Visualize.Target(canvas, target.DeployGrunts, 20, color);
-                        Visualize.Target(canvas, target.DeployRanged, 20, color);
-
-                    }
-                    //Save the Image to the Debug Folder...
-                    Screenshot.Save(canvas, $"{debugFileName}_3");
-                }
-
-                Log.Debug("[Berts Algorithms] Collector/Storage & Target Debug Images Saved!");
+                OutputDebugImage(buildings, targetList);
             }
-
-            Log.Debug($"[Berts Algorithms] Found {targetList.Count} deploy points");
 
             return targetList.ToArray();
         }
+
+        private static void OutputDebugImage(List<Building> buildings, List<Target> targetList) {
+
+            var d = DateTime.UtcNow;
+            var debugFileName = $"Human Barch {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}";
+            //Get a screen Capture of all targets we found...
+            using (Bitmap canvas = Screenshot.Capture())
+            {
+
+                Screenshot.Save(canvas, $"{debugFileName}_1");
+
+                foreach (var building in buildings)
+                {
+                    var color = Color.White;
+                    if (building.GetType() == typeof(ElixirCollector) || building.GetType() == typeof(ElixirStorage))
+                    {
+                        color = Color.Violet;
+                    }
+                    if (building.GetType() == typeof(GoldMine) || building.GetType() == typeof(GoldStorage))
+                    {
+                        color = Color.Gold;
+                    }
+                    if (building.GetType() == typeof(DarkElixirDrill) || building.GetType() == typeof(DarkElixirStorage))
+                    {
+                        color = Color.Brown;
+                    }
+
+                    //Draw a target on each building.
+                    Visualize.Target(canvas, building.Location.GetCenter(), 40, color);
+
+                }
+                //Save the Image to the Debug Folder...
+                Screenshot.Save(canvas, $"{debugFileName}_2");
+            }
+
+            //Get a screen Capture of all targets we found...
+            using (Bitmap canvas = Screenshot.Capture())
+            {
+                foreach (var target in targetList)
+                {
+                    var color = Color.White;
+                    if (target.TargetBuilding.GetType() == typeof(ElixirCollector) || target.TargetBuilding.GetType() == typeof(ElixirStorage))
+                    {
+                        color = Color.Violet;
+                    }
+                    if (target.TargetBuilding.GetType() == typeof(GoldMine) || target.TargetBuilding.GetType() == typeof(GoldStorage))
+                    {
+                        color = Color.Gold;
+                    }
+                    if (target.TargetBuilding.GetType() == typeof(DarkElixirDrill) || target.TargetBuilding.GetType() == typeof(DarkElixirStorage))
+                    {
+                        color = Color.Brown;
+                    }
+
+                    //Draw a target on each building.
+                    Visualize.Target(canvas, target.TargetBuilding.Location.GetCenter(), 40, color);
+                    Visualize.Target(canvas, target.DeployGrunts, 20, color);
+                    Visualize.Target(canvas, target.DeployRanged, 20, color);
+
+                }
+                //Save the Image to the Debug Folder...
+                Screenshot.Save(canvas, $"{debugFileName}_3");
+            }
+
+            Log.Debug("[Berts Algorithms] Collector/Storage & Target Debug Images Saved!");
+        }
+
+
 
         public static Target TargetDarkElixirStorage(CacheBehavior behavior = CacheBehavior.Default)
         {

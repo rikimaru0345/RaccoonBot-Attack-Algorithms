@@ -4,26 +4,18 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{ACD14A07-6378-4DF9-A214-44EA49757533}</ProjectGuid>
+    <ProjectGuid>{8650C069-420F-405A-82B6-7EFA5E64E6AD}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>HumanBarchDeploy</RootNamespace>
-    <AssemblyName>HumanBarchDeploy</AssemblyName>
+    <RootNamespace>CustomAlgorithmSettings</RootNamespace>
+    <AssemblyName>CustomAlgorithmSettings</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <SccProjectName>
-    </SccProjectName>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccProvider>
-    </SccProvider>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>..\..\CoC Bot.Main\bin\Debug\Addons\</OutputPath>
+    <OutputPath>..\..\CoC Bot.Main\bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>x86</PlatformTarget>
@@ -31,30 +23,32 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <OutputPath>..\..\CoC Bot.Main\bin\Release\Addons\</OutputPath>
+    <OutputPath>..\..\CoC Bot.Main\bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x86</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>0</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CoC Bot.Core">
-      <HintPath>..\..\CoC Bot.Main\Resources\CoC Bot.Core.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
       <Private>False</Private>
     </Reference>
     <Reference Include="Raccoon Bot">
-      <HintPath>..\..\CoC Bot.Main\Resources\Raccoon Bot.exe</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Shared">
-      <HintPath>..\..\CoC Bot.Main\Resources\Shared.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -63,18 +57,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HumanLikeAlgorithms.cs" />
-    <Compile Include="HumanBarchDeploy.cs" />
+    <Compile Include="Models\AlgorithmSetting.cs" />
+    <Compile Include="Models\Setting.cs" />
+    <Compile Include="Models\SettingOption.cs" />
+    <Compile Include="Models\AlgorithmSettings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Rand.cs" />
-    <Compile Include="Target.cs" />
+    <Compile Include="SettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SettingsForm.Designer.cs">
+      <DependentUpon>SettingsForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SettingsController.cs" />
+    <Compile Include="Enums.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CustomAlgorithmSettings\CustomAlgorithmSettings.csproj">
-      <Project>{8650c069-420f-405a-82b6-7efa5e64e6ad}</Project>
-      <Name>CustomAlgorithmSettings</Name>
-      <Private>False</Private>
-    </ProjectReference>
+    <EmbeddedResource Include="SettingsForm.resx">
+      <DependentUpon>SettingsForm.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -1,16 +1,15 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("HumanBarchDeploy")]
+[assembly: AssemblyTitle("CustomAlgorithmSettings")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("HumanBarchDeploy")]
-[assembly: AssemblyCopyright("Copyright © BertMcCrackin, exclusively for the use with RaccoonBot and the RaccoonBot UG. 2016")]
+[assembly: AssemblyCompany("RaccoonBot UG.")]
+[assembly: AssemblyProduct("CustomAlgorithmSettings")]
+[assembly: AssemblyCopyright("Copyright © BertMcCrackin, exclusively for the use with RaccoonBot and the RaccoonBot UG. 2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +19,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("A77F23EC-CEA7-45E4-93E6-378DE83D11C6")]
+[assembly: Guid("8650c069-420f-405a-82b6-7efa5e64e6ad")]
 
 // Version information for an assembly consists of the following four values:
 //
@@ -32,5 +31,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.0.5")]
-[assembly: AssemblyFileVersion("1.0.0.5")]
+[assembly: AssemblyVersion("1.0.0.1")]
+[assembly: AssemblyFileVersion("1.0.0.1")]
