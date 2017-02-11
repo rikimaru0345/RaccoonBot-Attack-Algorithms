@@ -34,15 +34,19 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CoC Bot.Core">
+      <HintPath>..\..\CoC Bot.Main\Resources\CoC Bot.Core.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json">
+      <HintPath>..\..\CoC Bot.Main\Resources\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Raccoon Bot">
+      <HintPath>..\..\CoC Bot.Main\Resources\Raccoon Bot.exe</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Shared">
+      <HintPath>..\..\CoC Bot.Main\Resources\Shared.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
