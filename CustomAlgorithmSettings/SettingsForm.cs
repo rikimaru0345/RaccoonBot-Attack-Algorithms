@@ -18,6 +18,12 @@ namespace CustomAlgorithmSettings
         }
         #endregion
 
+        #region Public Properties
+
+        public string AlgorithmName { get; set; }
+
+        #endregion
+
         #region ********** Set up and show the Form **********
 
         internal void ShowSettingsForm(AlgorithmSettings settings) {
@@ -26,6 +32,7 @@ namespace CustomAlgorithmSettings
             _settings = settings;
 
             //Set the Name Label, and the Titlebar.
+            AlgorithmName = _settings.AlgorithmName;
             lblAlgorithmName.Text = _settings.AlgorithmName;
             this.Text = $"{_settings.AlgorithmName} Settings";
 
@@ -292,12 +299,6 @@ namespace CustomAlgorithmSettings
             System.Diagnostics.Process.Start(_settings.AlgorithmDescriptionURL);
         }
         #endregion
-
-        #region ********** Save Settings on Form Close **********
-        private void SettingsForm_FormClosed(object sender, FormClosedEventArgs e)
-        {
-            SettingsController.Instance.SaveCustomUserSettings(_settings.AlgorithmName);
-        }
-        #endregion
+        
     }
 }

@@ -9,11 +9,6 @@ using System.Reflection;
 
 namespace CustomAlgorithmSettings
 {
-    //TODO - implemented this as a singleton, so one instance could always be accessable from the Settings Form,
-    // or From the Algorithm at Runtime.
-    // This would probably change if integrated into the real bot API.
-
-
     /// <summary>
     /// Singleton Controller Class that Manages the Instances of all Custom Algorithm Settings.
     /// </summary>
@@ -52,9 +47,8 @@ namespace CustomAlgorithmSettings
         #endregion
 
         #region ********** Private Properties **********
-        //TODO - can probably refactor this away if this gets added to framework...
-        //Contains a record of which Algorithms have been Initialized, and which ones have had their window's displayed... 
-        private ConcurrentDictionary<string, bool> AlgorithmConfigStatus = new ConcurrentDictionary<string, bool>();
+        //Contains a Reference to which windows are currently being shown...
+        private ConcurrentDictionary<string, SettingsForm> AlgorithmWindowStatus = new ConcurrentDictionary<string, SettingsForm>();
 
         #endregion
 
@@ -68,19 +62,49 @@ namespace CustomAlgorithmSettings
         {
             try
             {
-                var keyExists = AlgorithmConfigStatus.ContainsKey(algorithmName + "_window");
+                var keyExists = AlgorithmWindowStatus.ContainsKey(algorithmName);
 
                 if (!keyExists)
                 {
                     //Show the Settings Form.
                     var settingsForm = new SettingsForm();
+                    settingsForm.FormClosed += SettingsForm_FormClosed;
                     settingsForm.ShowSettingsForm(AllAlgorithmSettings[algorithmName]);
-                    AlgorithmConfigStatus.TryAdd(algorithmName + "_window", true);
+                    AlgorithmWindowStatus.TryAdd(algorithmName, settingsForm);
+                }
+                else
+                {
+                    //Set Focus on the Existing Form.
+                    SettingsForm settingsForm;
+                    var success = AlgorithmWindowStatus.TryGetValue(algorithmName, out settingsForm);
+
+                    if (success)
+                    {
+                        if (!settingsForm.Focused)
+                        {
+                            settingsForm.Focus();
+                        }
+                    }
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show(ex.Message + Environment.NewLine +  ex.StackTrace);
+                Log.Error($"[Custom Algorithm Settings]Error Showing Settings Window: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
+            }
+        }
+
+        private void SettingsForm_FormClosed(object sender, System.Windows.Forms.FormClosedEventArgs e)
+        {
+            SettingsForm senderForm = (SettingsForm)sender;
+
+            SettingsForm settingsForm;
+            var success = AlgorithmWindowStatus.TryRemove(senderForm.AlgorithmName, out settingsForm);
+
+            if (success)
+            {
+                //Dispose of the Form
+                settingsForm.Dispose();
+                settingsForm = null;
             }
         }
 
@@ -91,25 +115,12 @@ namespace CustomAlgorithmSettings
         public void DefineCustomAlgorithmSettings(AlgorithmSettings algorithmSettings)
         {
             var algorithmName = algorithmSettings.AlgorithmName;
-            try
-            {
-                var keyExists = AlgorithmConfigStatus.ContainsKey(algorithmName + "_init");
 
-                if (!keyExists)
-                {
-                    //Called from each Algorithm at startup, to Define the Custom Settings for each algorithm.
-                    AllAlgorithmSettings.TryAdd(algorithmName, algorithmSettings);
+            //Called from each Algorithm at startup, to Define the Custom Settings for each algorithm.
+            AllAlgorithmSettings.TryAdd(algorithmName, algorithmSettings);
 
-                    //Try to Load and override any settings the user has specified previously.
-                    LoadCustomUserSettings(algorithmName);
-
-                    AlgorithmConfigStatus.TryAdd(algorithmName + "_init", true);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Windows.Forms.MessageBox.Show(ex.Message + Environment.NewLine + ex.StackTrace);
-            }
+            //Try to Load and override any settings the user has specified previously.
+            LoadCustomUserSettings(algorithmName);
         }
 
         /// <summary>
@@ -217,7 +228,11 @@ namespace CustomAlgorithmSettings
         #endregion
 
         #region ********** Saving Custom Settings **********
-        internal void SaveCustomUserSettings(string algorithmName)
+        /// <summary>
+        /// Saves the Custom algorithm Settings in the "Settings" Folder.
+        /// </summary>
+        /// <param name="algorithmName"></param>
+        public void SaveAlgorithmSettings(string algorithmName)
         {
             try
             {

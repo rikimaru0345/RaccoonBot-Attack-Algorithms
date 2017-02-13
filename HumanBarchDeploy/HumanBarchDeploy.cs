@@ -15,18 +15,39 @@ namespace HumanBarchDeploy
     [AttackAlgorithm("HumanBarchDeploy", "Deploys Barch units close to collectors in a believeable Human pattern.  (So that a review of the attack does not look like a BOT)")]
     internal class HumanBarchDeploy : BaseAttack
     {
-
         #region Constructor
         public HumanBarchDeploy(Opponent opponent) : base(opponent)
         {
-            //TODO - HACK - Move this somwehere in the Bot Framework
-            //On load of the Plug-In DLL, Get the Default Settings for the Algorithm.
-            SettingsController.Instance.DefineCustomAlgorithmSettings(DefineSettings());
         }
         #endregion
 
+        #region Algorithm Name Override
+        /// <summary>
+        /// Returns the Name of this algorithm.
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            return algorithmName;
+        }
+        #endregion
+
+        #region Private Member varaibles
+
+        const string Tag = "[Human Barch]";
+        const string algorithmName = "Human Barch Deploy";
+        private float _thDeployRadius = 1.2f;
+        private float _collectorDeployRadius = 1.4f;
+
+        private bool IgnoreGold { get; set; }
+
+        private bool IgnoreElixir { get; set; }
+
+        #endregion
+
+        #region Custom Algorithm Settings
+
         #region CurrentSetting
-        //TODO - This would be good to move to the Framework Somewhere.
         /// <summary>
         /// Returns a Custom Setting's Current Value.  The setting Name must be defined in the DefineSettings Function for this algorithm.
         /// </summary>
@@ -39,7 +60,6 @@ namespace HumanBarchDeploy
         #endregion
 
         #region AllCurrentSettings
-        //TODO - This would be good to move to the Framework Somewhere
         /// <summary>
         /// Returns a list of all current Algorithm Setting Values.
         /// </summary>
@@ -54,17 +74,16 @@ namespace HumanBarchDeploy
         #endregion
 
         #region DefineSettings
-        //TODO - Should be a function in base class that can be overridden()
         /// <summary>
         /// Allows any Algorithm Dev to specify their own Settings.
         /// </summary>
         /// <returns>A Template of Settings to Dynamically build the UI for - so the Bot User can customize the settings.</returns>
-        public AlgorithmSettings DefineSettings()
+        internal static AlgorithmSettings DefineSettings()
         {
             var settings = new AlgorithmSettings();
 
             settings.AlgorithmName = algorithmName;
-            settings.AlgorithmDescriptionURL = "http://www.google.com";
+            settings.AlgorithmDescriptionURL = "http://www.raccoonbot.com/forum/topic/22848-human-barch-deploy/";
 
             var debugMode = new AlgorithmSetting("Debug Mode", "When on, Debug Images will be written out for each attack showing what the algorithm is seeing.", 1, SettingType.Global);
             debugMode.PossibleValues.Add(new SettingOption("Off", 0));
@@ -133,24 +152,49 @@ namespace HumanBarchDeploy
         }
         #endregion
 
-        public override string ToString()
+        #region Algorithm Bot Framework Hooks
+        /// <summary>
+        /// Called from the Bot Framework when the Algorithm is first loaded into memory.
+        /// </summary>
+        public static void OnInit()
         {
-            //TODO - HACK - should be placed somewhere inside the bot - to show settings window, only when Algorithm is Selected.
-
-            //For now, Show the Settings Dialog for this Algorithm. Happens Every time the Listbox is shown. (Multiple times actually)...
-            SettingsController.Instance.ShowSettingsWindow(algorithmName);
-
-            return algorithmName;
+            //On load of the Plug-In DLL, Define the Default Settings for the Algorithm.
+            SettingsController.Instance.DefineCustomAlgorithmSettings(DefineSettings());
         }
 
-        const string Tag = "[Human Barch]";
-        const string algorithmName = "Human Barch Deploy";
-        private float _thDeployRadius = 1.2f;
-        private float _collectorDeployRadius = 1.4f;
+        /// <summary>
+        /// Called by the Bot Framework when This algorithm Row is selected in Attack Options tab
+        /// to check to see whether or not this algorithm has Advanced Settings/Options
+        /// </summary>
+        /// <returns>returns true if there are advanced settings.</returns>
+        public static bool ShowAdvancedSettingsButton()
+        {
+            return true;
+        }
 
-        private bool IgnoreGold { get; set; }
+        /// <summary>
+        /// Called when the Advanced button is clicked in the Bot UI with this algorithm Selected.
+        /// </summary>
+        public static void OnAdvancedSettingsButtonClicked()
+        {
+            //Show the Settings Dialog for this Algorithm.
+            SettingsController.Instance.ShowSettingsWindow(algorithmName);
+        }
 
-        private bool IgnoreElixir { get; set; }
+        /// <summary>
+        /// Called from the Bot Framework when the bot is closing.
+        /// </summary>
+        public static void OnShutdown()
+        {
+            //Save settings for this algorithm.
+            SettingsController.Instance.SaveAlgorithmSettings(algorithmName);
+        }
+
+        #endregion
+
+        #endregion
+
+        #region Should Accept Function
 
         public override double ShouldAccept()
         {
@@ -238,7 +282,6 @@ namespace HumanBarchDeploy
             return returnVal;
         }
 
-
         #region PassesBasicAcceptRequirements
 
         bool PassesBasicAcceptRequirements()
@@ -279,8 +322,9 @@ namespace HumanBarchDeploy
         }
         #endregion
 
+        #endregion
 
-
+        #region Attack Routine
         public override IEnumerable<int> AttackRoutine()
         {
             Log.Info($"{Tag}Deploy start - V.{Assembly.GetExecutingAssembly().GetName().Version.ToString()}");
@@ -579,6 +623,8 @@ namespace HumanBarchDeploy
 
             //We broke out of the attack loop - allow attack to end how specified in the General Bot Settings... 
         }
+
+        #endregion
     }
 }
 

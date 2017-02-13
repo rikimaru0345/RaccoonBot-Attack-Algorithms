@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SettingsForm));
             this.lnkDescription = new System.Windows.Forms.LinkLabel();
             this.lblAlgorithmName = new System.Windows.Forms.Label();
             this.flpGlobal = new System.Windows.Forms.FlowLayoutPanel();
@@ -148,6 +149,7 @@
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.lblAlgorithmName);
             this.Controls.Add(this.lnkDescription);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.MaximumSize = new System.Drawing.Size(489, 298);
             this.MinimumSize = new System.Drawing.Size(489, 298);
@@ -155,7 +157,7 @@
             this.ShowInTaskbar = false;
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "[Algorithm Name] Settings";
+            this.Text = "Advanced Settings";
             this.tabControl1.ResumeLayout(false);
             this.tabGlobal.ResumeLayout(false);
             this.tabActive.ResumeLayout(false);
