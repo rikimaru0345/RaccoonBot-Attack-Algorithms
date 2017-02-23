@@ -215,13 +215,13 @@ namespace HumanBarchDeploy
             //If ignoring Gold, Reduce the min required targets by half.
             if (IgnoreGold)
             {
-                Log.Info($"{Tag} - Ignoring Gold Storages/Collectors");
+                Log.Info($"{Tag}Ignoring Gold Storages/Collectors");
             }
 
             //If ignoring Gold, Reduce the min required targets by half.
             if (IgnoreElixir)
             {
-                Log.Info($"{Tag} - Ignoring Elixir Storages/Collectors");
+                Log.Info($"{Tag}Ignoring Elixir Storages/Collectors");
             }
 
             var acceptableTargetRange = CurrentSetting("Acceptable Target Range");
@@ -246,7 +246,7 @@ namespace HumanBarchDeploy
                 }
                 else
                 {
-                    Log.Info($"{Tag} Avg Collector Fillstate Accepted: {(avgfillState * 10).ToString("F1")} > {minFillLevel}.");
+                    Log.Info($"{Tag}Avg Collector Fillstate Accepted: {(avgfillState * 10).ToString("F1")} > {minFillLevel}.");
                 }
 
                 var minAvgCollectorLevel = CurrentSetting("Min Average Collector Level");
@@ -258,13 +258,13 @@ namespace HumanBarchDeploy
                 }
                 else
                 {
-                    Log.Info($"{Tag} Avg Collector Level Accepted: {avgCollectorLvel.ToString("F1")} > {minAvgCollectorLevel}.");
+                    Log.Info($"{Tag}Avg Collector Level Accepted: {avgCollectorLvel.ToString("F1")} > {minAvgCollectorLevel}.");
                 }
             }
             else {
                 //Log some info about the AvgCollectorLevel and Fill State
-                Log.Info($"{Tag} Avg Collector Fillstate: {(avgfillState * 10).ToString("F1")}");
-                Log.Info($"{Tag} Avg Collector Level: {avgCollectorLvel.ToString("F1")}");
+                Log.Info($"{Tag}Avg Collector Fillstate: {(avgfillState * 10).ToString("F1")}");
+                Log.Info($"{Tag}Avg Collector Level: {avgCollectorLvel.ToString("F1")}");
             }
 
             Log.Debug($"{Tag}{ripeCollectors} targets found outside walls. Min={minTargets}");
@@ -332,7 +332,7 @@ namespace HumanBarchDeploy
             //Write out all the Current Algorithm Settings...
             foreach (var setting in AllCurrentSettings)
             {
-                Log.Debug($"{Tag} '{setting.Name}' Value: {setting.Value}");
+                Log.Debug($"{Tag}'{setting.Name}' Value: {setting.Value}");
             }
 
             var waveCounter = 1;
@@ -358,6 +358,7 @@ namespace HumanBarchDeploy
             var acceptableTargetRange = CurrentSetting("Acceptable Target Range");
             acceptableTargetRange = acceptableTargetRange * acceptableTargetRange;
             var activeBase = !Opponent.IsDead();
+            var clanCastleDeployed = false;
 
             // Loop until surrender conditions are met
             while (true)
@@ -380,7 +381,7 @@ namespace HumanBarchDeploy
                 bool kingDeployed = false;
 
                 //Write out all the unit pretty names we found...
-                Log.Debug($"{Tag} Deployable Troops (wave {waveCounter}): {ToUnitString(allElements)}");
+                Log.Debug($"{Tag}Deployable Troops (wave {waveCounter}): {ToUnitString(allElements)}");
 
                 var outputDebugImage = (CurrentSetting("Debug Mode") == 1);
                 double avgFillState = 0;
@@ -397,7 +398,7 @@ namespace HumanBarchDeploy
 
                 if (collectorCount < 1)
                 {
-                    Log.Info($"{Tag}Surrendering - Collectors Remaining = {collectorCount}");
+                    Log.Info($"{Tag}Collectors Remaining = {collectorCount}");
 
                     // Wait for the wave to finish
                     Log.Info($"{Tag}Deploy done. Waiting to finish...");
@@ -419,7 +420,7 @@ namespace HumanBarchDeploy
                     if (gruntUnits.Any())
                     {
                         var gruntsToDeploy = Rand.Int(meleCount - 1, meleCount + 1);
-                        Log.Info($"{Tag}+ TH Snipe Dead {gruntsToDeploy} Grunts Near: X:{townHallTarget.DeployGrunts.X} Y:{townHallTarget.DeployGrunts.Y}");
+                        Log.Info($"{Tag}TH Snipe Dead {gruntsToDeploy} Grunts Near: X:{townHallTarget.DeployGrunts.X} Y:{townHallTarget.DeployGrunts.Y}");
                         foreach (var t in Deploy.AtPoints(gruntUnits.FilterTypesByCount(), townHallTarget.DeployGrunts.RandomPointsInArea(_thDeployRadius, gruntsToDeploy), 1))
                             yield return t;
                         yield return Rand.Int(300, 500); //Wait 
@@ -428,10 +429,29 @@ namespace HumanBarchDeploy
                     if (rangedUnits.Any())
                     {
                         var rangedToDeploy = Rand.Int(rangedCount - 1, rangedCount + 1);
-                        Log.Info($"{Tag}+ TH Snipe Dead {rangedToDeploy} Ranged Near: X:{townHallTarget.DeployRanged.X} Y:{townHallTarget.DeployRanged.Y}");
+                        Log.Info($"{Tag}TH Snipe Dead {rangedToDeploy} Ranged Near: X:{townHallTarget.DeployRanged.X} Y:{townHallTarget.DeployRanged.Y}");
                         foreach (var t in Deploy.AtPoints(rangedUnits.FilterTypesByCount(), townHallTarget.DeployRanged.RandomPointsInArea(_thDeployRadius, rangedToDeploy), 1))
                             yield return t;
                         yield return Rand.Int(300, 500); //Wait 
+                    }
+
+                    if (UserSettings.UseClanTroops)
+                    {
+                        var clanCastle = allElements.FirstOrDefault(u => u.ElementType == DeployElementType.ClanTroops);
+
+                        clanCastleDeployed = true;
+
+                        if (clanCastle?.Count > 0)
+                        {
+                            Log.Info($"{Tag}Deploying Clan Castle Near Town Hall");
+                            foreach (var t in Deploy.AtPoint(clanCastle, townHallTarget.DeployRanged, clanCastle.Count))
+                                yield return t;
+                            
+                        }
+                        else
+                        {
+                            Log.Info($"{Tag}No Clan Castle Troops found to Deploy on Town Hall...");
+                        }
                     }
 
                     //Only do this once.
@@ -446,14 +466,14 @@ namespace HumanBarchDeploy
 
                 for (int i = 0; i < groupedTargets.Count; i++)
                 {
-                    if (groupedTargets[i].Length > largestSetIndex)
+                    if (groupedTargets[i].Length > largestSetCount)
                     {
                         secondLargestSetCount = largestSetCount;
                         secondLargestSetIndex = largestSetIndex;
                         largestSetCount = groupedTargets[i].Length;
                         largestSetIndex = i;
                     }
-                    else if (groupedTargets[i].Length > secondLargestSetIndex)
+                    else if (groupedTargets[i].Length > secondLargestSetCount)
                     {
                         secondLargestSetCount = groupedTargets[i].Length;
                         secondLargestSetIndex = i;
@@ -473,7 +493,7 @@ namespace HumanBarchDeploy
                         //First Deploy tanks
                         if (tankUnits.Any())
                         {
-                            Log.Info($"{Tag}Deploying {tankCount} Tank Units on {groupedTargets[p][i].Name} {p}.{i}");
+                            Log.Debug($"{Tag}Deploying {tankCount} Tank Units on {groupedTargets[p][i].Name} {p + 1}-{i}");
                             foreach (var t in Deploy.AtPoints(tankUnits.FilterTypesByCount(), gruntDeployPoint.RandomPointsInArea(_collectorDeployRadius, tankCount), 1))
                                 yield return t;
                             yield return Rand.Int(10, 40); //Wait
@@ -499,7 +519,7 @@ namespace HumanBarchDeploy
                                 decreaseFactor = (int)Math.Ceiling(i / 2d);
 
                             var gruntsAtCollector = (Rand.Int(meleCount - 1, meleCount + 1) - decreaseFactor);
-                            Log.Info($"{Tag}Deploying {gruntsAtCollector} Ground Units on {groupedTargets[p][i].Name} {p}.{i}");
+                            Log.Debug($"{Tag}Deploying {gruntsAtCollector} Ground Units on {groupedTargets[p][i].Name} {p + 1}-{i}");
                             foreach (var t in Deploy.AtPoints(gruntUnits.FilterTypesByCount(), gruntDeployPoint.RandomPointsInArea(_collectorDeployRadius, gruntsAtCollector), 1))
                                 yield return t;
                             yield return Rand.Int(10, 40); //Wait
@@ -511,11 +531,27 @@ namespace HumanBarchDeploy
                         //We are currently deploying to the largest set of Targets - AND its a set of 2 or more.
                         //Preferrably Drop the Queen on this set (2nd Target in the set.) - if she is not available drop the king here.
 
+                        if (!clanCastleDeployed && UserSettings.UseClanTroops)
+                        {
+                            var clanCastle = allElements.FirstOrDefault(u => u.ElementType == DeployElementType.ClanTroops);
+
+                            if (clanCastle?.Count > 0)
+                            {
+                                Log.Info($"{Tag}Deploying Clan Castle on Largest set of Targets: {largestSetCount} targets.");
+                                foreach (var t in Deploy.AtPoint(clanCastle, groupedTargets[p][1].DeployRanged, clanCastle.Count))
+                                    yield return t;
+                            }
+                            else {
+                                Log.Info($"{Tag}No Clan Castle Troops found to Deploy...");
+                            }
+                            clanCastleDeployed = true;
+                        }
+
                         if (UserSettings.UseQueen && queen.Any())
                         {
                             yield return Rand.Int(90, 100); //Wait before dropping Queen
 
-                            Log.Info($"{Tag}Deploying Queen at: X:{groupedTargets[p][1].DeployRanged.X} Y:{groupedTargets[p][1].DeployRanged.Y}");
+                            Log.Info($"{Tag}Deploying Queen on largest set of targets: {largestSetCount} targets.");
                             foreach (var t in Deploy.AtPoint(queen[0], groupedTargets[p][1].DeployRanged))
                                 yield return t;
                             yield return Rand.Int(900, 1000); //Wait
@@ -525,7 +561,7 @@ namespace HumanBarchDeploy
                         {
                             yield return Rand.Int(90, 100); //Wait before dropping King
 
-                            Log.Info($"{Tag}Deploying King at: X:{groupedTargets[p][1].DeployGrunts.X} Y:{groupedTargets[p][1].DeployGrunts.Y}");
+                            Log.Info($"{Tag}Deploying King on largest set of targets: {largestSetCount} targets.");
                             foreach (var t in Deploy.AtPoint(king[0], groupedTargets[p][1].DeployGrunts))
                                 yield return t;
                             yield return Rand.Int(900, 1000); //Wait
@@ -541,7 +577,7 @@ namespace HumanBarchDeploy
 
                         if (UserSettings.UseKing && king.Any() && !kingDeployed)
                         {
-                            Log.Info($"{Tag}Deploying King at: X:{groupedTargets[p][1].DeployGrunts.X} Y:{groupedTargets[p][1].DeployGrunts.Y}");
+                            Log.Info($"{Tag}Deploying King on 2nd largest set of targets: {secondLargestSetCount} targets.");
                             foreach (var t in Deploy.AtPoint(king[0], groupedTargets[p][1].DeployGrunts))
                                 yield return t;
                             yield return Rand.Int(900, 1000); //Wait
@@ -553,6 +589,7 @@ namespace HumanBarchDeploy
                     if (watchHeroes)
                     {
                         //Watch Heros and Hit ability when they get low.
+                        Log.Info($"{Tag}Watching heros to activate abilities when health gets Low.");
                         Deploy.WatchHeroes(allHeroes);
                         watchHeroes = false; //Only do this once through the loop.
                     }
@@ -575,7 +612,7 @@ namespace HumanBarchDeploy
                                 decreaseFactor = (int)Math.Ceiling(i / 2d);
 
                             var rangedAtCollector = (Rand.Int(rangedCount - 1, rangedCount + 1) - decreaseFactor);
-                            Log.Info($"{Tag} Deploying {rangedAtCollector} Ranged Units on {groupedTargets[p][i].Name} {p}.{i}");
+                            Log.Debug($"{Tag}Deploying {rangedAtCollector} Ranged Units on {groupedTargets[p][i].Name} {p + 1}-{i}");
                             foreach (var t in Deploy.AtPoints(rangedUnits.FilterTypesByCount(), rangedDeployPoint.RandomPointsInArea(_collectorDeployRadius, rangedAtCollector), 1))
                                 yield return t;
                             yield return Rand.Int(40, 50); //Wait
@@ -607,7 +644,7 @@ namespace HumanBarchDeploy
                 {
                     if (newGold + newElixir < 3000 * collectorCount)
                     {
-                        Log.Info($"{Tag}Surrendering because gained resources isn't enough");
+                        Log.Info($"{Tag}Stopping Troop Deployment because gained resources isn't enough");
                         break;
                     }
                     preLoot = postLoot;
@@ -616,7 +653,7 @@ namespace HumanBarchDeploy
                 waveCounter++;
             }
 
-            //Last thing Call ZapDarkElixterDrills... This uses the Clashbot settings for when to zap, and what level drills to zap.
+            //Last thing Call ZapDarkElixterDrills... This uses the Bot settings for when to zap, and what level drills to zap.
             Log.Info($"{Tag}Checking to see if we can Zap DE Drills...");
             foreach (var t in ZapDarkElixirDrills())
                 yield return t;
