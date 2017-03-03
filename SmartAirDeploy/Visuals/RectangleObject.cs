@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartAirDeploy.Visuals
+namespace LavaLoonDeploy.Visuals
 {
     class RectangleObject : VisualObject
     {

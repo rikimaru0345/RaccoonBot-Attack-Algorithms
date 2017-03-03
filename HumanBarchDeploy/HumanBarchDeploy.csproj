@@ -44,10 +44,6 @@
       <HintPath>..\..\CoC Bot.Main\Resources\CoC Bot.Core.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Raccoon Bot">
-      <HintPath>..\..\CoC Bot.Main\Resources\Raccoon Bot.exe</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Shared">
       <HintPath>..\..\CoC Bot.Main\Resources\Shared.dll</HintPath>
       <Private>False</Private>
@@ -70,6 +66,11 @@
     <Compile Include="Target.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\CoC Bot.Main\CoC Bot.Main.csproj">
+      <Project>{56c3730e-d493-414a-a478-7704d6391159}</Project>
+      <Name>CoC Bot.Main</Name>
+      <Private>False</Private>
+    </ProjectReference>
     <ProjectReference Include="..\CustomAlgorithmSettings\CustomAlgorithmSettings.csproj">
       <Project>{8650c069-420f-405a-82b6-7efa5e64e6ad}</Project>
       <Name>CustomAlgorithmSettings</Name>

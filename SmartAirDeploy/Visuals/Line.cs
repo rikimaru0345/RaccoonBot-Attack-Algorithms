@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using CoC_Bot.API;
 
-namespace SmartAirDeploy
+namespace LavaLoonDeploy
 {
     class Line
     {

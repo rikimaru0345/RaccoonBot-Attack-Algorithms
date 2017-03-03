@@ -41,10 +41,6 @@
       <HintPath>..\..\CoC Bot.Main\Resources\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Raccoon Bot">
-      <HintPath>..\..\CoC Bot.Main\Resources\Raccoon Bot.exe</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Shared">
       <HintPath>..\..\CoC Bot.Main\Resources\Shared.dll</HintPath>
       <Private>False</Private>
@@ -79,6 +75,13 @@
     <EmbeddedResource Include="SettingsForm.resx">
       <DependentUpon>SettingsForm.cs</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CoC Bot.Main\CoC Bot.Main.csproj">
+      <Project>{56c3730e-d493-414a-a478-7704d6391159}</Project>
+      <Name>CoC Bot.Main</Name>
+      <Private>False</Private>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
