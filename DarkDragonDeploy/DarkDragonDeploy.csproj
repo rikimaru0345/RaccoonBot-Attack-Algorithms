@@ -69,6 +69,12 @@
     <Compile Include="Rand.cs" />
     <Compile Include="Target.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CustomAlgorithmSettings\CustomAlgorithmSettings.csproj">
+      <Project>{8650c069-420f-405a-82b6-7efa5e64e6ad}</Project>
+      <Name>CustomAlgorithmSettings</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>
