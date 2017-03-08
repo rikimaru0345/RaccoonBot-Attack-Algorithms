@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using CoC_Bot;
 using CoC_Bot.API;
 
-namespace SmartAirDeploy.Visuals
+namespace LavaLoonDeploy.Visuals
 {
     class PointsObject : VisualObject
     {
@@ -43,7 +43,6 @@ namespace SmartAirDeploy.Visuals
 
             foreach (var point in Points)
             {
-
                 graphics.FillEllipse(new SolidBrush(ArgbColor), point.X - whOver2, point.Y - whOver2, widthAndHeight, widthAndHeight);
             }
                

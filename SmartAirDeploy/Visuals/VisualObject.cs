@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartAirDeploy.Visuals
+namespace LavaLoonDeploy.Visuals
 {
     abstract class VisualObject
     {

@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Windows;
 using CoC_Bot.API;
 using CoC_Bot.API.Buildings;
 using CoC_Bot.Internals;
 
-namespace SmartAirDeploy
+namespace LavaLoonDeploy
 {
     static class SmartAirDeployHelpers
     {
@@ -130,5 +132,54 @@ namespace SmartAirDeploy
             return false;
         }
 
-    }
+        /// <summary>
+        /// Chops line into 'count' points
+        /// </summary>
+        /// <param name="a">Startpoint of the line to chop</param>
+        /// <param name="b">Endpoint of the line to chop</param>
+        /// <param name="count"></param>
+        /// <returns>A list of points which represent a line</returns>
+        public static List<PointFT> ChopLine(Vector a, Vector b, int count = 50)
+        {
+            var results = new List<PointFT>();
+            Vector ab = b - a;
+
+            for(int i=0; i < count; i++)
+            {
+                var t = (1.0 / count) * i;
+
+                var point = a + ab * t;
+                var pointFT = new PointFT((int) point.X, (int) point.Y);
+                results.Add(pointFT);
+            }
+
+            return results;
+        }
+
+		/// <summary>
+		/// Chops line into 'count' points
+		/// </summary>
+		/// <param name="a">Startpoint of the line to chop</param>
+		/// <param name="b">Endpoint of the line to chop</param>
+		/// <param name="count"></param>
+		/// <returns>A list of points which represent a line</returns>
+		public static PointF[] ChopLine(PointF start, PointF end, int count)
+		{
+			Vector[] results = new Vector[count];
+
+			Vector a = new Vector(start.X, start.Y);
+			Vector b = new Vector(end.X, end.Y);
+
+			var ab = b - a;
+			var segmentLength = 1.0 / count;
+
+			var segmentVector = ab * segmentLength;
+
+			for (int i = 0; i < count; i++)
+				results[i] = a + segmentVector * i;
+			
+			return results.Select(v => new PointF((float)v.X, (float)v.Y)).ToArray();
+		}
+
+	}
 }

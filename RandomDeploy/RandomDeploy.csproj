@@ -51,16 +51,18 @@
       <HintPath>..\..\CoC Bot.Main\Resources\CoC Bot.Core.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Raccoon Bot, Version=1.19.0.2465, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\CoC Bot.Main\Resources\Raccoon Bot.exe</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Shared">
       <HintPath>..\..\CoC Bot.Main\Resources\Shared.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CoC Bot.Main\CoC Bot.Main.csproj">
+      <Project>{56c3730e-d493-414a-a478-7704d6391159}</Project>
+      <Name>CoC Bot.Main</Name>
+      <Private>False</Private>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -155,6 +155,12 @@ namespace CustomAlgorithmSettings
                 Log.Info($"[Custom Algorithm Settings] Loading {algorithmName} Settings.");
 
                 var settingsPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), $@"Settings\{algorithmName}.json");
+	            if (!File.Exists(settingsPath))
+	            {
+		            Log.Info("[Custom Algorithm Settings] No settings exist yet (first start?)");
+		            return;
+	            }
+
                 var settingsJson = File.ReadAllText(settingsPath);
 
                 List<Setting> settings = JsonConvert.DeserializeObject<List<Setting>>(settingsJson);
