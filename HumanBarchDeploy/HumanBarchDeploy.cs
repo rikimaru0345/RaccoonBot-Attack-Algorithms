@@ -449,11 +449,11 @@ namespace HumanBarchDeploy
                     tankCount = tankUnits.TotalUnitCount() / totalTargetCount;
 
                     //Make sure if there are less than 1 per target, but still more than zero. set to 1.
-                    if (tankCount == 0 && tankUnits.TotalUnitCount() > 0)
+                    if (tankCount <= 0 && tankUnits.TotalUnitCount() > 0)
                         tankCount = 1;
-                    if (rangedCount == 0 && rangedUnits.TotalUnitCount() > 0)
+                    if (rangedCount <= 0 && rangedUnits.TotalUnitCount() > 0)
                         rangedCount = 1;
-                    if (meleCount == 0 && gruntUnits.TotalUnitCount() > 0)
+                    if (meleCount <= 0 && gruntUnits.TotalUnitCount() > 0)
                         meleCount = 1;
                 }
 
@@ -463,18 +463,16 @@ namespace HumanBarchDeploy
                     //If there are Teslas around it, oh well. we only spent 9-12 units  of each type trying.
                     if (gruntUnits.Any())
                     {
-                        var gruntsToDeploy = Rand.Int(meleCount - 1, meleCount + 1);
-                        Log.Info($"{Tag}TH Snipe Dead {gruntsToDeploy} Grunts Near: X:{townHallTarget.DeployGrunts.X} Y:{townHallTarget.DeployGrunts.Y}");
-                        foreach (var t in Deploy.AtPoints(gruntUnits.FilterTypesByCount(), townHallTarget.DeployGrunts.RandomPointsInArea(_thDeployRadius, gruntsToDeploy), 1))
+                        Log.Info($"{Tag}TH Snipe Dead {meleCount} Grunts Near: X:{townHallTarget.DeployGrunts.X} Y:{townHallTarget.DeployGrunts.Y}");
+                        foreach (var t in Deploy.AtPoints(gruntUnits.FilterTypesByCount(), townHallTarget.DeployGrunts.RandomPointsInArea(_thDeployRadius, meleCount), 1))
                             yield return t;
                         yield return Rand.Int(300, 500); //Wait 
                     }
 
                     if (rangedUnits.Any())
                     {
-                        var rangedToDeploy = Rand.Int(rangedCount - 1, rangedCount + 1);
-                        Log.Info($"{Tag}TH Snipe Dead {rangedToDeploy} Ranged Near: X:{townHallTarget.DeployRanged.X} Y:{townHallTarget.DeployRanged.Y}");
-                        foreach (var t in Deploy.AtPoints(rangedUnits.FilterTypesByCount(), townHallTarget.DeployRanged.RandomPointsInArea(_thDeployRadius, rangedToDeploy), 1))
+                        Log.Info($"{Tag}TH Snipe Dead {rangedCount} Ranged Near: X:{townHallTarget.DeployRanged.X} Y:{townHallTarget.DeployRanged.Y}");
+                        foreach (var t in Deploy.AtPoints(rangedUnits.FilterTypesByCount(), townHallTarget.DeployRanged.RandomPointsInArea(_thDeployRadius, rangedCount), 1))
                             yield return t;
                         yield return Rand.Int(300, 500); //Wait 
                     }
@@ -558,13 +556,8 @@ namespace HumanBarchDeploy
                         //Next Deploy Ground troops
                         if (gruntUnits.Any())
                         {
-                            int decreaseFactor = 0;
-                            if (i > 0)
-                                decreaseFactor = (int)Math.Ceiling(i / 2d);
-
-                            var gruntsAtCollector = (Rand.Int(meleCount - 1, meleCount + 1) - decreaseFactor);
-                            Log.Debug($"{Tag}Deploying {gruntsAtCollector} Ground Units on {groupedTargets[p][i].Name} {p + 1}-{i}");
-                            foreach (var t in Deploy.AtPoints(gruntUnits.FilterTypesByCount(), gruntDeployPoint.RandomPointsInArea(_collectorDeployRadius, gruntsAtCollector), 1))
+                            Log.Debug($"{Tag}Deploying {meleCount} Ground Units on {groupedTargets[p][i].Name} {p + 1}-{i}");
+                            foreach (var t in Deploy.AtPoints(gruntUnits.FilterTypesByCount(), gruntDeployPoint.RandomPointsInArea(_collectorDeployRadius, meleCount), 1))
                                 yield return t;
                             yield return Rand.Int(10, 40); //Wait
                         }
@@ -662,13 +655,8 @@ namespace HumanBarchDeploy
 
                         if (rangedUnits.Any())
                         {
-                            int decreaseFactor = 0;
-                            if (i > 0)
-                                decreaseFactor = (int)Math.Ceiling(i / 2d);
-
-                            var rangedAtCollector = (Rand.Int(rangedCount - 1, rangedCount + 1) - decreaseFactor);
-                            Log.Debug($"{Tag}Deploying {rangedAtCollector} Ranged Units on {groupedTargets[p][i].Name} {p + 1}-{i}");
-                            foreach (var t in Deploy.AtPoints(rangedUnits.FilterTypesByCount(), rangedDeployPoint.RandomPointsInArea(_collectorDeployRadius, rangedAtCollector), 1))
+                            Log.Debug($"{Tag}Deploying {rangedCount} Ranged Units on {groupedTargets[p][i].Name} {p + 1}-{i}");
+                            foreach (var t in Deploy.AtPoints(rangedUnits.FilterTypesByCount(), rangedDeployPoint.RandomPointsInArea(_collectorDeployRadius, rangedCount), 1))
                                 yield return t;
                             yield return Rand.Int(40, 50); //Wait
                         }
