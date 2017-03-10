@@ -7,6 +7,7 @@ using SharedCode;
 using System.Drawing;
 using System.Text;
 using System.Reflection;
+using CustomAlgorithmSettings;
 
 [assembly: Addon("DarkDragonDeploy Addon", "Contains the Dark Dragon deploy algorithm", "Bert")]
 
@@ -15,13 +16,17 @@ namespace DarkDragonDeploy
     [AttackAlgorithm("DarkDragonDeploy", "Deploys Dragons and use Zap Quake To Maximize chance of Getting Dark Elixir Storage.")]
     internal class DarkDragonDeploy : BaseAttack
     {
-
-        public DarkDragonDeploy(Opponent opponent) : base(opponent) { }
+        #region Constructor
+        public DarkDragonDeploy(Opponent opponent) : base(opponent)
+        {
+        }
+        #endregion
 
         #region Private Member Variables
 
         List<DeployElement> deployElements = null;
         const string Tag = "[Dark Dragon]";
+        const string algorithmName = "Dark Dragon Deploy";
         Target mainTarget;
         PointFT[] deFunnelPoints;
         PointFT[] balloonFunnelPoints;
@@ -35,21 +40,142 @@ namespace DarkDragonDeploy
         #region Name of Deploy
         public override string ToString()
         {
-            return "Dark Dragon Deploy";
+            return algorithmName;
         }
         #endregion
+
+
+        #region CurrentSetting
+        /// <summary>
+        /// Returns a Custom Setting's Current Value.  The setting Name must be defined in the DefineSettings Function for this algorithm.
+        /// </summary>
+        /// <param name="settingName">Name of the setting to Get</param>
+        /// <returns>Current Value of the setting.</returns>
+        internal int CurrentSetting(string settingName)
+        {
+            return SettingsController.Instance.GetSetting(algorithmName, settingName, Opponent.IsDead());
+        }
+        #endregion
+
+        #region AllCurrentSettings
+        /// <summary>
+        /// Returns a list of all current Algorithm Setting Values.
+        /// </summary>
+        /// <returns>Current Value of the all settings for this algorithm.</returns>
+        internal List<AlgorithmSetting> AllCurrentSettings
+        {
+            get
+            {
+                return SettingsController.Instance.AllAlgorithmSettings[algorithmName].AllSettings;
+            }
+        }
+        #endregion
+
+        #region DefineSettings
+        //Should be public Override AlgorithmSettings DefineSettings()
+        internal static AlgorithmSettings DefineSettings()
+        {
+            var settings = new AlgorithmSettings();
+
+            settings.AlgorithmName = algorithmName;
+            settings.AlgorithmDescriptionURL = "http://www.raccoonbot.com/forum/topic/18641-dark-dragon-deploy/";
+
+            //Global Settings
+            var lightningSpellLevel = new AlgorithmSetting("Lightning Spell Level", "Specify the level of your Lightning Spells. (Used to determine if you can zap an air defense without the need for a quake)", 6, SettingType.Global);
+            lightningSpellLevel.PossibleValues.Add(new SettingOption("1", 1));
+            lightningSpellLevel.PossibleValues.Add(new SettingOption("2", 2));
+            lightningSpellLevel.PossibleValues.Add(new SettingOption("3", 3));
+            lightningSpellLevel.PossibleValues.Add(new SettingOption("4", 4));
+            lightningSpellLevel.PossibleValues.Add(new SettingOption("5", 5));
+            lightningSpellLevel.PossibleValues.Add(new SettingOption("6", 6));
+            lightningSpellLevel.PossibleValues.Add(new SettingOption("7", 7));
+            settings.DefineSetting(lightningSpellLevel);
+
+            var debugMode = new AlgorithmSetting("Debug Mode", "When on, Debug Images will be written out for each attack showing what the algorithm is seeing.", 0, SettingType.Global);
+            debugMode.PossibleValues.Add(new SettingOption("Off", 0));
+            debugMode.PossibleValues.Add(new SettingOption("On", 1));
+            settings.DefineSetting(debugMode);
+
+            //Active and Dead Settings.
+            var trophyPushSetting = new AlgorithmSetting("Trophy Push Mode", "When turned on, the algorithm will target the TownHall instead of the Dark Elixir Sorage.", 0, SettingType.ActiveAndDead);
+            trophyPushSetting.PossibleValues.Add(new SettingOption("DE Storage (Farming)", 0));
+            trophyPushSetting.PossibleValues.Add(new SettingOption("Town Hall (Trophy Push)", 1));
+            settings.DefineSetting(trophyPushSetting);
+
+            var funnelDragons = new AlgorithmSetting("Funnel Dragons", "Specify the Number of Dragons to use on each side of the funnel. (1 or 2)", 1, SettingType.ActiveAndDead);
+            funnelDragons.PossibleValues.Add(new SettingOption("1", 1));
+            funnelDragons.PossibleValues.Add(new SettingOption("2", 2));
+            settings.DefineSetting(funnelDragons);
+
+            //Show These ONLY when Trophy Push Mode is on
+            var minTrophysForWin = new AlgorithmSetting("Min Trophys For Win", "Specify the Minimum acceptable Number of 'Trophys to Win' a base must have in order to attack.", 10, SettingType.ActiveAndDead);
+            minTrophysForWin.MinValue = 0;
+            minTrophysForWin.MaxValue = 100;
+            minTrophysForWin.HideInUiWhen.Add(new SettingOption("Trophy Push Mode", 0));
+            settings.DefineSetting(minTrophysForWin);
+
+            var maxTrophysForLoss = new AlgorithmSetting("Max Trophys For Loss", "Specify the Maximum acceptable Number of 'Trophys to Loose' a base can have in order to attack.", 10, SettingType.ActiveAndDead);
+            maxTrophysForLoss.MinValue = 0;
+            maxTrophysForLoss.MaxValue = 100;
+            maxTrophysForLoss.HideInUiWhen.Add(new SettingOption("Trophy Push Mode", 0));
+            settings.DefineSetting(maxTrophysForLoss);
+
+            var maxBaseAirStrengthScore = new AlgorithmSetting("Max Base Air Strength Score", "Specify the Maximum acceptable Air Base Strength Score a base can have in order to attack.", 54, SettingType.ActiveAndDead);
+            maxBaseAirStrengthScore.MinValue = 0;
+            maxBaseAirStrengthScore.MaxValue = 65;
+            maxBaseAirStrengthScore.HideInUiWhen.Add(new SettingOption("Trophy Push Mode", 0));
+            settings.DefineSetting(maxBaseAirStrengthScore);
+
+            return settings;
+        }
+        #endregion
+
+        #region Algorithm Bot Framework Hooks
+        /// <summary>
+        /// Called from the Bot Framework when the Algorithm is first loaded into memory.
+        /// </summary>
+        public static void OnInit()
+        {
+            //On load of the Plug-In DLL, Define the Default Settings for the Algorithm.
+            SettingsController.Instance.DefineCustomAlgorithmSettings(DefineSettings());
+        }
+
+        /// <summary>
+        /// Called by the Bot Framework when This algorithm Row is selected in Attack Options tab
+        /// to check to see whether or not this algorithm has Advanced Settings/Options
+        /// </summary>
+        /// <returns>returns true if there are advanced settings.</returns>
+        public static bool ShowAdvancedSettingsButton()
+        {
+            return true;
+        }
+
+        /// <summary>
+        /// Called when the Advanced button is clicked in the Bot UI with this algorithm Selected.
+        /// </summary>
+        public static void OnAdvancedSettingsButtonClicked()
+        {
+            //Show the Settings Dialog for this Algorithm.
+            SettingsController.Instance.ShowSettingsWindow(algorithmName);
+        }
+
+        /// <summary>
+        /// Called from the Bot Framework when the bot is closing.
+        /// </summary>
+        public static void OnShutdown()
+        {
+            //Save settings for this algorithm.
+            SettingsController.Instance.SaveAlgorithmSettings(algorithmName);
+        }
+
+        #endregion
+
 
         #region *******  ShouldAccept  *******
         public override double ShouldAccept()
         {
             if (!PassesBasicAcceptRequirements())
                 return 0;
-
-            //TODO - Check which kind of army we have trained. Calculate an Air Offense Score, and Ground Offense Score.
-
-            //TODO - Find all Base Defenses, and calculate an AIR and Ground Defensive Score.  
-
-            //TODO - From Collector/Storage fill levels, determine if loot is in Collectors, or Storages... (Will help to decide which alg to use.)
 
             //Verify that the Attacking Army contains at least 6 Dragons.
             deployElements = Deploy.GetTroops();
@@ -86,10 +212,63 @@ namespace DarkDragonDeploy
                 Log.Warning($"{Tag} Warning! Full Army! - The Bot does not scroll through choices when deploying units... If your army has more than 11 unit types, The bot will not see them all, and cannot deploy everything!)");
             }
 
-            //Write out all the unit pretty names we found...
-            Log.Debug($"{Tag} Deployable Troops: {ToUnitString(deployElements)}");
+            //Get the Trophy Counts.
+            int trophiesWin = 0, trophiesDefeat = -1;
+            try
+            {
+                Opponent.GetLootableTrophies(out trophiesWin, out trophiesDefeat);
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"{Tag} Error getting trophy values... - {ex.Message} - {ex.StackTrace}");
+            }
 
-            Log.Info($"{Tag} Base meets minimum Requirements... Checking DE Storage/Air Defense Locations...");
+            //Only Check Trophies, if we are in Tropy Push Mode:
+            if (CurrentSetting("Trophy Push Mode") == 1)
+            {
+                //Only test if the value was read successfully, and is over Zero...
+                if (trophiesWin > 0)
+                {
+                    if (trophiesWin < CurrentSetting("Min Trophys For Win"))
+                    {
+                        Log.Warning($"{Tag} Minimum Trophies For Win Requirement not met. Actual:{trophiesWin} Needed:{CurrentSetting("Min Trophys For Win")} - Skipping");
+                        return 0;
+                    }
+                }
+                else
+                {
+                    Log.Error($"{Tag} Trophies for Win Value could not be read. - Skipping");
+                    return 0;
+                }
+
+                if (trophiesDefeat < -1)
+                {
+                    if (trophiesDefeat < -CurrentSetting("Max Trophys For Loss"))
+                    {
+                        Log.Warning($"{Tag} Maximum Trophies For Defeat Requirement exceeded. Actual:{trophiesDefeat} Max Allowed:-{CurrentSetting("Max Trophys For Loss")} - Skipping");
+                        return 0;
+                    }
+                }
+                else
+                {
+                    Log.Error($"{Tag} Trophies for Defeat Value could not be read. - Skipping");
+                    return 0;
+                }
+            }
+
+            Log.Info($"{Tag} Trophies if we Win: {trophiesWin}, Trophies if we lose: {trophiesDefeat}");
+
+            //Lastly check Maximum Airbase score value.
+            var totalAirDefenseScore = CalculateAirDefenseScore(lightningCount, earthquakeCount);
+
+            Log.Info($"{Tag} Air Defense Score calculated at: {totalAirDefenseScore}.");
+            if (totalAirDefenseScore > CurrentSetting("Max Base Air Strength Score"))
+            {
+                Log.Warning($"{Tag} Max Base Air Strength Score Requirement exceeded. Actual:{totalAirDefenseScore} Max Allowed:{CurrentSetting("Max Base Air Strength Score")} - Skipping");
+                return 0;
+            }
+
+            Log.Info($"{Tag} Base meets all minimum Requirements...");
 
 
             //Check to see if we can find ANY air Defenses... (Could Skip here if not all are found.)
@@ -100,24 +279,105 @@ namespace DarkDragonDeploy
                 Log.Warning($"{Tag} Could not find ANY air defenses - Skipping");
                 return 0;
             }
-
-            //For now just log the Trophy counts...
-            //TODO - Later we will want to use these to see if the base is worth attacking when we are in Trophy mode...
-            try
-            {
-                int trophiesWin, trophiesDefeat = -1;
-                if (Opponent.GetLootableTrophies(out trophiesWin, out trophiesDefeat))
-                    Log.Info($"Trophies if we Win: {trophiesWin}, Trophies if we lose: {trophiesDefeat}");
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Error getting trophy values... - {ex.Message} - {ex.StackTrace}");
-            }
-
             Log.Info($"{Tag} Found {airDefensesTest.Length} Air Defense Buildings.. Continuing Attack..");
+
+            //Write out all the unit pretty names we found...
+            Log.Debug($"{Tag} Deployable Troops: {ToUnitString(deployElements)}");
+
+            //Write out all the Current Algorithm Settings...
+            foreach (var setting in AllCurrentSettings)
+            {
+                Log.Debug($"{Tag} '{setting.Name}' Value: {setting.Value}");
+            }
 
             //We are Good to attack!
             return 1;
+        }
+
+
+        /// <summary>
+        /// Returns an arbitrary score value based on how many buildings it finds.
+        /// Maximums:  TH5 can return Max value of 8.1, TH6: 12.3, TH7: 19.9, TH8: 29.2, TH9: 41.3, TH10: 53.3, TH11: 62.7
+        /// Buildings are weighted: Air Defense 50%, Archer Tower 35%, Wizard Tower 15%.
+        /// XBows, not accounted for - cannot find, dont know whether they are on air or ground etc.
+        /// Infernos - TODO - not accounted for yet... (Could be factored in later.)
+        /// </summary>
+        /// <returns></returns>
+        private double CalculateAirDefenseScore(int lightningCount, int earthquakeCount)
+        {
+            //Score adjusts to which ADs we intend to zap. (if only 1, then Subtract One AD, or if two, subtract the two highest ones etc.)
+            var airDefenses = AirDefense.Find();
+            var lightningHP = GetMyLightningHP();
+
+            //Trophy Push Mode - Sort the Array to take out the Highest Level ADs First
+            airDefenses = airDefenses.OrderByDescending(c => c.Level ?? 0).ToArray();
+            List<AirDefense> adsLeft = new List<AirDefense>();
+
+            foreach (var ad in airDefenses)
+            {
+                var requiredLightning = 0;
+                var requiredEarthquake = 0;
+
+                if (ad.MaxHitPoints > (lightningHP * 2))
+                {
+                    requiredLightning = 2;
+                    requiredEarthquake = 1; //Assuming 1eq will always take finish off an AD.
+
+                    //If we dont have any earthquakes, use a 3rd lightning instead.
+                    if (earthquakeCount < 1)
+                    {
+                        requiredLightning++;
+                        requiredEarthquake--;
+                    }
+                }
+                else
+                {
+                    requiredLightning = 2;
+                    requiredEarthquake = 0;
+                }
+
+                if (lightningCount >= requiredLightning && earthquakeCount >= requiredEarthquake)
+                {
+                    //we can take out this AD.
+                    lightningCount = lightningCount - requiredLightning;
+                    earthquakeCount = earthquakeCount - requiredEarthquake;
+                }
+                else
+                {
+                    //We dont have enough EQ or Lightning to take out the AD, include in Score.
+                    adsLeft.Add(ad);
+                }
+
+            }
+
+            var adScore = adsLeft.Sum(ad => ad.Level * .5) ?? 0;
+            var atScore = ArcherTower.Find().Sum(at => at.Level * .35) ?? 0;
+            var wtScore = WizardTower.Find().Sum(wt => wt.Level * .15) ?? 0;
+
+            return adScore + atScore + wtScore;
+        }
+
+        private int GetMyLightningHP()
+        {
+            switch (CurrentSetting("Lightning Spell Level"))
+            {
+                case 1:
+                    return 300;
+                case 2:
+                    return 330;
+                case 3:
+                    return 360;
+                case 4:
+                    return 390;
+                case 5:
+                    return 450;
+                case 6:
+                    return 510;
+                case 7:
+                    return 570;
+                default:
+                    return 300;
+            }
         }
         #endregion
 
@@ -142,10 +402,11 @@ namespace DarkDragonDeploy
                 yield break;
             }
 
-#if DEBUG
-            //During Debug, Create an Image of the base including what we found.
-            CreateDebugImages();
-#endif
+            if (CurrentSetting("Debug Mode") == 1)
+            {
+                //During Debug, Create an Image of the base including what we found.
+                CreateDebugImages();
+            }
 
             //##### Attack Phase #####
 
@@ -200,7 +461,7 @@ namespace DarkDragonDeploy
                 yield return t;
 
             //STEP 9 ******* Now that all heros have been deployed begin watching them and activate ability etc. *******
-            WatchHeros();
+            WatchDeployedHeros();
 
             //TODO Deploy Baby Drags on the Back End - on Air D's 3 & 4'
 
@@ -289,7 +550,7 @@ namespace DarkDragonDeploy
             EagleArtillery eagle = EagleArtillery.Find(CacheBehavior.Default);
 
             var d = DateTime.UtcNow;
-            var debugFileName = $"Dragon Deploy {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}";
+            var debugFileName = $"{algorithmName} {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}";
 
             using (Bitmap canvas = Screenshot.Capture())
             {
@@ -375,10 +636,10 @@ namespace DarkDragonDeploy
         IEnumerable<int> FindMainTarget()
         {
 
-            if ((UserSettings.DeadSearch.MinDarkElixir == 0 && Opponent.IsDead()) || (UserSettings.ActiveSearch.MinDarkElixir == 0 && !Opponent.IsDead()))
+            if (CurrentSetting("Trophy Push Mode") == 1)
             {
                 //Trophy Push Mode!
-                Log.Warning($"{Tag} Min Dark Elixir Setting = 0 - Trophy Push Mode - Target Town Hall Instead of Dark Elixir Storage.");
+                Log.Warning($"{Tag} Trophy Push Mode - Target Town Hall Instead of Dark Elixir Storage.");
 
                 var townHall = TownHall.Find(); //start with Cached.. usually always works.
 
@@ -438,14 +699,15 @@ namespace DarkDragonDeploy
         #endregion
 
         #region TargetPoint
-        private void TargetPoint(PointFT point) {
+        private void TargetPoint(PointFT point)
+        {
             mainTarget = new Target();
 
             mainTarget.ValidTarget = true;
             mainTarget.Center = point;
 
             mainTarget.Edge = point;
-            mainTarget.NearestRedLine = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(mainTarget.Edge)).First();
+            mainTarget.NearestRedLine = HumanLikeAlgorithms.AllPoints.OrderBy(p => p.DistanceSq(mainTarget.Edge)).First();
             mainTarget.EdgeToRedline = mainTarget.Edge.DistanceSq(mainTarget.NearestRedLine);
 
             //Fill the DeployGrunts Property with where out main dragon force should go.
@@ -573,23 +835,25 @@ namespace DarkDragonDeploy
         {
             var dragons = deployElements.FirstOrDefault(u => u.Id == DeployId.Dragon);
 
-            if (dragons?.Count > 2)
+            var funnelDragons = CurrentSetting("Funnel Dragons");
+
+            if (dragons?.Count > funnelDragons * 2)
             {
-                Log.Info($"{Tag} Deploying two Dragons to Create a funnel to direct main force at Dark Elixer Storage...");
+                Log.Info($"{Tag} Deploying {funnelDragons * 2} Dragons to Create a funnel to direct main force at Dark Elixer Storage...");
                 //Deploy two dragons - one at each funel point.
-                foreach (var t in Deploy.AtPoint(dragons, deFunnelPoints[0], 1))
+                foreach (var t in Deploy.AtPoint(dragons, deFunnelPoints[0], funnelDragons))
                     yield return t;
 
                 yield return Rand.Int(500, 1500);
 
-                foreach (var t in Deploy.AtPoint(dragons, deFunnelPoints[1], 1))
+                foreach (var t in Deploy.AtPoint(dragons, deFunnelPoints[1], funnelDragons))
                     yield return t;
 
                 yield return Rand.Int(1000, 1500); // pause for a little while... - Long enought for dragons to begin to create the funnel.
             }
             else
             {
-                Log.Error($"{Tag} Two Dragons to create the funnel do not exist. {dragons?.Count ?? 0} exists...");
+                Log.Error($"{Tag} {funnelDragons * 2} Dragons to create each side of the funnel do not exist.  A total of {dragons?.Count ?? 0} Dragons exist...");
             }
 
             if (dragons?.Count > 0)
@@ -773,9 +1037,9 @@ namespace DarkDragonDeploy
         }
         #endregion
 
-        #region WatchHeros
+        #region WatchDeployedHeros
 
-        void WatchHeros()
+        void WatchDeployedHeros()
         {
             var allHeroes = deployElements.Where(u => u.IsHero).ToList();
 

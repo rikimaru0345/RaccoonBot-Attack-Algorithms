@@ -20,6 +20,8 @@ namespace SharedCode
         private readonly static float _rangedDeployDistanceFromRedline = 1.5f;
         private readonly static float _DEStorageCenterToOuterEdgeDistance = 1f;
 
+        private static PointFT[] GreenPoints = GenerateGreenPoints();
+
         /// <summary>
         /// Takes a single Object of whatever type and returns it wrapped in an IEnumerable.
         /// </summary>
@@ -91,7 +93,8 @@ namespace SharedCode
         /// </summary>
         /// <param name="remainingElements">List to add the items to</param>
         /// <param name="item">Deployment Element to add if it is not used up.</param>
-        public static void RecountAndAddIfAny(this List<DeployElement> remainingElements, DeployElement item) {
+        public static void RecountAndAddIfAny(this List<DeployElement> remainingElements, DeployElement item)
+        {
             if (remainingElements == null)
                 remainingElements = new List<DeployElement>();
 
@@ -99,7 +102,8 @@ namespace SharedCode
 
             item.Recount();
 
-            if (item.Count > 0) {
+            if (item.Count > 0)
+            {
                 remainingElements.Add(item);
             }
         }
@@ -147,7 +151,7 @@ namespace SharedCode
 
             for (int i = 0; i < numberOfPointsToReturn; i++)
             {
-                PointFT newPoint = SafePoint(Rand.Float(minX, maxX),  Rand.Float(minY, maxY));
+                PointFT newPoint = SafePoint(Rand.Float(minX, maxX), Rand.Float(minY, maxY));
                 retval[i] = newPoint;
             }
 
@@ -316,7 +320,20 @@ namespace SharedCode
             return groupedTargets;
         }
 
-
+        /// <summary>
+        /// Returns the total Unit count across all different Unit types in the list.
+        /// </summary>
+        /// <param name="deployElements"></param>
+        /// <returns></returns>
+        public static int TotalUnitCount(this IEnumerable<DeployElement> deployElements)
+        {
+            var totalCount = 0;
+            foreach (var item in deployElements)
+            {
+                totalCount += item.Count;
+            }
+            return totalCount;
+        }
 
         /// <summary>
         /// Filters the List of Deploy Elements, and returns the single type of unit that has the largest count currently.
@@ -346,46 +363,6 @@ namespace SharedCode
             }
 
             return filteredList.ToArray();
-        }
-
-        /// <summary>
-        /// Tests to see whether or not we can easily reach the town hall to snipe it or not.
-        /// </summary>
-        /// <param name="townHall"></param>
-        /// <returns></returns>
-        public static bool CanSnipe(this TownHall townHall)
-        {
-            if (townHall != null)
-            {
-                Target target = townHall.GetTownHallPoints();
-
-                Log.Debug($"[Berts Agorithms] Town Hall Center Location: X:{target.Center.X} Y:{target.Center.Y}");
-                Log.Debug($"[Berts Agorithms] Town Hall Outer Edge Location: X:{target.Edge.X} Y:{target.Edge.Y}");
-                Log.Debug($"[Berts Agorithms] DistanceSq from Town Hall to closest outer red point: {target.EdgeToRedline.ToString("F1")}");
-
-#if DEBUG
-                //Get a screen Capture...
-                using (Bitmap canvas = Screenshot.Capture())
-                    {
-                        //Draw some stuff on it.
-                        Visualize.Target(canvas, Origin, 40, Color.White);
-                        Visualize.Target(canvas, target.Center, 40, Color.Orange);
-                        Visualize.Target(canvas, target.Edge, 40, Color.Red);
-
-                        //Save the Image to the Debug Folder...
-                        var d = DateTime.UtcNow;
-                        Screenshot.Save(canvas, $"CanSnipe TownHall {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
-                    }
-                    Log.Debug("[Berts Algorithms] Snipe Townhall Debug Image Saved!");
-#endif
-
-                if (target.EdgeToRedline < _townHallToRedZoneMinDistance)  // means there is no wall or building between us and the OUTSIDE of the Town Hall
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         public static Target GetSnipeDeployPoints(this TownHall townHall)
@@ -431,41 +408,84 @@ namespace SharedCode
             target.Center = th.Location.GetCenter(); //Center of the Town Hall that was found.
             target.Edge = Origin.PointOnLineAwayFromEnd(target.Center, _townHallCenterToOuterEdgeDistance);
 
-            target.NearestRedLine = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(target.Edge)).First();
+            target.NearestRedLine = AllPoints.OrderBy(p => p.DistanceSq(target.Edge)).First();
             target.EdgeToRedline = target.Edge.DistanceSq(target.NearestRedLine);
             target.TargetBuilding = th;
 
             return target;
         }
 
-        public static int CountRipeCollectors(float minimumDistance, bool ignoreGold, bool ignoreElixir, CacheBehavior behavior = CacheBehavior.Default)
+        public static int CountRipeCollectors(string algorithmName, float minimumDistance, bool ignoreGold, bool ignoreElixir, out double fillState, out double collectorLvl, CacheBehavior behavior = CacheBehavior.Default, bool activeBase = false)
         {
-            Target[] targets = GenerateTargets(minimumDistance, ignoreGold, ignoreElixir, behavior);
+            Target[] targets = GenerateTargets(algorithmName, minimumDistance, ignoreGold, ignoreElixir, out fillState, out collectorLvl, behavior, false, activeBase);
             return targets.Length;
         }
 
-        public static Target[] GenerateTargets(float minimumDistance, bool ignoreGold, bool ignoreElixir, CacheBehavior behavior = CacheBehavior.Default, bool outputDebugImage = false)
+        public static Target[] GenerateTargets(string algorithmName, float minimumDistance, bool ignoreGold, bool ignoreElixir, out double avgFillstate, out double avgCollectorLvl, CacheBehavior behavior = CacheBehavior.Default, bool outputDebugImage = false, bool activeBase = false)
         {
             // Find all Collectors & storages just sitting around...
             List<Building> buildings = new List<Building>();
 
-            if (!ignoreGold)
+            //Get a list of Gold Mines.
+            List<GoldMine> goldMines = new List<GoldMine>();
+            goldMines.AddRange(GoldMine.Find(behavior));
+
+            //Get a list of Elixir Collectors.
+            List<ElixirCollector> elixirCollectors = new List<ElixirCollector>();
+            elixirCollectors.AddRange(ElixirCollector.Find(behavior));
+            avgFillstate = 0;
+
+            //Get the Average Fill State of all the Elixir Collectors - From this we can tell what percentage of the loot is in Collectors.
+            if (elixirCollectors.Count > 1)
             {
-                //User has Gold min set to ZERO - which means Dont include Gold Targets
-                buildings.AddRange(GoldMine.Find(behavior));
-                buildings.AddRange(GoldStorage.Find(behavior));
+                avgFillstate = elixirCollectors.Average(c => c.FillState);
             }
 
+            //Log the Average Fill State of aLL elixir Collectors...
+            Log.Debug($"[Berts Algorithms] - Fill State Average of ALL Elixir Collectors: {(avgFillstate * 10).ToString("F1")}");
+
+            if (!ignoreGold)
+            {
+                buildings.AddRange(goldMines);
+                if (activeBase)
+                    buildings.AddRange(GoldStorage.Find(behavior));
+            }
             if (!ignoreElixir)
             {
-                //User has Elixir min set to ZERO - which means Dont include Elixir Targets
-                buildings.AddRange(ElixirCollector.Find(behavior));
-                buildings.AddRange(ElixirStorage.Find(behavior));
+                buildings.AddRange(elixirCollectors);
+                if (activeBase)
+                    buildings.AddRange(ElixirStorage.Find(behavior));
+            }
+
+            //Determine the Average Collector Level.
+            avgCollectorLvl = 0;
+
+            if (ignoreGold && !ignoreElixir)
+            {
+                if (elixirCollectors.Count(c => c.Level.HasValue) > 1)
+                {
+                    avgCollectorLvl = elixirCollectors.Where(c => c.Level.HasValue).Average(c => (int)c.Level);
+                }
+            }
+            else if (ignoreElixir && !ignoreGold)
+            {
+                if (goldMines.Count(c => c.Level.HasValue) > 1)
+                {
+                    avgCollectorLvl = goldMines.Where(c => c.Level.HasValue).Average(c => (int)c.Level);
+                }
+            }
+            else if (!ignoreElixir && !ignoreGold)
+            {
+                if (buildings.Count(c => c.Level.HasValue) > 1)
+                {
+                    avgCollectorLvl = buildings.Where(c => c.Level.HasValue).Average(c => (int)c.Level);
+                }
             }
 
             //We always includ DarkElixir - Because who doesnt love dark Elixir?
             buildings.AddRange(DarkElixirDrill.Find(behavior));
-            buildings.AddRange(DarkElixirStorage.Find(behavior));
+            if (activeBase)
+                buildings.AddRange(DarkElixirStorage.Find(behavior));
 
             List<Target> targetList = new List<Target>();
 
@@ -475,88 +495,138 @@ namespace SharedCode
 
                 current.TargetBuilding = building;
                 current.Center = building.Location.GetCenter();
-                current.NearestRedLine = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(current.Center)).First();
+                current.Edge = Origin.PointOnLineAwayFromEnd(current.Center, 1.0f);
+                current.NearestRedLine = AllPoints.OrderBy(p => p.DistanceSq(current.Edge)).First();
                 current.CenterToRedline = current.Center.DistanceSq(current.NearestRedLine);
-                Log.Debug($"[Berts Algorithms] DistanceSq from {current.Name} to red point: {current.CenterToRedline.ToString("F1")}");
                 if (current.CenterToRedline < minimumDistance)  //Compare distance to Redline to the Minimum acceptable distance Passed in
                 {
+                    Log.Debug($"[Berts Algorithms] Distance from {current.Name} to red point: {Math.Sqrt(current.CenterToRedline).ToString("F1")}, Min Distance: {Math.Sqrt(minimumDistance).ToString("F1")} - GO!");
                     current.DeployGrunts = current.Center.PointOnLineAwayFromEnd(current.NearestRedLine, _gruntDeployDistanceFromRedline); //Barbs & Goblins
                     current.DeployRanged = current.Center.PointOnLineAwayFromEnd(current.NearestRedLine, _rangedDeployDistanceFromRedline); //Archers & Minions
 
                     targetList.Add(current);
                 }
+                else
+                {
+                    Log.Debug($"[Berts Algorithms] Distance from {current.Name} to red point: {Math.Sqrt(current.CenterToRedline).ToString("F1")}, Min Distance: {Math.Sqrt(minimumDistance).ToString("F1")} - TOO FAR!");
+                }
             }
 
             if (outputDebugImage)
             {
-                var d = DateTime.UtcNow;
-                var debugFileName = $"Human Barch {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}";
-                //Get a screen Capture of all targets we found...
-                using (Bitmap canvas = Screenshot.Capture())
-                {
-
-                    Screenshot.Save(canvas, $"{debugFileName}_1");
-
-                    foreach (var building in buildings)
-                    {
-                        var color = Color.White;
-                        if (building.GetType() == typeof(ElixirCollector) || building.GetType() == typeof(ElixirStorage))
-                        {
-                            color = Color.Violet;
-                        }
-                        if (building.GetType() == typeof(GoldMine) || building.GetType() == typeof(GoldStorage))
-                        {
-                            color = Color.Gold;
-                        }
-                        if (building.GetType() == typeof(DarkElixirDrill) || building.GetType() == typeof(DarkElixirStorage))
-                        {
-                            color = Color.Brown;
-                        }
-
-                        //Draw a target on each building.
-                        Visualize.Target(canvas, building.Location.GetCenter(), 40, color);
-
-                    }
-                    //Save the Image to the Debug Folder...
-                    Screenshot.Save(canvas, $"{debugFileName}_2");
-                }
-
-                //Get a screen Capture of all targets we found...
-                using (Bitmap canvas = Screenshot.Capture())
-                {
-                    foreach (var target in targetList)
-                    {
-                        var color = Color.White;
-                        if (target.TargetBuilding.GetType() == typeof(ElixirCollector) || target.TargetBuilding.GetType() == typeof(ElixirStorage))
-                        {
-                            color = Color.Violet;
-                        }
-                        if (target.TargetBuilding.GetType() == typeof(GoldMine) || target.TargetBuilding.GetType() == typeof(GoldStorage))
-                        {
-                            color = Color.Gold;
-                        }
-                        if (target.TargetBuilding.GetType() == typeof(DarkElixirDrill) || target.TargetBuilding.GetType() == typeof(DarkElixirStorage))
-                        {
-                            color = Color.Brown;
-                        }
-
-                        //Draw a target on each building.
-                        Visualize.Target(canvas, target.TargetBuilding.Location.GetCenter(), 40, color);
-                        Visualize.Target(canvas, target.DeployGrunts, 20, color);
-                        Visualize.Target(canvas, target.DeployRanged, 20, color);
-
-                    }
-                    //Save the Image to the Debug Folder...
-                    Screenshot.Save(canvas, $"{debugFileName}_3");
-                }
-
-                Log.Debug("[Berts Algorithms] Collector/Storage & Target Debug Images Saved!");
+                OutputDebugImage(algorithmName, buildings, targetList);
             }
-
-            Log.Debug($"[Berts Algorithms] Found {targetList.Count} deploy points");
 
             return targetList.ToArray();
         }
+
+        private static void OutputDebugImage(string algorithmName, List<Building> buildings, List<Target> targetList)
+        {
+
+            var d = DateTime.UtcNow;
+            var debugFileName = $"{algorithmName} {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}";
+            //Get a screen Capture of all targets we found...
+            using (Bitmap canvas = Screenshot.Capture())
+            {
+
+                Screenshot.Save(canvas, $"{debugFileName}_1");
+
+                Visualize.Axes(canvas);
+                Visualize.Grid(canvas, redZone: true);
+
+                //Draw the Max Outside Boundry For Deployment...
+                for (int i = -35; i <= 35; i++)
+                {
+                    var color = Color.Magenta;
+                    if (i % 2 == 0)
+                        color = Color.LightPink;
+
+                    float max = 30f;
+                    DrawLine(canvas, color, SafePoint(max, i), SafePoint(max, i + 1)); //Top Left Side
+                    DrawLine(canvas, color, SafePoint(i, max), SafePoint(i + 1, max)); //Top Right Side
+                    DrawLine(canvas, color, SafePoint(i + 1, -max), SafePoint(i, -max)); //Bottom Left Side
+                    DrawLine(canvas, color, SafePoint(-max, i + 1), SafePoint(-max, i)); //Bottom Right Side
+                }
+
+                //Temporary Draw all the Redpoints.
+                foreach (var point in GameGrid.RedPoints)
+                {
+                    DrawPoint(canvas, Color.Red, point);
+                }
+
+                //Temporary Draw all the Greenpoints.
+                foreach (var point in GreenPoints)
+                {
+                    DrawPoint(canvas, Color.Green, point);
+                }
+
+                foreach (var building in buildings)
+                {
+                    var color = Color.White;
+                    if (building.GetType() == typeof(ElixirCollector) || building.GetType() == typeof(ElixirStorage))
+                    {
+                        color = Color.Violet;
+                    }
+                    if (building.GetType() == typeof(GoldMine) || building.GetType() == typeof(GoldStorage))
+                    {
+                        color = Color.Gold;
+                    }
+                    if (building.GetType() == typeof(DarkElixirDrill) || building.GetType() == typeof(DarkElixirStorage))
+                    {
+                        color = Color.Brown;
+                    }
+
+                    //Draw a target on each building.
+                    Visualize.Target(canvas, building.Location.GetCenter(), 40, color);
+
+                }
+                //Save the Image to the Debug Folder...
+                Screenshot.Save(canvas, $"{debugFileName}_2");
+            }
+
+            //Get a screen Capture of all targets we found...
+            using (Bitmap canvas = Screenshot.Capture())
+            {
+                foreach (var target in targetList)
+                {
+                    var color = Color.White;
+                    if (target.TargetBuilding.GetType() == typeof(ElixirCollector) || target.TargetBuilding.GetType() == typeof(ElixirStorage))
+                    {
+                        color = Color.Violet;
+                    }
+                    if (target.TargetBuilding.GetType() == typeof(GoldMine) || target.TargetBuilding.GetType() == typeof(GoldStorage))
+                    {
+                        color = Color.Gold;
+                    }
+                    if (target.TargetBuilding.GetType() == typeof(DarkElixirDrill) || target.TargetBuilding.GetType() == typeof(DarkElixirStorage))
+                    {
+                        color = Color.Brown;
+                    }
+
+                    //Draw a target on each building.
+                    Visualize.Target(canvas, target.TargetBuilding.Location.GetCenter(), 40, color);
+                    Visualize.Target(canvas, target.DeployGrunts, 20, color);
+                    Visualize.Target(canvas, target.DeployRanged, 20, color);
+
+                }
+                //Save the Image to the Debug Folder...
+                Screenshot.Save(canvas, $"{debugFileName}_3");
+            }
+
+            Log.Debug("[Berts Algorithms] Collector/Storage & Target Debug Images Saved!");
+        }
+
+        public static void SaveBasicDebugScreenShot(string algorithmName, string filenameSuffix)
+        {
+            var d = DateTime.UtcNow;
+            var debugFileName = $"{algorithmName} {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}";
+            //Get a screen Capture of all targets we found...
+            using (Bitmap canvas = Screenshot.Capture())
+            {
+                Screenshot.Save(canvas, $"{debugFileName}_{filenameSuffix}");
+            }
+        }
+
 
         public static Target TargetDarkElixirStorage(CacheBehavior behavior = CacheBehavior.Default)
         {
@@ -572,7 +642,7 @@ namespace SharedCode
                 target.Center = des[0].Location.GetCenter();
 
                 target.Edge = Origin.PointOnLineAwayFromEnd(target.Center, _DEStorageCenterToOuterEdgeDistance);
-                target.NearestRedLine = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(target.Edge)).First();
+                target.NearestRedLine = AllPoints.OrderBy(p => p.DistanceSq(target.Edge)).First();
                 target.EdgeToRedline = target.Edge.DistanceSq(target.NearestRedLine);
 
                 //Fill the DeployGrunts Property with where out main dragon force should go.
@@ -582,7 +652,8 @@ namespace SharedCode
             return target;
         }
 
-        public static PointFT[] GetFunnelingPoints(this Target mainGroupDeployPoint, double angleOfFunnel) {
+        public static PointFT[] GetFunnelingPoints(this Target mainGroupDeployPoint, double angleOfFunnel)
+        {
 
             //Get the Distance From the Origin to the Center - main deploy point.
             var distance = Math.Sqrt((Math.Pow(mainGroupDeployPoint.DeployGrunts.X - 0, 2) + Math.Pow(mainGroupDeployPoint.DeployGrunts.Y - 0, 2)));
@@ -618,8 +689,8 @@ namespace SharedCode
             Log.Debug($"[Berts Algorithms] Point2   ({funnel2.X.ToString("F1")},{funnel2.Y.ToString("F1")})");
 
             //Find the closest Redline points to these two funnel points.
-            var red1 =  GameGrid.RedPoints.OrderBy(p => p.DistanceSq(funnel1)).First();
-            var red2 = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(funnel2)).First();
+            var red1 = AllPoints.OrderBy(p => p.DistanceSq(funnel1)).First();
+            var red2 = AllPoints.OrderBy(p => p.DistanceSq(funnel2)).First();
 
             //Return the two points
             List<PointFT> points = new List<PointFT>();
@@ -635,7 +706,8 @@ namespace SharedCode
         /// </summary>
         /// <param name="building"></param>
         /// <returns></returns>
-        public static double DistanceFromOrigin(this Building building) {
+        public static double DistanceFromOrigin(this Building building)
+        {
             return DistanceFromPoint(building, 0, 0);
         }
 
@@ -666,7 +738,7 @@ namespace SharedCode
 
         private static bool IsPointOutsideRedline(this PointFT start)
         {
-            var nearestRedLine = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(start)).First();
+            var nearestRedLine = AllPoints.OrderBy(p => p.DistanceSq(start)).First();
             var distance = start.DistanceSq(nearestRedLine);
 
             if (distance == 0)
@@ -675,23 +747,25 @@ namespace SharedCode
                 return false;
         }
 
-        public static PointFT SafePoint(float x, float y) {
-            //Make sure the point is inside the Playing field
-            if (x > GameGrid.MaxX + 2) x = GameGrid.MaxX + 1.8f;
-            if (x < GameGrid.MinX - 2) x = GameGrid.MinX - 1.8f;
-            if (y > GameGrid.MaxY + 2) y = GameGrid.MaxY + 1.8f;
-            if (y < GameGrid.MinY - 2) y = GameGrid.MinY - 1.8f;
+        public static PointFT SafePoint(float x, float y)
+        {
+            //Make sure the point is close to being inside the Playing field
+            if (x > GameGrid.MaxX + 8.0f) x = GameGrid.MaxX + 8.0f;
+            if (x < GameGrid.MinX - 8.0f) x = GameGrid.MinX - 8.0f;
+            if (y > GameGrid.MaxY + 8.0f) y = GameGrid.MaxY + 8.0f;
+            if (y < GameGrid.MinY - 8.0f) y = GameGrid.MinY - 8.0f;
 
             return new PointFT(x, y);
         }
 
-        public static PointFT FindClosestDeployPointOnLine(PointFT origin, PointFT start) {
+        public static PointFT FindClosestDeployPointOnLine(PointFT origin, PointFT start)
+        {
 
             PointFT result = new PointFT();
 
             float counter = .5f;
 
-            while(counter < 50)
+            while (counter < 50)
             {
                 var temp = origin.PointOnLineAwayFromEnd(start, counter);
                 if (result.IsPointOutsideRedline())
@@ -705,6 +779,71 @@ namespace SharedCode
 
             return result;
         }
+
+        public static PointFT[] GenerateGreenPoints()
+        {
+            var points = new HashSet<PointFT>();
+
+            for (int i = -25; i <= 25; i++)
+            {
+                float max = 25.5f;
+                if (i >= -20) //Skip Points off the Right Hand side of Screen.
+                    points.Add(new PointFT(max, i)); //Top Right
+
+                points.Add(new PointFT(i, max)); //Top Left
+
+                if (i >= -14) //Skip points that are on the bottom cuttoff.
+                    points.Add(new PointFT(-max, i)); //Bottom Left
+
+                if (i >= -13 && i <= 19) //Skip points that are on the bottom cuttoff. & Righthand side of screen.
+                    points.Add(new PointFT(i, -(max + 1))); //Bottom Right //Make bottom right more outside Because of incorrect Y shift in the bot.
+            }
+            return points.ToArray();
+        }
+
+        /// <summary>
+        /// Combines all RedPoints and GreenPoints arrays into one array.
+        /// </summary>
+        public static PointFT[] AllPoints
+        {
+            get
+            {
+                return GreenPoints.Concat(GameGrid.RedPoints).ToArray();
+            }
+        }
+
+
+        /// <summary>
+        /// Draws a line between two points on the bitmap
+        /// </summary>
+        /// <param name="canvas"></param>
+        /// <param name="color"></param>
+        /// <param name="startPoint"></param>
+        /// <param name="endPoint"></param>
+        public static void DrawLine(Bitmap canvas, Color color, PointFT startPoint, PointFT endPoint)
+        {
+            using (var g = Graphics.FromImage(canvas))
+            {
+                var pen = new Pen(color, 2);
+                g.DrawLine(pen, startPoint.ToScreenAbsolute().X, startPoint.ToScreenAbsolute().Y, endPoint.ToScreenAbsolute().X, endPoint.ToScreenAbsolute().Y);
+            }
+        }
+
+        /// <summary>
+        /// Draws a Point on the canvas
+        /// </summary>
+        /// <param name="canvas"></param>
+        /// <param name="color"></param>
+        /// <param name="point"></param>
+        public static void DrawPoint(Bitmap canvas, Color color, PointFT point)
+        {
+            using (var g = Graphics.FromImage(canvas))
+            {
+                var pen = new Pen(color, 2);
+                g.DrawEllipse(pen, point.ToScreenAbsolute().X, point.ToScreenAbsolute().Y, 3, 3);
+            }
+        }
+
 
     }
 }
