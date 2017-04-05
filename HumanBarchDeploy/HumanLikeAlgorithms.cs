@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CoC_Bot.API.Buildings;
 using System.Drawing;
+using System.IO;
 
 namespace SharedCode
 {
@@ -415,13 +416,13 @@ namespace SharedCode
             return target;
         }
 
-        public static int CountRipeCollectors(string algorithmName, float minimumDistance, bool ignoreGold, bool ignoreElixir, out double fillState, out double collectorLvl, CacheBehavior behavior = CacheBehavior.Default, bool activeBase = false)
+        public static int CountRipeCollectors(string algorithmName, float minimumDistance, bool ignoreGold, bool ignoreElixir, string AttackId, out double fillState, out double collectorLvl, CacheBehavior behavior = CacheBehavior.Default, bool activeBase = false)
         {
-            Target[] targets = GenerateTargets(algorithmName, minimumDistance, ignoreGold, ignoreElixir, out fillState, out collectorLvl, behavior, false, activeBase);
+            Target[] targets = GenerateTargets(algorithmName, minimumDistance, ignoreGold, ignoreElixir, AttackId, out fillState, out collectorLvl, behavior, false, activeBase);
             return targets.Length;
         }
 
-        public static Target[] GenerateTargets(string algorithmName, float minimumDistance, bool ignoreGold, bool ignoreElixir, out double avgFillstate, out double avgCollectorLvl, CacheBehavior behavior = CacheBehavior.Default, bool outputDebugImage = false, bool activeBase = false)
+        public static Target[] GenerateTargets(string algorithmName, float minimumDistance, bool ignoreGold, bool ignoreElixir, string AttackId, out double avgFillstate, out double avgCollectorLvl, CacheBehavior behavior = CacheBehavior.Default, bool outputDebugImage = false, bool activeBase = false)
         {
             // Find all Collectors & storages just sitting around...
             List<Building> buildings = new List<Building>();
@@ -514,17 +515,17 @@ namespace SharedCode
 
             if (outputDebugImage)
             {
-                OutputDebugImage(algorithmName, buildings, targetList);
+                OutputDebugImage(algorithmName, buildings, targetList, AttackId);
             }
 
             return targetList.ToArray();
         }
 
-        private static void OutputDebugImage(string algorithmName, List<Building> buildings, List<Target> targetList)
+        private static void OutputDebugImage(string algorithmName, List<Building> buildings, List<Target> targetList, string AttackId)
         {
 
             var d = DateTime.UtcNow;
-            var debugFileName = $"{algorithmName} {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}";
+            var debugFileName = $"{algorithmName} {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}[{AttackId}]".GetSafeFilename();
             //Get a screen Capture of all targets we found...
             using (Bitmap canvas = Screenshot.Capture())
             {
@@ -616,9 +617,9 @@ namespace SharedCode
             Log.Debug("[Berts Algorithms] Collector/Storage & Target Debug Images Saved!");
         }
 
-        public static void SaveBasicDebugScreenShot(string algorithmName, string filenameSuffix) {
+        public static void SaveBasicDebugScreenShot(string algorithmName, string AttackId, string filenameSuffix) {
             var d = DateTime.UtcNow;
-            var debugFileName = $"{algorithmName} {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}";
+            var debugFileName = $"{algorithmName} {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}[{AttackId}]".GetSafeFilename();
             //Get a screen Capture of all targets we found...
             using (Bitmap canvas = Screenshot.Capture())
             {
@@ -843,6 +844,27 @@ namespace SharedCode
             }
         }
 
+        /// <summary>
+        /// Returns a String that can be used as a filename with any illegal characters replaced with "_".
+        /// </summary>
+        /// <param name="filename">The String to find and replace illegal filename characters in.</param>
+        /// <returns>a Valid File Name</returns>
+        public static string GetSafeFilename(this string filename)
+        {
+            return string.Join("_", filename.Split(Path.GetInvalidFileNameChars()));
+        }
 
+        /// <summary>
+        /// Returns a Short Unique string to add to the log, and the Debug Images, so it is easy to find the attack in the log using the image.
+        /// </summary>
+        /// <returns>A unique attack Id.</returns>
+        public static string GenerateAttackId()
+        {
+            var d = DateTime.UtcNow;
+            var shortDateint = int.Parse($"{d.Month}{d.Day}{d.Hour.ToString("D2")}{d.Minute.ToString("D2")}{d.Second.ToString("D2")}"); //Dont bother to include Year - string will be unique enough without it.
+            var plainTextBytes = BitConverter.GetBytes(shortDateint); //Convert int to byte array.
+            var id = Convert.ToBase64String(plainTextBytes).Replace("=", string.Empty); //remove any placeholders at the end of the string. (We dont care if it is the same length every time.)
+            return string.Join("_", id.Split(Path.GetInvalidFileNameChars())); //Replace any Illegal filename characters with "_". - Could cause more collisions, but not too woried since this is just for easy searching.
+        }
     }
 }
