@@ -43,6 +43,27 @@ namespace HumanBarchDeploy
 
         private bool IgnoreElixir { get; set; }
 
+        private string attackId = null;
+
+
+        /// <summary>
+        /// A short unique identifier for this attack - used to tag the log, and any debug images that are ouput for easy debugging.
+        /// Set once on first access, and will remain the same for the duration of this attack.
+        /// </summary>
+        private string AttackId
+        {
+            get
+            {
+                //Create the AttackID if it doesnt already exist.
+                if (string.IsNullOrEmpty(attackId))
+                {
+                    attackId = HumanLikeAlgorithms.GenerateAttackId();
+                }
+
+                return attackId;
+            }
+        }
+
         #endregion
 
         #region Custom Algorithm Settings
@@ -156,6 +177,11 @@ namespace HumanBarchDeploy
             tankUnits.HideInUiWhen.Add(new SettingOption("Deploy All Troops Mode", 1));
             settings.DefineSetting(tankUnits);
 
+            var valksAsTanks = new AlgorithmSetting("Use Valkyries as Tanks", "When on, The algorithm will classify Valkyries as Tank Units, and deploy before other Ground and Ranged units.", 0, SettingType.ActiveAndDead);
+            valksAsTanks.PossibleValues.Add(new SettingOption("Off", 0));
+            valksAsTanks.PossibleValues.Add(new SettingOption("On", 1));
+            settings.DefineSetting(valksAsTanks);
+
             return settings;
         }
         #endregion
@@ -206,12 +232,12 @@ namespace HumanBarchDeploy
 
         public override double ShouldAccept()
         {
-            double returnVal = 0;
-
+            bool accept = true;
             // check if the base meets ALL the user's requirements
             if (!PassesBasicAcceptRequirements())
             {
-                return 0;
+                if (!Opponent.IsForcedAttack)
+                    return 0;
             }
 
             //Check to see if the settings are favoring Gold or Elixir...
@@ -241,16 +267,20 @@ namespace HumanBarchDeploy
             var activeBase = !Opponent.IsDead();
 
             //Check how many Collectors are Ripe for the taking (outside walls)
-            ripeCollectors = HumanLikeAlgorithms.CountRipeCollectors(algorithmName, acceptableTargetRange, IgnoreGold, IgnoreElixir, out avgfillState, out avgCollectorLvel, CacheBehavior.Default, activeBase);
+            ripeCollectors = HumanLikeAlgorithms.CountRipeCollectors(algorithmName, acceptableTargetRange, IgnoreGold, IgnoreElixir, AttackId, out avgfillState, out avgCollectorLvel, CacheBehavior.Default, activeBase);
 
             if (activeBase)
             {
                 var minFillLevel = (double)(CurrentSetting("Min Collector Fill Level"));
-                if ((avgfillState * 10) < minFillLevel)
+                if (Opponent.IsForcedAttack)
+                {
+                    Log.Info($"{Tag}Forced Attack! Actual Fillstate: {(avgfillState * 10).ToString("F1")} Normal FillState Req: {minFillLevel}.");
+                }
+                else if ((avgfillState * 10) < minFillLevel)
                 {
                     //FillState is too Low. Skip
                     Log.Warning($"{Tag}Skipping - Avg fillstate is too low: {(avgfillState * 10).ToString("F1")}. Must be > {minFillLevel}.");
-                    return 0;
+                    accept = false;
                 }
                 else
                 {
@@ -258,13 +288,17 @@ namespace HumanBarchDeploy
                 }
 
                 var minAvgCollectorLevel = CurrentSetting("Min Average Collector Level");
-                if (avgCollectorLvel < minAvgCollectorLevel)
+                if (Opponent.IsForcedAttack)
+                {
+                    Log.Info($"{Tag}Forced Attack! Avg Collector Level: {avgCollectorLvel.ToString("F1")} Normal Collector Lvl Req: {minAvgCollectorLevel}.");
+                }
+                else if (avgCollectorLvel < minAvgCollectorLevel && accept)
                 {
                     //Level of Collectors is too low.
                     Log.Warning($"{Tag}Skipping - Avg Collector Level is too low: {avgCollectorLvel.ToString("F1")}. Must be > {minAvgCollectorLevel}.");
-                    return 0;
+                    accept = false;
                 }
-                else
+                else if (accept)
                 {
                     Log.Info($"{Tag}Avg Collector Level Accepted: {avgCollectorLvel.ToString("F1")} > {minAvgCollectorLevel}.");
                 }
@@ -276,14 +310,22 @@ namespace HumanBarchDeploy
                 Log.Info($"{Tag}Avg Collector Level: {avgCollectorLvel.ToString("F1")}");
             }
 
-            Log.Debug($"{Tag}{ripeCollectors} targets found outside walls. Min={minTargets}");
 
-            if (ripeCollectors < minTargets)
+            if (Opponent.IsForcedAttack)
+            {
+                Log.Info($"{Tag}Forced Attack! {ripeCollectors} targets found outside walls. Normal Min={minTargets}");
+            }
+            else if (ripeCollectors < minTargets && accept)
             {
                 Log.Warning($"{Tag}Skipping - {ripeCollectors} targets were found outside the wall. Min={minTargets}");
-                returnVal = 0;
+                accept = false;
             }
-            else
+            else if (accept) {
+                Log.Debug($"{Tag}{ripeCollectors} targets found outside walls. Min={minTargets}");
+            }
+
+            double returnVal = 0;
+            if (accept || Opponent.IsForcedAttack)
             {
                 returnVal = .99;
             }
@@ -337,12 +379,17 @@ namespace HumanBarchDeploy
         public override IEnumerable<int> AttackRoutine()
         {
             Log.Info($"{Tag}Deploy start - V.{Assembly.GetExecutingAssembly().GetName().Version.ToString()}");
+            Log.Debug($"{Tag}Attack Identifier: [{AttackId}] - (Links Debug Images to Log File)");
+
+            var attackStartTime = DateTime.UtcNow;
 
             //Write out all the Current Algorithm Settings...
+            var settings = $"{Tag}Current Custom Settings Values:{Environment.NewLine}";
             foreach (var setting in AllCurrentSettings)
             {
-                Log.Debug($"{Tag}'{setting.Name}' Value: {setting.Value}");
+                settings += $"{setting.InstanceType} Setting - '{setting.Name}' Value: {setting.Value}{Environment.NewLine}";
             }
+            Log.Debug(settings);
 
             var waveCounter = 1;
 
@@ -369,6 +416,11 @@ namespace HumanBarchDeploy
             var activeBase = !Opponent.IsDead();
             var clanCastleDeployed = false;
 
+            bool watchHeroes = false;
+            bool kingDeployed = false;
+            bool queenDeployed = false;
+            bool wardenDeployed = false;
+
             // Loop until surrender conditions are met
             while (true)
             {
@@ -378,8 +430,21 @@ namespace HumanBarchDeploy
                 var allElements = Attack.GetAvailableDeployElements();
                 var deployElements = allElements.Where(x => x.UnitData != null).ToArray();
                 var rangedUnits = deployElements.Where(x => x.IsRanged == true && x.ElementType == DeployElementType.NormalUnit && x.UnitData.AttackType == AttackType.Damage);
-                var gruntUnits = deployElements.Where(x => x.IsRanged == false && x.ElementType == DeployElementType.NormalUnit && x.UnitData.AttackType == AttackType.Damage);
-                var tankUnits = deployElements.Where(x => x.IsRanged == false && x.ElementType == DeployElementType.NormalUnit && x.UnitData.AttackType == AttackType.Tank);
+
+                IEnumerable<DeployElement> gruntUnits = null;
+                IEnumerable<DeployElement> tankUnits = null;
+
+                if (CurrentSetting("Use Valkyries as Tanks") == 0)
+                {
+                    gruntUnits = deployElements.Where(x => x.IsRanged == false && x.ElementType == DeployElementType.NormalUnit && x.UnitData.AttackType == AttackType.Damage);
+                    tankUnits = deployElements.Where(x => x.IsRanged == false && x.ElementType == DeployElementType.NormalUnit && x.UnitData.AttackType == AttackType.Tank);
+                }
+                else {
+                    //Reclassify Valks as Tanks!
+                    gruntUnits = deployElements.Where(x => x.IsRanged == false && x.ElementType == DeployElementType.NormalUnit && x.UnitData.AttackType == AttackType.Damage && x.Id != DeployId.Valkyrie);
+                    tankUnits = deployElements.Where(x => (x.IsRanged == false && x.ElementType == DeployElementType.NormalUnit && x.UnitData.AttackType == AttackType.Tank) || x.Id == DeployId.Valkyrie);
+                }
+
                 List<DeployElement> king = allElements.Where(x => x.IsHero && x.Name.ToLower().Contains("king")).ToList();
                 List<DeployElement> queen = allElements.Where(x => x.IsHero && x.Name.ToLower().Contains("queen")).ToList();
                 List<DeployElement> warden = allElements.Where(x => x.IsHero && x.Name.ToLower().Contains("warden")).ToList();
@@ -387,9 +452,6 @@ namespace HumanBarchDeploy
                 allHeroes.AddRange(king);
                 allHeroes.AddRange(queen);
                 allHeroes.AddRange(warden);
-
-                bool watchHeroes = false;
-                bool kingDeployed = false;
 
                 //Write out all the unit pretty names we found...
                 Log.Debug($"{Tag}Deployable Troops (wave {waveCounter}): {ToUnitString(allElements)}");
@@ -399,7 +461,7 @@ namespace HumanBarchDeploy
                 double avgCollectorLvl = 0;
 
                 //First time through force a Scan... after the first wave always recheck for Destroyed ones...
-                Target[] targets = HumanLikeAlgorithms.GenerateTargets(algorithmName, acceptableTargetRange, IgnoreGold, IgnoreElixir, out avgFillState, out avgCollectorLvl, collectorCacheBehavior, outputDebugImage, activeBase);
+                Target[] targets = HumanLikeAlgorithms.GenerateTargets(algorithmName, acceptableTargetRange, IgnoreGold, IgnoreElixir, AttackId, out avgFillState, out avgCollectorLvl, collectorCacheBehavior, outputDebugImage, activeBase);
 
                 collectorCount = targets.Length;
 
@@ -415,12 +477,7 @@ namespace HumanBarchDeploy
 
                 if (collectorCount < 1)
                 {
-                    Log.Info($"{Tag}Collectors Remaining = {collectorCount}");
-
-                    // Wait for the wave to finish
-                    Log.Info($"{Tag}Deploy done. Waiting to finish...");
-                    var x = Attack.WatchResources(10d).Result;
-
+                    Log.Info($"{Tag}Collectors Remaining = {collectorCount} - Deployment Done. Exiting Attack Loop.");
                     break;
                 }
 
@@ -524,6 +581,10 @@ namespace HumanBarchDeploy
 
                 Log.Info($"{Tag}{groupedTargets.Count} Target Groups, Largest has {largestSetCount} targets, Second Largest {secondLargestSetCount} targets.");
 
+                if (largestSetCount <= 1) {
+                    Log.Info($"{Tag}No group of two or more targets found - Skipping deploy of Heros & Clan Castle.");
+                }
+
                 //Deploy Barch Units - In Groups on Sets of collectors that are close together.
                 for (int p = 0; p < groupedTargets.Count; p++)
                 {
@@ -563,10 +624,30 @@ namespace HumanBarchDeploy
                         }
                     }
 
-                    if (largestSetIndex == p && largestSetCount >= 2)
+                    if (rangedUnits.Any())
+                    {
+                        //Pause inbetween switching units.
+                        yield return Rand.Int(90, 100); //Wait
+                    }
+
+                    //Deploy Ranged units on same set of Targets.
+                    for (int i = 0; i < groupedTargets[p].Length; i++)
+                    {
+                        var rangedDeployPoint = groupedTargets[p][i].DeployRanged;
+
+                        if (rangedUnits.Any())
+                        {
+                            Log.Debug($"{Tag}Deploying {rangedCount} Ranged Units on {groupedTargets[p][i].Name} {p + 1}-{i}");
+                            foreach (var t in Deploy.AtPoints(rangedUnits.FilterTypesByCount(), rangedDeployPoint.RandomPointsInArea(_collectorDeployRadius, rangedCount), 1))
+                                yield return t;
+                            yield return Rand.Int(40, 50); //Wait
+                        }
+                    }
+
+                    if (largestSetIndex == p && largestSetCount >= 2 && waveCounter == 1)
                     {
                         //We are currently deploying to the largest set of Targets - AND its a set of 2 or more.
-                        //Preferrably Drop the Queen on this set (2nd Target in the set.) - if she is not available drop the king here.
+                        //Preferrably Drop All Heros on this set (2nd Target in the set.)
                         reminderTarget = groupedTargets[p][1];
 
                         if (!clanCastleDeployed && UserSettings.UseClanTroops)
@@ -586,17 +667,7 @@ namespace HumanBarchDeploy
                             clanCastleDeployed = true;
                         }
 
-                        if (UserSettings.UseQueen && queen.Any())
-                        {
-                            yield return Rand.Int(90, 100); //Wait before dropping Queen
-
-                            Log.Info($"{Tag}Deploying Queen on largest set of targets: {largestSetCount} targets.");
-                            foreach (var t in Deploy.AtPoint(queen[0], groupedTargets[p][1].DeployRanged))
-                                yield return t;
-                            yield return Rand.Int(200, 500); //Wait
-                            watchHeroes = true;
-                        }
-                        else if (UserSettings.UseKing && king.Any())
+                        if (UserSettings.UseKing && king.Any() && !kingDeployed)
                         {
                             yield return Rand.Int(90, 100); //Wait before dropping King
 
@@ -608,57 +679,35 @@ namespace HumanBarchDeploy
                             watchHeroes = true;
                         }
 
-                        if (UserSettings.UseWarden && warden.Any())
+                        if (UserSettings.UseQueen && queen.Any() && !queenDeployed)
+                        {
+                            yield return Rand.Int(90, 100); //Wait before dropping Queen
+
+                            Log.Info($"{Tag}Deploying Queen on largest set of targets: {largestSetCount} targets.");
+                            foreach (var t in Deploy.AtPoint(queen[0], groupedTargets[p][1].DeployRanged))
+                                yield return t;
+                            yield return Rand.Int(200, 500); //Wait
+                            queenDeployed = true;
+                            watchHeroes = true;
+                        }
+
+                        if (UserSettings.UseWarden && warden.Any() && !wardenDeployed)
                         {
                             Log.Info($"{Tag}Deploying Warden on largest set of targets: {largestSetCount} targets.");
                             foreach (var t in Deploy.AtPoint(warden[0], groupedTargets[p][1].DeployRanged))
                                 yield return t;
                             yield return Rand.Int(200, 500); //Wait
+                            wardenDeployed = true;
                             watchHeroes = true;
                         }
-                    }
 
-                    if (secondLargestSetIndex == p && secondLargestSetCount >= 2)
-                    {
-                        //We are currently deploying to the 2nd largest set of Targets - AND its a set of 2 or more.
-                        //Drop the King on the 2nd Target in the set.
-
-                        if (UserSettings.UseKing && king.Any() && !kingDeployed)
+                        //Now that the first round of deploying is done, watch any heros if necessary.
+                        if (watchHeroes)
                         {
-                            Log.Info($"{Tag}Deploying King on 2nd largest set of targets: {secondLargestSetCount} targets.");
-                            foreach (var t in Deploy.AtPoint(king[0], groupedTargets[p][1].DeployGrunts))
-                                yield return t;
-                            yield return Rand.Int(900, 1000); //Wait
-
-                            watchHeroes = true;
-                        }
-                    }
-
-                    if (watchHeroes)
-                    {
-                        //Watch Heros and Hit ability when they get low.
-                        Log.Info($"{Tag}Watching heros to activate abilities when health gets Low.");
-                        Deploy.WatchHeroes(allHeroes);
-                        watchHeroes = false; //Only do this once through the loop.
-                    }
-
-                    if (rangedUnits.Any())
-                    {
-                        //Pause inbetween switching units.
-                        yield return Rand.Int(90, 100); //Wait
-                    }
-
-                    //Deploy Ranged units on same set of Targets.
-                    for (int i = 0; i < groupedTargets[p].Length; i++)
-                    {
-                        var rangedDeployPoint = groupedTargets[p][i].DeployRanged;
-
-                        if (rangedUnits.Any())
-                        {
-                            Log.Debug($"{Tag}Deploying {rangedCount} Ranged Units on {groupedTargets[p][i].Name} {p + 1}-{i}");
-                            foreach (var t in Deploy.AtPoints(rangedUnits.FilterTypesByCount(), rangedDeployPoint.RandomPointsInArea(_collectorDeployRadius, rangedCount), 1))
-                                yield return t;
-                            yield return Rand.Int(40, 50); //Wait
+                            //Watch Heros and Hit ability when they get low.
+                            Log.Info($"{Tag}Watching heros to activate abilities when health gets Low.");
+                            Deploy.WatchHeroes(allHeroes);
+                            watchHeroes = false; //Only do this once through the loop.
                         }
                     }
 
@@ -706,16 +755,12 @@ namespace HumanBarchDeploy
                         }
                     }
 
-                    if (CurrentSetting("Debug Mode") == 1)
-                        HumanLikeAlgorithms.SaveBasicDebugScreenShot(algorithmName, "All Deployed");
-
-                    //There is only ONE wave in Deploy all troops mode... Watch for No Change in Resources, then Break out.
-                    var x = Attack.WatchResources(10d).Result;
+                    //There is only ONE wave in Deploy all troops mode...
                     break;
                 }
 
                 //wait a random number of seconds before the next round on all Targets...
-                yield return Rand.Int(2000, 5000);
+                yield return Rand.Int(5000, 7000);
 
                 // Get starting resources, cache needs to be false to force a new check
                 LootResources postLoot = Opponent.GetAvailableLoot(false);
@@ -737,7 +782,6 @@ namespace HumanBarchDeploy
                     if (newGold + newElixir < 3000 * collectorCount)
                     {
                         Log.Info($"{Tag}Stopping Troop Deployment because gained resources isn't enough");
-                        var x = Attack.WatchResources(10d).Result;
                         break;
                     }
                     preLoot = postLoot;
@@ -746,16 +790,14 @@ namespace HumanBarchDeploy
                 waveCounter++;
             }
 
-
-            //Last thing Call ZapDarkElixterDrills... This uses the Bot settings for when to zap, and what level drills to zap.
-            Log.Info($"{Tag}Checking to see if we can Zap DE Drills...");
-            foreach (var t in ZapDarkElixirDrills())
-                yield return t;
-
             if (CurrentSetting("Debug Mode") == 1)
-                HumanLikeAlgorithms.SaveBasicDebugScreenShot(algorithmName, "Battle End");
+            {
+                Log.Debug($"{Tag}Deployment End. Taking last debug Screenshot.");
+                HumanLikeAlgorithms.SaveBasicDebugScreenShot(algorithmName, AttackId, "Battle End");
+            }
 
             //We broke out of the attack loop - allow attack to end how specified in the General Bot Settings... 
+            Log.Info($"{Tag} <<<<<< End of Human Barch Algorithm >>>>>>");
         }
 
         #endregion
