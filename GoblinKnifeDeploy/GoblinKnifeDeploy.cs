@@ -1,9 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using CoC_Bot;
 using CoC_Bot.API;
 using CoC_Bot.API.Buildings;
 using CoC_Bot.Modules.Helpers;
@@ -249,9 +246,19 @@ namespace GoblinKnifeDeploy
             yield return 1000;
 
             #region Deploy rest of Wizards 
-            foreach (var t in Deploy.AlongLine(wizard, _attackLine.Item1, _attackLine.Item2, 20, 4))
+            while (wizard?.Count > 0)
             {
-                yield return t;
+                var count = giant.Count;
+
+                Log.Info($"[GoblinKnife] Deploying {wizard.PrettyName} x10");
+                foreach (var t in Deploy.AlongLine(wizard, _attackLine.Item1, _attackLine.Item2, 8, 4))
+                    yield return t;
+
+                // prevent infinite loop if deploy point is on red
+                if (wizard.Count != count) continue;
+
+                Log.Warning($"[GoblinKnife] Couldn't deploy {wizard.PrettyName}");
+                break;
             }
             #endregion
 
