@@ -12,14 +12,14 @@ namespace GoblinKnifeDeploy
     public class GoblinKnifeDeploy : BaseAttack
     {
         #region variables to store attack points
-        private RectangleT _border;
-        private PointFT _core;
-        private Container<PointFT> _orgin;
-        private Tuple<PointFT, PointFT> _attackLine;
-        private PointFT _earthQuakePoint;
-        private PointFT _healPoint;
-        private PointFT _ragePoint;
-        private PointFT _target;
+        private static RectangleT _border;
+        private static PointFT _core;
+        private static Container<PointFT> _orgin;
+        private static Tuple<PointFT, PointFT> _attackLine;
+        private static PointFT _earthQuakePoint;
+        private static PointFT _healPoint;
+        private static PointFT _ragePoint;
+        private static PointFT _target;
         #endregion
 
         public GoblinKnifeDeploy(Opponent opponent) : base(opponent)
@@ -46,7 +46,7 @@ namespace GoblinKnifeDeploy
         #endregion
 
         #region Calculate Deploy Points
-        private void CreateDeployPoints()
+        private static void CreateDeployPoints()
         {
             var target = DarkElixirStorage.Find()?.FirstOrDefault().Location.GetCenter() ??
                             TownHall.Find()?.Location.GetCenter() ??
