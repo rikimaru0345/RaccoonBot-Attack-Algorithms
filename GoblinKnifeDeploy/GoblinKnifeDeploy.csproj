@@ -16,7 +16,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.3.2526\RaccoonBot v1.20.3.2526 - Menu2\Addons\</OutputPath>
+    <OutputPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.6.2571\RaccoonBot v1.20.6.2571\Addons\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -32,16 +32,17 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CoC Bot.Core">
-      <HintPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.3.2526\RaccoonBot v1.20.3.2526 - Menu2\CoC Bot.Core.dll</HintPath>
+      <HintPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.6.2571\RaccoonBot v1.20.6.2571\CoC Bot.Core.dll</HintPath>
     </Reference>
     <Reference Include="Raccoon Bot">
-      <HintPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.3.2526\RaccoonBot v1.20.3.2526 - Menu2\Raccoon Bot.exe</HintPath>
+      <HintPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.6.2571\RaccoonBot v1.20.6.2571\Raccoon Bot.exe</HintPath>
     </Reference>
     <Reference Include="Shared">
-      <HintPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.3.2526\RaccoonBot v1.20.3.2526 - Menu2\Shared.dll</HintPath>
+      <HintPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.6.2571\RaccoonBot v1.20.6.2571\Shared.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -50,6 +51,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DarkPushDeploy.cs" />
     <Compile Include="GoblinKnifeDeploy.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
