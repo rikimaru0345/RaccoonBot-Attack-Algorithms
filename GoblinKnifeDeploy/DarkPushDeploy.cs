@@ -6,7 +6,6 @@ using System.Threading;
 using CoC_Bot.API;
 using CoC_Bot.API.Buildings;
 using CoC_Bot.Modules.Helpers;
-using CoC_Bot;
 
 namespace GoblinKnifeDeploy
 {
@@ -18,9 +17,9 @@ namespace GoblinKnifeDeploy
         Tuple<PointFT, PointFT> attackLine;
         PointFT nearestWall, core, earthQuakePoint, healPoint, ragePoint, ragePoint2, target, jumpPoint, jumpPoint1, red1, red2;
         bool useJump = false;
-        int bowlerFunnelCount, witchFunnelCount,healerFunnlCount;
+        int bowlerFunnelCount, witchFunnelCount, healerFunnlCount;
         DeployElement freezeSpell;
-        const string Version = "1.0.2.34";
+        const string Version = "1.0.2.35";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -77,10 +76,10 @@ namespace GoblinKnifeDeploy
             var getOutRedArea = 0.5f;
 
             // don't include corners in case build huts are there
-            var maxRedPointX = (GameGrid.RedPoints.Where(p => -18 < p.Y && p.Y < 18)?.Max(point => point.X)  ?? GameGrid.RedZoneExtents.MaxX) + getOutRedArea;
-            var minRedPointX = (GameGrid.RedPoints.Where(p => -18 < p.Y && p.Y < 18)?.Min(point => point.X)  ?? GameGrid.RedZoneExtents.MinX) - getOutRedArea;
-            var maxRedPointY = (GameGrid.RedPoints.Where(p => -18 < p.X && p.X < 18)?.Max(point => point.Y)  ?? GameGrid.RedZoneExtents.MaxY) + getOutRedArea;
-            var minRedPointY = (GameGrid.RedPoints.Where(p => -18 < p.X && p.X < 18)?.Min(point => point.Y)  ?? GameGrid.RedZoneExtents.MinY) - getOutRedArea;
+            var maxRedPointX = (GameGrid.RedPoints.Where(p => -18 < p.Y && p.Y < 18)?.Max(point => point.X) ?? GameGrid.RedZoneExtents.MaxX) + getOutRedArea;
+            var minRedPointX = (GameGrid.RedPoints.Where(p => -18 < p.Y && p.Y < 18)?.Min(point => point.X) ?? GameGrid.RedZoneExtents.MinX) - getOutRedArea;
+            var maxRedPointY = (GameGrid.RedPoints.Where(p => -18 < p.X && p.X < 18)?.Max(point => point.Y) ?? GameGrid.RedZoneExtents.MaxY) + getOutRedArea;
+            var minRedPointY = (GameGrid.RedPoints.Where(p => -18 < p.X && p.X < 18)?.Min(point => point.Y) ?? GameGrid.RedZoneExtents.MinY) - getOutRedArea;
             // build a box around the base
             var left = new PointFT(minRedPointX, maxRedPointY);
             var top = new PointFT(maxRedPointX, maxRedPointY);
@@ -109,7 +108,7 @@ namespace GoblinKnifeDeploy
                 Log.Info($"[{AttackName}] Attacking from the top right");
 
                 attackLine = new Tuple<PointFT, PointFT>(top, right);
-                
+
                 var distance = orgin.Item.X - this.target.X;
                 var target = distance >= MinDistace ? this.target : core;
 
@@ -120,10 +119,10 @@ namespace GoblinKnifeDeploy
 
                 var earthQuakePoints = new List<PointFT>();
                 var jumpPoints = new List<PointFT>();
-                
+
                 var maxX = nearestWall.X - 5f;
                 var start = target.X + 4f;
-                while ( maxX > start)
+                while (maxX > start)
                 {
                     earthQuakePoints.Add(new PointFT(start, core.Y));
                     jumpPoints.Add(new PointFT(start - 0.5f, core.Y));
@@ -134,7 +133,7 @@ namespace GoblinKnifeDeploy
                 jumpPoint = jumpPoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
 
                 jumpPoint1 = new PointFT(nearestWall.X - 3f, core.Y);
-   
+
                 ragePoint = new PointFT(orgin.Item.X - 9f, core.Y);
                 healPoint = new PointFT(orgin.Item.X - 15f, core.Y);
                 ragePoint2 = new PointFT(orgin.Item.X - 20f, core.Y);
@@ -152,7 +151,7 @@ namespace GoblinKnifeDeploy
                 var wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().Y == (int)orgin.Item.Y) || ((int)w.Location.GetCenter().Y + 1 == (int)orgin.Item.Y) || (int)w.Location.GetCenter().Y - 1 == (int)orgin.Item.Y);
                 //set default value to the nearst wall if there is no walls
                 nearestWall = orgin.Item;
-                if(wallsToTarget?.Count() > 0)
+                if (wallsToTarget?.Count() > 0)
                     nearestWall = wallsToTarget.OrderBy(w => w.Location.GetCenter().X).First().Location.GetCenter();
 
                 var earthQuakePoints = new List<PointFT>();
@@ -187,7 +186,7 @@ namespace GoblinKnifeDeploy
 
                 var wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().X == (int)orgin.Item.X) || ((int)w.Location.GetCenter().X + 1 == (int)orgin.Item.X) || (int)w.Location.GetCenter().X - 1 == (int)orgin.Item.X);
                 nearestWall = orgin.Item;
-                if(wallsToTarget?.Count() > 0)
+                if (wallsToTarget?.Count() > 0)
                     nearestWall = wallsToTarget.OrderByDescending(w => w.Location.GetCenter().Y).First().Location.GetCenter();
 
                 var earthQuakePoints = new List<PointFT>();
@@ -201,7 +200,7 @@ namespace GoblinKnifeDeploy
                     jumpPoints.Add(new PointFT(core.X, start - 0.5f));
                     start += 0.25f;
                 }
-                
+
                 earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
                 jumpPoint = jumpPoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
 
@@ -223,7 +222,7 @@ namespace GoblinKnifeDeploy
 
                 var wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().X == (int)orgin.Item.X) || ((int)w.Location.GetCenter().X + 1 == (int)orgin.Item.X) || (int)w.Location.GetCenter().X - 1 == (int)orgin.Item.X);
                 nearestWall = orgin.Item;
-                if(wallsToTarget?.Count() > 0)
+                if (wallsToTarget?.Count() > 0)
                     nearestWall = wallsToTarget.OrderBy(w => w.Location.GetCenter().Y).First().Location.GetCenter();
 
                 var earthQuakePoints = new List<PointFT>();
@@ -256,7 +255,6 @@ namespace GoblinKnifeDeploy
 
             red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
                          orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
-            VisualizeDeployment();
         }
 
         public override IEnumerable<int> AttackRoutine()
@@ -292,7 +290,6 @@ namespace GoblinKnifeDeploy
             //get warden in a seperated member
             var warden = heroes.ExtractOne(u => u.ElementType == DeployElementType.HeroWarden);
 
-            bool oneHealerDeployed = false;
 
             //open near to dark elixer with 4 earthquakes
             if (earthQuakeSpell?.Count >= 4)
@@ -304,11 +301,7 @@ namespace GoblinKnifeDeploy
             else
                 useJump = true;
 
-            if (useJump && jumpSpell?.Count >= 2)
-            {
-                foreach (var t in Deploy.AtPoint(jumpSpell, jumpPoint1))
-                    yield return t;
-            }
+
             yield return 1000;
             //deploy tanks
             Log.Info($"[{AttackName}] deploy tank troops .. ");
@@ -335,16 +328,9 @@ namespace GoblinKnifeDeploy
                     yield return t;
             }
 
-            if (healer?.Count == 2)
+            if (healer?.Count >= 2)
             {
-                foreach (var t in Deploy.AtPoint(healer, red1))
-                    yield return t;
-                oneHealerDeployed = true;
-            }
-
-            if (healer?.Count >= 4)
-            {
-                healerFunnlCount = healer.Count / 3;
+                healerFunnlCount = healer.Count <= 4 ? healer.Count / 2 : healer.Count / 3;
                 foreach (var t in Deploy.AtPoint(healer, red1, healerFunnlCount))
                     yield return t;
             }
@@ -355,13 +341,8 @@ namespace GoblinKnifeDeploy
             foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
                 yield return t;
 
-            if (healer?.Count == 1 && oneHealerDeployed)
-            {
-                foreach (var t in Deploy.AtPoint(healer, red2))
-                    yield return t;
-            }
 
-            if (healer?.Count >= 3)
+            if (healer?.Count > 0 && healerFunnlCount > 0)
             {
                 foreach (var t in Deploy.AtPoint(healer, red2, healerFunnlCount))
                     yield return t;
@@ -407,6 +388,12 @@ namespace GoblinKnifeDeploy
                 break;
             }
 
+            if (useJump && jumpSpell?.Count >= 2)
+            {
+                foreach (var t in Deploy.AtPoint(jumpSpell, jumpPoint1))
+                    yield return t;
+            }
+
             Log.Info($"[{AttackName}] deploy rest of troops");
             if (bowler?.Count > 0)
             {
@@ -420,7 +407,7 @@ namespace GoblinKnifeDeploy
             }
             if (witch?.Count > 0)
             {
-                foreach (var t in Deploy.AlongLine(witch, red1, red2, witch.Count, 4)) 
+                foreach (var t in Deploy.AlongLine(witch, red1, red2, witch.Count, 4))
                     yield return t;
             }
 
@@ -463,7 +450,7 @@ namespace GoblinKnifeDeploy
                     yield return t;
             }
             yield return 2000;
-            
+
             //deploy spells
             foreach (var t in Deploy.AtPoint(ragespell, ragePoint))
                 yield return t;
@@ -509,7 +496,6 @@ namespace GoblinKnifeDeploy
 
         public override double ShouldAccept()
         {
-            CreateDeployPoints();
             if (Opponent.MeetsRequirements(BaseRequirements.All))
             {
                 Log.Debug($"[{AttackName}] searching for TownHall ....");
@@ -523,7 +509,7 @@ namespace GoblinKnifeDeploy
                 else
                 {
                     Log.Debug($"[{AttackName}] Found TownHall .. move to CreateDeployPoints Method");
-                    return 0;
+                    return 1;
                 }
             }
             return 0;
@@ -554,7 +540,7 @@ namespace GoblinKnifeDeploy
                     Visualize.RectangleT(bmp, new RectangleT((int)red2.X, (int)red2.Y, 1, 1), new Pen(Color.Blue));
 
                     Visualize.RectangleT(bmp, new RectangleT((int)nearestWall.X, (int)nearestWall.Y, 1, 1), new Pen(Color.White));
-                
+
                     Visualize.CircleT(bmp, earthQuakePoint, 4, Color.Brown, 128, 0);
 
                     Visualize.CircleT(bmp, jumpPoint, 3.5f, Color.DarkGreen, 130, 0);
