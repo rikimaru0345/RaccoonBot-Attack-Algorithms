@@ -16,10 +16,10 @@ namespace GoblinKnifeDeploy
         Container<PointFT> orgin;
         Tuple<PointFT, PointFT> attackLine;
         PointFT nearestWall, core, earthQuakePoint, healPoint, ragePoint, ragePoint2, target, jumpPoint, jumpPoint1, red1, red2;
-        bool useJump = false;
+        bool useJump = false, isWardwn = false;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount;
         DeployElement freezeSpell;
-        const string Version = "1.0.2.35";
+        const string Version = "1.0.2.36";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -55,7 +55,16 @@ namespace GoblinKnifeDeploy
             return eqWalls;
         }
 
-       
+        IEnumerable<Wall> GetNearstWallInFrontOfDeployPoint(float PointOfDeployXorY, string DirctionOfWalls)
+        {
+            IEnumerable<Wall> wallsToTarget;
+            if (DirctionOfWalls == "Y")
+                wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().Y == (int)PointOfDeployXorY) || ((int)w.Location.GetCenter().Y + 1 == (int)PointOfDeployXorY) || (int)w.Location.GetCenter().Y - 1 == (int)PointOfDeployXorY);
+            else
+                wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().X == (int)PointOfDeployXorY) || ((int)w.Location.GetCenter().X + 1 == (int)PointOfDeployXorY) || (int)w.Location.GetCenter().X - 1 == (int)PointOfDeployXorY);
+            return wallsToTarget;
+        }
+
         /// <summary>
         /// create depoly points for troops and spells
         /// </summary>
@@ -113,7 +122,7 @@ namespace GoblinKnifeDeploy
                 var distance = orgin.Item.X - this.target.X;
                 var target = distance >= MinDistace ? this.target : core;
 
-                var wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().Y == (int)orgin.Item.Y) || ((int)w.Location.GetCenter().Y + 1 == (int)orgin.Item.Y) || (int)w.Location.GetCenter().Y - 1 == (int)orgin.Item.Y);
+                var wallsToTarget = GetNearstWallInFrontOfDeployPoint(orgin.Item.Y,"Y");
                 nearestWall = orgin.Item;
                 if (wallsToTarget?.Count() > 0)
                     nearestWall = wallsToTarget.OrderByDescending(w => w.Location.GetCenter().X).First().Location.GetCenter();
@@ -149,7 +158,7 @@ namespace GoblinKnifeDeploy
                 var distance = (orgin.Item.X - this.target.X) * -1;
                 var target = distance >= MinDistace ? this.target : core;
 
-                var wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().Y == (int)orgin.Item.Y) || ((int)w.Location.GetCenter().Y + 1 == (int)orgin.Item.Y) || (int)w.Location.GetCenter().Y - 1 == (int)orgin.Item.Y); 
+                var wallsToTarget = GetNearstWallInFrontOfDeployPoint(orgin.Item.Y, "Y");
                 //set default value to the nearst wall if there is no walls
                 nearestWall = orgin.Item;
                 if (wallsToTarget?.Count() > 0)
@@ -185,7 +194,7 @@ namespace GoblinKnifeDeploy
                 var distance = orgin.Item.Y - this.target.Y;
                 var target = distance >= MinDistace ? this.target : core;
 
-                var wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().X == (int)orgin.Item.X) || ((int)w.Location.GetCenter().X + 1 == (int)orgin.Item.X) || (int)w.Location.GetCenter().X - 1 == (int)orgin.Item.X);
+                var wallsToTarget = GetNearstWallInFrontOfDeployPoint(orgin.Item.X, "X");
                 nearestWall = orgin.Item;
                 if (wallsToTarget?.Count() > 0)
                     nearestWall = wallsToTarget.OrderByDescending(w => w.Location.GetCenter().Y).First().Location.GetCenter();
@@ -221,7 +230,7 @@ namespace GoblinKnifeDeploy
                 var distance = (orgin.Item.Y - this.target.Y) * -1;
                 var target = distance >= MinDistace ? this.target : core;
 
-                var wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().X == (int)orgin.Item.X) || ((int)w.Location.GetCenter().X + 1 == (int)orgin.Item.X) || (int)w.Location.GetCenter().X - 1 == (int)orgin.Item.X);
+                var wallsToTarget = GetNearstWallInFrontOfDeployPoint(orgin.Item.X, "X");
                 nearestWall = orgin.Item;
                 if (wallsToTarget?.Count() > 0)
                     nearestWall = wallsToTarget.OrderBy(w => w.Location.GetCenter().Y).First().Location.GetCenter();
@@ -292,7 +301,7 @@ namespace GoblinKnifeDeploy
             //get warden in a seperated member
             var warden = heroes.ExtractOne(u => u.ElementType == DeployElementType.HeroWarden);
 
-
+            isWardwn = warden?.Count > 0 ? true : false;
             //open near to dark elixer with 4 earthquakes
             if (earthQuakeSpell?.Count >= 4)
             {
@@ -307,7 +316,7 @@ namespace GoblinKnifeDeploy
             yield return 1000;
             //deploy tanks
             Log.Info($"[{AttackName}] deploy tank troops .. ");
-            if (golem?.Count > 0)
+            if (golem?.Count >= 2)
             {
                 foreach (var t in Deploy.AlongLine(golem, attackLine.Item1, attackLine.Item2, golem.Count, golem.Count))
                     yield return t;
@@ -349,12 +358,22 @@ namespace GoblinKnifeDeploy
                 foreach (var t in Deploy.AtPoint(healer, red2, healerFunnlCount))
                     yield return t;
             }
+            if ((useJump && jumpSpell?.Count >= 2) || (!useJump && jumpSpell.Count >= 1))
+            {
+                foreach (var t in Deploy.AtPoint(jumpSpell, jumpPoint1))
+                    yield return t;
+            }
 
             yield return 7000;
 
             if (giant?.Count > 0)
             {
                 foreach (var t in Deploy.AlongLine(giant, red1, red2, giant.Count, 2))
+                    yield return t;
+            }
+            if (golem?.Count > 0)
+            {
+                foreach (var t in Deploy.AlongLine(golem, attackLine.Item1, attackLine.Item2, golem.Count, golem.Count))
                     yield return t;
             }
             Log.Info($"[{AttackName}] droping heroes");
@@ -367,7 +386,7 @@ namespace GoblinKnifeDeploy
                 }
                 Deploy.WatchHeroes(heroes);
             }
-            if (warden?.Count > 0)
+            if (isWardwn)
             {
                 foreach (var t in Deploy.AtPoint(warden, orgin))
                     yield return t;
@@ -388,12 +407,6 @@ namespace GoblinKnifeDeploy
 
                 Log.Warning($"[{AttackName}] Couldn't deploy {wallbreaker.PrettyName}");
                 break;
-            }
-
-            if ((useJump && jumpSpell?.Count >= 2) || (!useJump && jumpSpell.Count >= 1)) 
-            {
-                foreach (var t in Deploy.AtPoint(jumpSpell, jumpPoint1))
-                    yield return t;
             }
 
             Log.Info($"[{AttackName}] deploy rest of troops");
@@ -425,6 +438,8 @@ namespace GoblinKnifeDeploy
                 foreach (var t in Deploy.AtPoint(healer, orgin, healer.Count))
                     yield return t;
             }
+
+            yield return 3000;
 
             foreach (var unit in deployElements)
             {
@@ -460,7 +475,7 @@ namespace GoblinKnifeDeploy
             yield return 3000;
 
             // activate Grand Warden apility
-            if (warden?.Count > 0)
+            if (isWardwn)
             {
                 var heroList = new List<DeployElement> { warden };
                 TryActivateHeroAbilities(heroList, true, 2000);
@@ -471,11 +486,10 @@ namespace GoblinKnifeDeploy
             foreach (var t in Deploy.AtPoint(healspell, healPoint))
                 yield return t;
 
-            if (ragespell?.Count >= 2)
-            {
-                foreach (var t in Deploy.AtPoint(ragespell, healPoint))
-                    yield return t;
-            }
+          
+            foreach (var t in Deploy.AtPoint(ragespell, healPoint))
+                yield return t;
+
             //use freeze if inferno is found
             if (freezeSpell?.Count > 0)
             {
@@ -490,6 +504,7 @@ namespace GoblinKnifeDeploy
                     }
                 }
             }
+
 
             yield return 4000;
             foreach (var t in Deploy.AtPoint(ragespell, ragePoint2))
