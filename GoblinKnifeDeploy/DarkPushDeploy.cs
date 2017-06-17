@@ -16,7 +16,7 @@ namespace GoblinKnifeDeploy
         Container<PointFT> orgin;
         Tuple<PointFT, PointFT> attackLine;
         PointFT nearestWall, core, earthQuakePoint, healPoint, ragePoint, ragePoint2, target, jumpPoint, jumpPoint1, red1, red2;
-        bool useJump = false;
+        bool useJump = false, isWardwn = false;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount;
         DeployElement freezeSpell;
         const string Version = "1.0.2.36";
@@ -301,7 +301,7 @@ namespace GoblinKnifeDeploy
             //get warden in a seperated member
             var warden = heroes.ExtractOne(u => u.ElementType == DeployElementType.HeroWarden);
 
-
+            isWardwn = warden?.Count > 0 ? true : false;
             //open near to dark elixer with 4 earthquakes
             if (earthQuakeSpell?.Count >= 4)
             {
@@ -358,6 +358,11 @@ namespace GoblinKnifeDeploy
                 foreach (var t in Deploy.AtPoint(healer, red2, healerFunnlCount))
                     yield return t;
             }
+            if ((useJump && jumpSpell?.Count >= 2) || (!useJump && jumpSpell.Count >= 1))
+            {
+                foreach (var t in Deploy.AtPoint(jumpSpell, jumpPoint1))
+                    yield return t;
+            }
 
             yield return 7000;
 
@@ -381,7 +386,7 @@ namespace GoblinKnifeDeploy
                 }
                 Deploy.WatchHeroes(heroes);
             }
-            if (warden?.Count > 0)
+            if (isWardwn)
             {
                 foreach (var t in Deploy.AtPoint(warden, orgin))
                     yield return t;
@@ -402,12 +407,6 @@ namespace GoblinKnifeDeploy
 
                 Log.Warning($"[{AttackName}] Couldn't deploy {wallbreaker.PrettyName}");
                 break;
-            }
-
-            if ((useJump && jumpSpell?.Count >= 2) || (!useJump && jumpSpell.Count >= 1)) 
-            {
-                foreach (var t in Deploy.AtPoint(jumpSpell, jumpPoint1))
-                    yield return t;
             }
 
             Log.Info($"[{AttackName}] deploy rest of troops");
@@ -476,7 +475,7 @@ namespace GoblinKnifeDeploy
             yield return 3000;
 
             // activate Grand Warden apility
-            if (warden?.Count > 0)
+            if (isWardwn)
             {
                 var heroList = new List<DeployElement> { warden };
                 TryActivateHeroAbilities(heroList, true, 2000);
