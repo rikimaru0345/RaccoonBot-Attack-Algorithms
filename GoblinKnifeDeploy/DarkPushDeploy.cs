@@ -55,6 +55,7 @@ namespace GoblinKnifeDeploy
             return eqWalls;
         }
 
+       
         /// <summary>
         /// create depoly points for troops and spells
         /// </summary>
@@ -112,7 +113,7 @@ namespace GoblinKnifeDeploy
                 var distance = orgin.Item.X - this.target.X;
                 var target = distance >= MinDistace ? this.target : core;
 
-                var wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().Y == (int)orgin.Item.Y) || ((int)w.Location.GetCenter().Y + 1 == (int)orgin.Item.Y) || (int)w.Location.GetCenter().Y - 1 == (int)orgin.Item.X);
+                var wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().Y == (int)orgin.Item.Y) || ((int)w.Location.GetCenter().Y + 1 == (int)orgin.Item.Y) || (int)w.Location.GetCenter().Y - 1 == (int)orgin.Item.Y);
                 nearestWall = orgin.Item;
                 if (wallsToTarget?.Count() > 0)
                     nearestWall = wallsToTarget.OrderByDescending(w => w.Location.GetCenter().X).First().Location.GetCenter();
@@ -120,7 +121,7 @@ namespace GoblinKnifeDeploy
                 var earthQuakePoints = new List<PointFT>();
                 var jumpPoints = new List<PointFT>();
 
-                var maxX = nearestWall.X - 5f;
+                var maxX = nearestWall.X - 6f;
                 var start = target.X + 4f;
                 while (maxX > start)
                 {
@@ -148,7 +149,7 @@ namespace GoblinKnifeDeploy
                 var distance = (orgin.Item.X - this.target.X) * -1;
                 var target = distance >= MinDistace ? this.target : core;
 
-                var wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().Y == (int)orgin.Item.Y) || ((int)w.Location.GetCenter().Y + 1 == (int)orgin.Item.Y) || (int)w.Location.GetCenter().Y - 1 == (int)orgin.Item.Y);
+                var wallsToTarget = Wall.Find().Where(w => ((int)w.Location.GetCenter().Y == (int)orgin.Item.Y) || ((int)w.Location.GetCenter().Y + 1 == (int)orgin.Item.Y) || (int)w.Location.GetCenter().Y - 1 == (int)orgin.Item.Y); 
                 //set default value to the nearst wall if there is no walls
                 nearestWall = orgin.Item;
                 if (wallsToTarget?.Count() > 0)
@@ -157,7 +158,7 @@ namespace GoblinKnifeDeploy
                 var earthQuakePoints = new List<PointFT>();
                 var jumpPoints = new List<PointFT>();
 
-                var maxX = nearestWall.X + 5f;
+                var maxX = nearestWall.X + 6f;
                 var start = target.X - 4f;
                 while (maxX < start)
                 {
@@ -192,7 +193,7 @@ namespace GoblinKnifeDeploy
                 var earthQuakePoints = new List<PointFT>();
                 var jumpPoints = new List<PointFT>();
 
-                var maxX = nearestWall.Y - 5f;
+                var maxX = nearestWall.Y - 6f;
                 var start = target.Y + 4f;
                 while (maxX > start)
                 {
@@ -228,7 +229,7 @@ namespace GoblinKnifeDeploy
                 var earthQuakePoints = new List<PointFT>();
                 var jumpPoints = new List<PointFT>();
 
-                var maxX = nearestWall.Y + 5f;
+                var maxX = nearestWall.Y + 6f;
                 var start = target.Y - 4f;
                 while (maxX < start)
                 {
@@ -255,6 +256,8 @@ namespace GoblinKnifeDeploy
 
             red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
                          orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+            VisualizeDeployment();
         }
 
         public override IEnumerable<int> AttackRoutine()
@@ -278,7 +281,6 @@ namespace GoblinKnifeDeploy
             var golem = deployElements.ExtractOne(DeployId.Golem);
             //main troops
             var wallbreaker = deployElements.ExtractOne(DeployId.WallBreaker);
-            var valk = deployElements.ExtractOne(DeployId.Valkyrie);
             var bowler = deployElements.ExtractOne(DeployId.Bowler);
             var witch = deployElements.ExtractOne(DeployId.Witch);
             var healer = deployElements.ExtractOne(DeployId.Healer);
@@ -294,7 +296,7 @@ namespace GoblinKnifeDeploy
             //open near to dark elixer with 4 earthquakes
             if (earthQuakeSpell?.Count >= 4)
             {
-                Log.Info($"[{AttackName}] preak walls beside Twonhall ");
+                Log.Info($"[{AttackName}] break walls beside Twonhall ");
                 foreach (var t in Deploy.AtPoint(earthQuakeSpell, earthQuakePoint, 4))
                     yield return t;
             }
@@ -388,7 +390,7 @@ namespace GoblinKnifeDeploy
                 break;
             }
 
-            if (useJump && jumpSpell?.Count >= 2)
+            if ((useJump && jumpSpell?.Count >= 2) || (!useJump && jumpSpell.Count >= 1)) 
             {
                 foreach (var t in Deploy.AtPoint(jumpSpell, jumpPoint1))
                     yield return t;
@@ -541,7 +543,7 @@ namespace GoblinKnifeDeploy
 
                     Visualize.RectangleT(bmp, new RectangleT((int)nearestWall.X, (int)nearestWall.Y, 1, 1), new Pen(Color.White));
 
-                    Visualize.CircleT(bmp, earthQuakePoint, 4, Color.Brown, 128, 0);
+                    //Visualize.CircleT(bmp, earthQuakePoint, 4, Color.Brown, 128, 0);
 
                     Visualize.CircleT(bmp, jumpPoint, 3.5f, Color.DarkGreen, 130, 0);
                     Visualize.CircleT(bmp, jumpPoint1, 3.5f, Color.DarkGreen, 130, 0);
