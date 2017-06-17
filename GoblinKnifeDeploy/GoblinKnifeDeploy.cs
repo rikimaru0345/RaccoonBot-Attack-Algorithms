@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Linq;
 using CoC_Bot.API;
 using CoC_Bot.API.Buildings;
@@ -11,58 +12,64 @@ namespace GoblinKnifeDeploy
     [AttackAlgorithm("Goblin Knife Deploy", "Use goblin knife to get dark elixir")]
     public class GoblinKnifeDeploy : BaseAttack
     {
-        #region variables to store attack points
-        private static RectangleT _border;
-        private static PointFT _core;
-        private static Container<PointFT> _orgin;
-        private static Tuple<PointFT, PointFT> _attackLine;
-        private static PointFT _earthQuakePoint;
-        private static PointFT _healPoint;
-        private static PointFT _ragePoint;
-        private static PointFT _target;
+        #region my variables "class members"
+        private RectangleT _border;
+        private Container<PointFT> _orgin;
+        private Tuple<PointFT, PointFT> _attackLine;
+        private PointFT _core, _earthQuakePoint, _healPoint, _ragePoint, _target, _jumpPoint;
+        private bool _useJump = false;
+        private int _delay = 2000;
+        private DeployElement _freezeSpell;
+        private const string Version = "1.0.6.45";
         #endregion
 
-        public GoblinKnifeDeploy(Opponent opponent) : base(opponent)
-        {
-        }
+        #region drop freeze function 
 
-        #region shoudAccept
-        public override double ShouldAccept()
+        /// <summary>
+        /// whatch Inforno to drop FreezSpell on
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="a"></param>
+        private void DropFreeze(object sender, EventArgs a)
         {
-            if (Opponent.MeetsRequirements(BaseRequirements.All))
+            var inferno = (InfernoTower)sender;
+
+            foreach (var t in Deploy.AtPoint(_freezeSpell, inferno.Location.GetCenter()))
+                Thread.Sleep(t);
+
+            inferno.StopWatching();
+        }
+        #endregion
+
+        #region create depoly points for troops and spells
+        /// <summary>
+        /// create depoly points for troops and spells
+        /// </summary>
+        private void CreateDeployPoints()
+        {
+            var DE = DarkElixirStorage.Find()?.FirstOrDefault()?.Location.GetCenter();
+            if(DE != null)
+                _target = (PointFT)DE;
+            else
             {
-                return 1;
+                Log.Debug("[Goblin Knife] coundn't locate the target after aligning the base");
+                Log.Error("Couldn't find DE Storage we will return home");
+                Surrender();
             }
 
-            return 0;
-        }
-        #endregion
+            float getOutRedArea = 0.25f;
 
-        #region Attack Name in toStriong Method
-        public override string ToString()
-        {
-            return "Goblin Knife Deploy";
-        }
-        #endregion
-
-        #region Calculate Deploy Points
-        private static void CreateDeployPoints()
-        {
-            var target = DarkElixirStorage.Find()?.FirstOrDefault().Location.GetCenter() ??
-                            TownHall.Find()?.Location.GetCenter() ??
-                            new PointFT(0, 0);
-            _target = target;
             // don't include corners in case build huts are there
-            var maxRedPointX = GameGrid.RedPoints.Where(p => -18 < p.Y && p.Y < 18)?.Max(point => point.X) + 1 ?? GameGrid.RedZoneExtents.MaxX;
-            var minRedPointX = GameGrid.RedPoints.Where(p => -18 < p.Y && p.Y < 18)?.Min(point => point.X) - 1 ?? GameGrid.RedZoneExtents.MinX;
-            var maxRedPointY = GameGrid.RedPoints.Where(p => -18 < p.X && p.X < 18)?.Max(point => point.Y) + 1 ?? GameGrid.RedZoneExtents.MaxY;
-            var minRedPointY = GameGrid.RedPoints.Where(p => -18 < p.X && p.X < 18)?.Min(point => point.Y) - 1 ?? GameGrid.RedZoneExtents.MinY;
-
+            float maxRedPointX = (GameGrid.RedPoints.Where(p => -18 < p.Y && p.Y < 18)?.Max(point => point.X) + 1 ?? GameGrid.RedZoneExtents.MaxX)+ getOutRedArea;
+            float minRedPointX = (GameGrid.RedPoints.Where(p => -18 < p.Y && p.Y < 18)?.Min(point => point.X) - 1 ?? GameGrid.RedZoneExtents.MinX)- getOutRedArea;
+            float maxRedPointY = (GameGrid.RedPoints.Where(p => -18 < p.X && p.X < 18)?.Max(point => point.Y) + 1 ?? GameGrid.RedZoneExtents.MaxY)+ getOutRedArea;
+            float minRedPointY = (GameGrid.RedPoints.Where(p => -18 < p.X && p.X < 18)?.Min(point => point.Y) - 1 ?? GameGrid.RedZoneExtents.MinY)- getOutRedArea;
             // build a box around the base
-            var left = new PointFT(minRedPointX, maxRedPointY);
-            var top = new PointFT(maxRedPointX, maxRedPointY);
-            var right = new PointFT(maxRedPointX, minRedPointY);
-            var bottom = new PointFT(minRedPointX, minRedPointY);
+            PointFT left = new PointFT(minRedPointX, maxRedPointY);
+            PointFT top = new PointFT(maxRedPointX, maxRedPointY);
+            PointFT right = new PointFT(maxRedPointX, minRedPointY);
+            PointFT bottom = new PointFT(minRedPointX, minRedPointY);
+
 
             // border around the base
             _border = new RectangleT((int)minRedPointX, (int)maxRedPointY, (int)(maxRedPointX - minRedPointX), (int)(minRedPointY - maxRedPointY));
@@ -70,7 +77,7 @@ namespace GoblinKnifeDeploy
             // core is center of the box
             _core = _border.GetCenter();
 
-            var orginPoints = new[]
+            PointFT[] orginPoints = new[]
             {
                 new PointFT(maxRedPointX, _core.Y),
                 new PointFT(minRedPointX, _core.Y),
@@ -78,245 +85,341 @@ namespace GoblinKnifeDeploy
                 new PointFT(_core.X, minRedPointY)
             };
 
-            _orgin = new Container<PointFT> { Item = orginPoints.OrderBy(point => point.DistanceSq(target)).First() };
+            _orgin = new Container<PointFT> { Item = orginPoints.OrderBy(point => point.DistanceSq(_target)).First() };
             #region top right
             if (_orgin.Item.X > _core.X)
             {
-                Log.Info("[GoblinKnife] Attacking from the top right");
-
-                var redLinePoint = GameGrid.RedPoints
-                    .Where(point => point.Y > -10 && point.Y < 10)?
-                    .Max(point => point.X) ?? GameGrid.RedZoneExtents.MaxX;
-
+                Log.Info("[Goblin Knife] Attacking from the top right");
+                
                 _attackLine = new Tuple<PointFT, PointFT>(top, right);
 
-                _earthQuakePoint = new PointFT(target.X + 5.5f, _core.Y);
-                _healPoint = new PointFT(redLinePoint - 13, _core.Y);
-                _ragePoint = new PointFT(redLinePoint - 9, _core.Y);
+                _earthQuakePoint = new PointFT(_target.X + 5.5f, _core.Y);
+                _jumpPoint = new PointFT(_target.X + 5f, _core.Y);
+                _healPoint = new PointFT(_orgin.Item.X - 13f, _core.Y);
+                _ragePoint = new PointFT(_orgin.Item.X - 9f, _core.Y);
             }
             #endregion
 
             #region bottom left
             else if (_orgin.Item.X < _core.X)
             {
-                Log.Info("[GoblinKnife] Attacking from the bottom left");
-
-                var redLinePoint = GameGrid.RedPoints
-                    .Where(point => point.Y > -10 && point.Y < 10)?
-                    .Min(point => point.X) ?? GameGrid.RedZoneExtents.MinX;
-
+                Log.Info("[Goblin Knife] Attacking from the bottom left");
+                
                 _attackLine = new Tuple<PointFT, PointFT>(bottom, left);
 
-                _earthQuakePoint = new PointFT(target.X - 5.5f, _core.Y);
-                _healPoint = new PointFT(redLinePoint + 13, _core.Y);
-                _ragePoint = new PointFT(redLinePoint + 9, _core.Y);
+                _earthQuakePoint = new PointFT(_target.X - 5.5f, _core.Y);
+                _jumpPoint = new PointFT(_target.X - 5f, _core.Y);
+                _healPoint = new PointFT(_orgin.Item.X + 13f, _core.Y);
+                _ragePoint = new PointFT(_orgin.Item.X + 9f, _core.Y);
             }
             #endregion
 
             #region top left
             else if (_orgin.Item.Y > _core.Y)
             {
-                Log.Info("[GoblinKnife] Attacking from the top left");
-
-                var redLinePoint = GameGrid.RedPoints
-                    .Where(point => point.X > -10 && point.X < 10)?
-                    .Max(point => point.Y) ?? GameGrid.RedZoneExtents.MaxY;
-
+                Log.Info("[Goblin Knife] Attacking from the top left");
+                
                 _attackLine = new Tuple<PointFT, PointFT>(left, top);
 
-                _earthQuakePoint = new PointFT(_core.X, target.Y + 5.5f);
-                _healPoint = new PointFT(_core.X, redLinePoint - 13);
-                _ragePoint = new PointFT(_core.X, redLinePoint - 9);
+                _earthQuakePoint = new PointFT(_core.X, _target.Y + 5.5f);
+                _jumpPoint = new PointFT(_core.X, _target.Y + 5f);
+                _healPoint = new PointFT(_core.X, _orgin.Item.Y - 13f);
+                _ragePoint = new PointFT(_core.X, _orgin.Item.Y - 9f);
             }
             #endregion
 
             #region bottom right
             else // (orgin.Y < core.Y)
             {
-                Log.Info("[GoblinOnife] Attacking from the bottom right");
-
-                var redLinePoint = GameGrid.RedPoints
-                    .Where(point => point.X > -10 && point.X < 10)?
-                    .Min(point => point.Y) ?? GameGrid.RedZoneExtents.MinY;
-
-                
+                Log.Info("[Goblin Knife] Attacking from the bottom right");
+               
                 _attackLine = new Tuple<PointFT, PointFT>(right, bottom);
 
-                _earthQuakePoint = new PointFT(_core.X, target.Y - 5.5f);
-                _healPoint = new PointFT(_core.X, redLinePoint + 13);
-                _ragePoint = new PointFT(_core.X, redLinePoint + 9);
+                _earthQuakePoint = new PointFT(_core.X, _target.Y - 5.5f);
+                _jumpPoint = new PointFT(_core.X, _target.Y - 5f);
+                _healPoint = new PointFT(_core.X, _orgin.Item.Y + 13f);
+                _ragePoint = new PointFT(_core.X, _orgin.Item.Y + 9f);
             }
             #endregion
-
         }
         #endregion
 
-        #region Attack Routine
+        #region Deployment troops and spells
         public override IEnumerable<int> AttackRoutine()
         {
-            Log.Info("[GoblinKnife] Deploy start");
-
+            yield return 5000;
             CreateDeployPoints();
+            Log.Info($"[Goblin Knife] V{Version} Deploy start");
 
-            #region get used Troops
+            //get troops
+
             var deployElements = Deploy.GetTroops();
 
+            var clanCastle = deployElements.ExtractOne(u => u.ElementType == DeployElementType.ClanTroops && UserSettings.UseClanTroops);
+
             var earthQuakeSpell = deployElements.ExtractOne(DeployId.Earthquake);
+            var jumpSpell = deployElements.ExtractOne(DeployId.Jump);
             var giant = deployElements.ExtractOne(DeployId.Giant);
             var goblin = deployElements.ExtractOne(DeployId.Goblin);
             var wizard = deployElements.ExtractOne(DeployId.Wizard);
+            var barbarian = deployElements.ExtractOne(DeployId.Barbarian);
+            var archer = deployElements.ExtractOne(DeployId.Archer);
             var wallbreaker = deployElements.ExtractOne(DeployId.WallBreaker);
             var ragespell = deployElements.ExtractOne(DeployId.Rage);
             var healspell = deployElements.ExtractOne(DeployId.Heal);
+            _freezeSpell = deployElements.ExtractOne(DeployId.Freeze);
+
             var heroes = deployElements
                 .Extract(u => (UserSettings.UseKing && u.ElementType == DeployElementType.HeroKing)
                     || (UserSettings.UseQueen && u.ElementType == DeployElementType.HeroQueen)
                     || (UserSettings.UseWarden && u.ElementType == DeployElementType.HeroWarden))
                 .ToList();
-            var clanCastle = deployElements.ExtractOne(u => u.ElementType == DeployElementType.ClanTroops && UserSettings.UseClanTroops);
-            #endregion
-
-            #region Deploy EarthQuake Spells
+            
             //open near to dark elixer with 4 earthquakes
-            if (earthQuakeSpell?.Count >=4)
+            if (earthQuakeSpell?.Count >= 4)
             {
-                foreach (var t in Deploy.AtPoint(earthQuakeSpell, _earthQuakePoint, 4))
+                foreach (int t in Deploy.AtPoint(earthQuakeSpell, _earthQuakePoint, 4))
                 {
                     yield return t;
                 }
-               
             }
-            #endregion
-
-            #region Deploy 4 giants in a line to tank the funnel
-            foreach (var t in Deploy.AlongLine(giant, _attackLine.Item1, _attackLine.Item2, 4, 4))
+            else
             {
-                yield return t;
+                _useJump = true;
             }
-            #endregion
-
-            #region Deploy Wizards after giant to funnel
-            foreach (var t in Deploy.AlongLine(wizard, _attackLine.Item1, _attackLine.Item2, 8, 4))
+            yield return 1000;
+            if (giant?.Count > 0)
             {
-                yield return t;
+                foreach (int t in Deploy.AlongLine(giant, _attackLine.Item1, _attackLine.Item2, 6, 6))
+                {
+                    yield return t;
+                }
             }
-            #endregion
+
+            yield return 1000;
+
+            if (wizard?.Count > 0)
+            {
+                foreach (int t in Deploy.AlongLine(wizard, _attackLine.Item1, _attackLine.Item2, 8, 4))
+                {
+                    yield return t;
+                }
+            }
+
+            if(barbarian?.Count >0)
+            {
+                while (barbarian.Count > 0)
+                {
+                    int count = barbarian.Count;
+
+                    Log.Info($"[Goblin Knife] Deploying {barbarian.PrettyName}");
+                    foreach (int t in Deploy.AlongLine(barbarian, _attackLine.Item1, _attackLine.Item2, count, 4))
+                    {
+                        yield return t;
+                    }
+
+                    // prevent infinite loop if deploy point is on red
+                    if (barbarian.Count != count) continue;
+
+                    Log.Warning($"[Goblin Knife] Couldn't deploy {barbarian.PrettyName}");
+                    break;
+                }
+            }
+            
+            if (archer?.Count > 0)
+            {
+                int archerCount = (int)(archer.Count/2);
+                Log.Info($"[Goblin Knife] Deploying {archer.PrettyName} ");
+                foreach (int t in Deploy.AlongLine(archer, _attackLine.Item1, _attackLine.Item2, archerCount, 4))
+                {
+                    yield return t;
+                }
+            }
 
             yield return 3000;
 
-            #region Deploy rage spell for giants and wall-breakers
-            foreach (var t in Deploy.AtPoint(ragespell, _ragePoint))
-                yield return t;
-            #endregion
+            if (ragespell?.Count >= 2)
+            {
+                foreach (int t in Deploy.AtPoint(ragespell, _ragePoint))
+                    yield return t;
+            }
 
-            #region Deploy wall-breakers to open the first one or two wall layers
+            Log.Info($"[Goblin Knife] send test {wallbreaker.PrettyName} to check for bombs");
+            foreach (int t in Deploy.AtPoint(wallbreaker, _orgin, 1))
+                yield return t;
+
+            yield return 1000;
             while (wallbreaker?.Count > 0)
             {
-                var count = wallbreaker.Count;
-
-                Log.Info($"[GoblinKnife] Deploying {wallbreaker.PrettyName} x3");
-                foreach (var t in Deploy.AtPoint(wallbreaker, _orgin, 3))
+                int count = wallbreaker.Count;
+                Log.Info("[Goblin Knife] send wall breakers in groups");
+                foreach (int t in Deploy.AtPoint(wallbreaker, _orgin, 3))
                     yield return t;
 
                 // prevent infinite loop if deploy point is on red
                 if (wallbreaker.Count != count) continue;
 
-                Log.Warning($"[GoblinKnife] Couldn't deploy {wallbreaker.PrettyName}");
+                Log.Warning($"[Goblin Knife] Couldn't deploy {wallbreaker.PrettyName}");
                 break;
             }
-            #endregion
 
-            #region Deploy rest of giants in one spot
             while (giant?.Count > 0)
             {
-                var count = giant.Count;
+                int count = giant.Count;
 
-                Log.Info($"[GoblinKnife] Deploying {giant.PrettyName} x10");
-                foreach (var t in Deploy.AtPoint(giant, _orgin, 10))
+                Log.Info($"[Goblin Knife] Deploying {giant.PrettyName} x{count}");
+                foreach (int t in Deploy.AtPoint(giant, _orgin, count))
                     yield return t;
 
                 // prevent infinite loop if deploy point is on red
                 if (giant.Count != count) continue;
 
-                Log.Warning($"[GoblinKnife] Couldn't deploy {giant.PrettyName}");
+                Log.Warning($"[Goblin Knife] Couldn't deploy {giant.PrettyName}");
                 break;
             }
-            #endregion
 
             yield return 1000;
 
-            #region Deploy rest of Wizards 
             while (wizard?.Count > 0)
             {
-                var count = giant.Count;
+                int count = wizard.Count;
 
-                Log.Info($"[GoblinKnife] Deploying {wizard.PrettyName} x10");
-                foreach (var t in Deploy.AlongLine(wizard, _attackLine.Item1, _attackLine.Item2, 8, 4))
+                Log.Info($"[Goblin Knife] Deploying {wizard}");
+                foreach (int t in Deploy.AlongLine(wizard, _attackLine.Item1, _attackLine.Item2, 4, 2))
                     yield return t;
 
                 // prevent infinite loop if deploy point is on red
                 if (wizard.Count != count) continue;
 
-                Log.Warning($"[GoblinKnife] Couldn't deploy {wizard.PrettyName}");
+                Log.Warning($"[Goblin Knife] Couldn't deploy {wizard.PrettyName}");
                 break;
             }
-            #endregion
-
-            yield return 2000;
-
-            #region deploy heal spell to our tanks and wizards
-            foreach (var t in Deploy.AtPoint(healspell, _healPoint))
-                yield return t;
-            #endregion
-
-            #region deploy clanCastle Troops
-            if (clanCastle?.Count > 0)
+            if (archer?.Count > 0)
             {
-                Log.Info($"[GoblinKnife] Deploying {clanCastle.PrettyName}");
-                foreach (var t in Deploy.AtPoint(clanCastle, _orgin))
+                Log.Info($"[Goblin Knife] Deploying {archer.PrettyName} ");
+                foreach (int t in Deploy.AlongLine(archer, _attackLine.Item1, _attackLine.Item2, archer.Count, 4))
+                {
+                    yield return t;
+                }
+            }
+
+            yield return 1500;
+            if (_useJump == true && jumpSpell?.Count > 0)
+            {
+                foreach (int t in Deploy.AtPoint(jumpSpell, _jumpPoint))
                     yield return t;
             }
-            #endregion
 
-            #region Deploy Heroes
+            if (healspell?.Count > 0)
+            {
+                foreach (int t in Deploy.AtPoint(healspell, _healPoint))
+                    yield return t;
+            }
+
+            if (clanCastle?.Count > 0)
+            {
+                Log.Info($"[Goblin Knife] Deploying {clanCastle.PrettyName}");
+                foreach (int t in Deploy.AtPoint(clanCastle, _orgin))
+                    yield return t;
+            }
+
             if (heroes.Any())
             {
-                foreach (var hero in heroes.Where(u => u.Count > 0))
+                _delay = 1000;
+                foreach (DeployElement hero in heroes.Where(u => u.Count > 0))
                 {
-                    foreach (var t in Deploy.AtPoint(hero, _orgin))
+                    foreach (int t in Deploy.AtPoint(hero, _orgin))
                         yield return t;
                 }
                 Deploy.WatchHeroes(heroes, 7000);
             }
-            #endregion
+            yield return _delay;
 
-            yield return 2000;
-
-            #region Deploy all Goblins
             while (goblin?.Count > 0)
             {
-                var count = goblin.Count;
+                int testGoblins = (int)(goblin.Count / 3);
+                Log.Info($"[Goblin Knife] Deploying {goblin.PrettyName} x{testGoblins}");
+                
+                foreach (int t in Deploy.AtPoint(goblin, _orgin, testGoblins))
+                    yield return t;
 
-                Log.Info($"[GoblinKnife] Deploying {goblin.PrettyName} x20");
-                foreach (var t in Deploy.AtPoint(goblin, _orgin, 20))
+                yield return 2000;
+
+                int count = goblin.Count;
+
+                Log.Info($"[Goblin Knife] Deploying {goblin.PrettyName} x{count}");
+                foreach (int t in Deploy.AtPoint(goblin, _orgin, count))
                     yield return t;
 
                 // prevent infinite loop if deploy point is on red
                 if (goblin.Count != count) continue;
 
-                Log.Warning($"[GoblinKnife] Couldn't deploy {goblin.PrettyName}");
+                Log.Warning($"[Goblin Knife] Couldn't deploy {goblin.PrettyName}");
                 break;
             }
-            #endregion
+            //use freeze if inferno is found
+            if (_freezeSpell?.Count > 0)
+            {
+                var infernos = InfernoTower.Find();
+                // find and watch inferno towers
+                if (infernos != null)
+                {
+                    foreach (var inferno in infernos)
+                    {
+                        inferno.FirstActivated += DropFreeze;
 
-            yield return 1500;
+                        inferno.StartWatching();
+                    }
+                }
+            }
+            yield return 200;
 
-            #region Deploy heal spell on the target
-            foreach (var t in Deploy.AtPoint(healspell, _target))
+            foreach (int t in Deploy.AtPoint(healspell, _target))
                 yield return t;
-            #endregion
 
-            yield break;
+            foreach (int t in Deploy.AtPoint(ragespell, _target))
+                yield return t;
+        }
+        #endregion
+
+        public GoblinKnifeDeploy(Opponent opponent) : base(opponent)
+        {
+        }
+
+        #region override ShouldAccept() to check if we fing our tharget or not
+        public override double ShouldAccept()
+        {
+            /*var deployElements = Deploy.GetTroops();
+
+            var spells = deployElements.Extract(DeployElementType.Spell);
+            foreach(var unit in spells)
+            {
+                Log.Error($"we have {unit}");
+            }*/
+
+            if (Opponent.MeetsRequirements(BaseRequirements.All))
+            {
+                Log.Debug("[Goblin Knife] searching for DE Storage ....");
+                var DE = DarkElixirStorage.Find()?.FirstOrDefault()?.Location.GetCenter();
+                if(DE == null)
+                {
+                    Log.Debug("Couldn't found DE Storage .. we will skip this base");
+                    Log.Error("Counld not locate DE Storage .. skipping this base");
+                    return 0;
+                }else
+                {
+                    Log.Debug("[Goblin Knife] Found DE storage .. move to CreateDeployPoints Method");
+                    return 1;
+                }
+            }
+            return 0;
+        }
+        #endregion
+
+        #region override attack name through ToString function
+        public override string ToString()
+        {
+            return "Goblin Knife Deploy";
         }
         #endregion
     }
