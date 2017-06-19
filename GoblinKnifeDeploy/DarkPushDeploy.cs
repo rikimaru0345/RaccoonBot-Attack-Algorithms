@@ -21,7 +21,7 @@ namespace GoblinKnifeDeploy
         bool useJump = false, isWarden = false, QW, debug;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
-        const string Version = "1.0.2.36";
+        const string Version = "1.1.0.38";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -439,7 +439,7 @@ namespace GoblinKnifeDeploy
                          orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
 
             var queenRagePointX = red1.X > 0 ? red1.X - 5: red1.X + 5;
-            var queenRagePointY = red1.Y > 0 ? red1.X - 5 : red1.Y + 5;
+            var queenRagePointY = red1.Y > 0 ? red1.Y - 5 : red1.Y + 5;
 
             queenRagePoint = new PointFT(queenRagePointX, queenRagePointY);
             //VisualizeDeployment();
@@ -921,15 +921,17 @@ namespace GoblinKnifeDeploy
                 }
                 else
                 {
-                    target = (PointFT)TH;
+                    var target = (PointFT)TH;
                     maxTHDistance = CurrentSetting("maximum distance to townhall in tiles");
                     if(maxTHDistance > 0 && maxTHDistance < 20)
                     {
-                        var x = Math.Abs(target.X) - 2;
-                        var y = Math.Abs(target.Y) - 2;
+                        var x = Math.Abs(target.X) ;
+                        var y = Math.Abs(target.Y) ;
                         var max = x >= y ? x : y;
-                        if(maxTHDistance > max)
+                        max = 20 - max;
+                        if(maxTHDistance < max)
                         {
+                            Log.Warning($"user set maxTHDistance to {maxTHDistance}");
                             Log.Warning($"TownHall distance is {max} tiles , skipping the base");
                             return 0;
                         }
