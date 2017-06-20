@@ -17,7 +17,7 @@ namespace GoblinKnifeDeploy
         RectangleT border;
         Container<PointFT> orgin;
         Tuple<PointFT, PointFT> attackLine;
-        PointFT queenRagePoint, nearestWall, core, earthQuakePoint, healPoint, ragePoint, ragePoint2, target, jumpPoint, jumpPoint1, red1, red2;
+        PointFT QWHealear, queenRagePoint, nearestWall, core, earthQuakePoint, healPoint, ragePoint, ragePoint2, target, jumpPoint, jumpPoint1, red1, red2;
         bool useJump = false, isWarden = false, QW, debug;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
@@ -302,7 +302,7 @@ namespace GoblinKnifeDeploy
                 var earthQuakePoints = new List<PointFT>();
                 var jumpPoints = new List<PointFT>();
 
-                var maxX = nearestWall.X - 6f;
+                var maxX = nearestWall.X - 5f;
                 var start = target.X + 4f;
                 while (maxX > start)
                 {
@@ -319,13 +319,26 @@ namespace GoblinKnifeDeploy
                 ragePoint = new PointFT(orgin.Item.X - 9f, core.Y);
                 healPoint = new PointFT(orgin.Item.X - 15f, core.Y);
                 ragePoint2 = new PointFT(orgin.Item.X - 20f, core.Y);
+
+
+                //try to find better funneling points
+                var frac = 0.65f;
+
+                red1 = new PointFT(orgin.Item.X + frac * (attackLine.Item1.X - orgin.Item.X),
+                             orgin.Item.Y + frac * (attackLine.Item1.Y - orgin.Item.Y));
+
+                red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
+                             orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+                QWHealear = new PointFT(24, red1.Y);
+                queenRagePoint = new PointFT(red1.X - 1, red1.Y);
             }
 
             else if (orgin.Item.X < core.X)
             {
                 Log.Info($"[{AttackName}] Attacking from the bottom left");
 
-                attackLine = new Tuple<PointFT, PointFT>(bottom, left);
+                attackLine = new Tuple<PointFT, PointFT>(left, bottom);
 
                 var distance = (orgin.Item.X - this.target.X) * -1;
                 var target = distance >= MinDistace ? this.target : core;
@@ -339,7 +352,7 @@ namespace GoblinKnifeDeploy
                 var earthQuakePoints = new List<PointFT>();
                 var jumpPoints = new List<PointFT>();
 
-                var maxX = nearestWall.X + 6f;
+                var maxX = nearestWall.X + 5f;
                 var start = target.X - 4f;
                 while (maxX < start)
                 {
@@ -355,6 +368,18 @@ namespace GoblinKnifeDeploy
                 ragePoint = new PointFT(orgin.Item.X + 9f, core.Y);
                 healPoint = new PointFT(orgin.Item.X + 15f, core.Y);
                 ragePoint2 = new PointFT(orgin.Item.X + 20f, core.Y);
+
+                //try to find better funneling points
+                var frac = 0.65f;
+
+                red1 = new PointFT(orgin.Item.X + frac * (attackLine.Item1.X - orgin.Item.X),
+                             orgin.Item.Y + frac * (attackLine.Item1.Y - orgin.Item.Y));
+
+                red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
+                             orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+                QWHealear = new PointFT(-24, red1.Y);
+                queenRagePoint = new PointFT(red1.X + 1, red1.Y);
             }
 
             else if (orgin.Item.Y > core.Y)
@@ -374,7 +399,7 @@ namespace GoblinKnifeDeploy
                 var earthQuakePoints = new List<PointFT>();
                 var jumpPoints = new List<PointFT>();
 
-                var maxX = nearestWall.Y - 6f;
+                var maxX = nearestWall.Y - 5f;
                 var start = target.Y + 4f;
                 while (maxX > start)
                 {
@@ -391,6 +416,18 @@ namespace GoblinKnifeDeploy
                 ragePoint = new PointFT(core.X, orgin.Item.Y - 9f);
                 healPoint = new PointFT(core.X, orgin.Item.Y - 15f);
                 ragePoint2 = new PointFT(core.X, orgin.Item.Y - 20f);
+
+                //try to find better funneling points
+                var frac = 0.65f;
+
+                red1 = new PointFT(orgin.Item.X + frac * (attackLine.Item1.X - orgin.Item.X),
+                             orgin.Item.Y + frac * (attackLine.Item1.Y - orgin.Item.Y));
+
+                red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
+                             orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+                QWHealear = new PointFT(red1.X, 24);
+                queenRagePoint = new PointFT(red1.X, red1.Y - 1);
             }
 
             else // (orgin.Y < core.Y)
@@ -410,7 +447,7 @@ namespace GoblinKnifeDeploy
                 var earthQuakePoints = new List<PointFT>();
                 var jumpPoints = new List<PointFT>();
 
-                var maxX = nearestWall.Y + 6f;
+                var maxX = nearestWall.Y + 5f;
                 var start = target.Y - 4f;
                 while (maxX < start)
                 {
@@ -427,22 +464,19 @@ namespace GoblinKnifeDeploy
                 ragePoint = new PointFT(core.X, orgin.Item.Y + 9f);
                 healPoint = new PointFT(core.X, orgin.Item.Y + 15f);
                 ragePoint2 = new PointFT(core.X, orgin.Item.Y + 20f);
+
+                //try to find better funneling points
+                var frac = 0.65f;
+
+                red1 = new PointFT(orgin.Item.X + frac * (attackLine.Item1.X - orgin.Item.X),
+                             orgin.Item.Y + frac * (attackLine.Item1.Y - orgin.Item.Y));
+
+                red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
+                             orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+                QWHealear = new PointFT(red1.X, -24);
+                queenRagePoint = new PointFT(red1.X, red1.Y + 1);
             }
-
-            //try to find better funneling points
-            var frac = 0.65f;
-
-            red1 = new PointFT(orgin.Item.X + frac * (attackLine.Item1.X - orgin.Item.X),
-                         orgin.Item.Y + frac * (attackLine.Item1.Y - orgin.Item.Y));
-
-            red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
-                         orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
-
-            var queenRagePointX = red1.X > 0 ? red1.X - 5: red1.X + 5;
-            var queenRagePointY = red1.Y > 0 ? red1.Y - 5 : red1.Y + 5;
-
-            queenRagePoint = new PointFT(queenRagePointX, queenRagePointY);
-            //VisualizeDeployment();
         }
 
         public override IEnumerable<int> AttackRoutine()
@@ -487,7 +521,6 @@ namespace GoblinKnifeDeploy
                 Log.Info($"[{AttackName}] break walls beside Twonhall ");
                 foreach (var unit in earthQuakeSpell)
                 {
-                    unit.Select();
                     foreach (var t in Deploy.AtPoint(unit, earthQuakePoint,unit.Count))
                         yield return t;
                 }
@@ -534,7 +567,7 @@ namespace GoblinKnifeDeploy
             IEnumerable<int> deployFunnlling()
             {
                 Log.Info($"[{AttackName}] deploy funnelling troops on sides");
-              
+                
                 var queen = heroes.ExtractOne(DeployId.Queen);
                 QW = queen?.Count > 0 && healer?.Count >= CurrentSetting("Number of healers to use on Queen") ? true : false;
                 if(QW)
@@ -547,9 +580,9 @@ namespace GoblinKnifeDeploy
 
                     yield return 400;
 
-                    foreach (var t in Deploy.AtPoint(healer, red1, CurrentSetting("Number of healers to use on Queen")))
+                    foreach (var t in Deploy.AtPoint(healer, QWHealear, CurrentSetting("Number of healers to use on Queen")))
                         yield return t;
-                    yield return 10000;
+
                     Deploy.WatchHeroes(new List<DeployElement> { queen });
 
                     if(CurrentSetting("Drop 1 rage in the first of the QW") == 1)
@@ -565,7 +598,7 @@ namespace GoblinKnifeDeploy
                             }
                         }
                     }
-
+                    yield return 10000;
                     if (bowler?.Count > 0)
                     {
                         bowlerFunnelCount = bowler.Count / 4;
@@ -927,12 +960,12 @@ namespace GoblinKnifeDeploy
                     {
                         var x = Math.Abs(target.X) ;
                         var y = Math.Abs(target.Y) ;
-                        var max = x >= y ? x : y;
-                        max = 20 - max;
-                        if(maxTHDistance < max)
+                        var distance = x >= y ? x : y;
+                        distance = 20 - distance;
+                        if(maxTHDistance < distance)
                         {
-                            Log.Warning($"user set maxTHDistance to {maxTHDistance}");
-                            Log.Warning($"TownHall distance is {max} tiles , skipping the base");
+                            Log.Warning($"[{AttackName}] you set TH maximun distance to {maxTHDistance}");
+                            Log.Warning($"[{AttackName}] TownHall distance is {distance} tiles , skipping the base");
                             return 0;
                         }
                     }
