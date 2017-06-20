@@ -21,7 +21,7 @@ namespace GoblinKnifeDeploy
         bool useJump = false, isWarden = false, QW, debug;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
-        const string Version = "1.1.0.38";
+        const string Version = "1.1.2.43";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -510,7 +510,7 @@ namespace GoblinKnifeDeploy
 
             //get warden in a seperated member
             var warden = heroes.ExtractOne(u => u.ElementType == DeployElementType.HeroWarden);
-
+            var queen = heroes.ExtractOne(DeployId.Queen);
             isWarden = warden?.Count > 0 ? true : false;
 
             debug = CurrentSetting("Debug Mode") == 1 ? true : false;
@@ -568,7 +568,6 @@ namespace GoblinKnifeDeploy
             {
                 Log.Info($"[{AttackName}] deploy funnelling troops on sides");
                 
-                var queen = heroes.ExtractOne(DeployId.Queen);
                 QW = queen?.Count > 0 && healer?.Count >= CurrentSetting("Number of healers to use on Queen") ? true : false;
                 if(QW)
                 {
@@ -708,6 +707,12 @@ namespace GoblinKnifeDeploy
                             yield return t;
                     }
                     Deploy.WatchHeroes(heroes);
+                }
+                if (queen?.Count > 0)
+                {
+                    foreach (var t in Deploy.AtPoint(queen, orgin))
+                        yield return t;
+                    Deploy.WatchHeroes(new List<DeployElement> { queen });
                 }
                 if (isWarden)
                 {
