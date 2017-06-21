@@ -18,10 +18,10 @@ namespace GoblinKnifeDeploy
         Container<PointFT> orgin;
         Tuple<PointFT, PointFT> attackLine;
         PointFT QWHealear, queenRagePoint, nearestWall, core, earthQuakePoint, healPoint, ragePoint, ragePoint2, target, jumpPoint, jumpPoint1, red1, red2;
-        bool useJump = false, isWarden = false, QW, debug;
+        bool useJump = false, isWarden = false, QW = false, debug;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
-        const string Version = "1.1.2.43";
+        const string Version = "1.1.2.44";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -237,24 +237,45 @@ namespace GoblinKnifeDeploy
             return wallsToTarget;
         }
 
-        /// <summary>
-        /// create depoly points for troops and spells
-        /// </summary>
+
+        public override double ShouldAccept()
+        {
+            if (Opponent.MeetsRequirements(BaseRequirements.All))
+            {
+                Log.Debug($"[{AttackName}] searching for TownHall ....");
+                var TH = TownHall.Find()?.Location.GetCenter();
+                if (TH == null)
+                {
+                    Log.Debug("Couldn't found TH .. we will skip this base");
+                    Log.Error("Couldn't not locate TownHall .. skipping this base");
+                    return 0;
+                }
+                else
+                {
+                    var target = (PointFT)TH;
+                    maxTHDistance = CurrentSetting("maximum distance to townhall in tiles");
+                    if (maxTHDistance > 0 && maxTHDistance < 20)
+                    {
+                        var x = Math.Abs(target.X);
+                        var y = Math.Abs(target.Y);
+                        var distance = x >= y ? x : y;
+                        distance = 20 - distance;
+                        if (maxTHDistance < distance)
+                        {
+                            Log.Warning($"[{AttackName}] you set TH maximun distance to {maxTHDistance}");
+                            Log.Warning($"[{AttackName}] TownHall distance is {distance} tiles , skipping the base");
+                            return 0;
+                        }
+                    }
+                    Log.Debug($"[{AttackName}] Found TownHall .. move to CreateDeployPoints Method");
+                    return 1;
+                }
+            }
+            return 0;
+        }
+
         void CreateDeployPoints()
         {
-            var th = TownHall.Find()?.Location.GetCenter();
-            if (th != null)
-            {
-                target = (PointFT)th;
-            }
-            else
-            {
-                Log.Debug($"{AttackName} coundn't locate the TARGET after aligning the base");
-                Log.Error("Couldn't find Townhall we will return home");
-                Surrender();
-            }
-
-
             var getOutRedArea = 0.5f;
 
             // don't include corners in case build huts are there
@@ -273,6 +294,9 @@ namespace GoblinKnifeDeploy
 
             // core is center of the box
             core = border.GetCenter();
+            //set the target
+            var th = TownHall.Find()?.Location.GetCenter() ?? core;
+            target = (PointFT)th;
 
             var orginPoints = new[]
             {
@@ -299,11 +323,12 @@ namespace GoblinKnifeDeploy
                 if (wallsToTarget?.Count() > 0)
                     nearestWall = wallsToTarget.OrderByDescending(w => w.Location.GetCenter().X).First().Location.GetCenter();
 
-                var earthQuakePoints = new List<PointFT>();
-                var jumpPoints = new List<PointFT>();
-
                 var maxX = nearestWall.X - 5f;
                 var start = target.X + 4f;
+
+                var earthQuakePoints = new List<PointFT> { new PointFT(target.X + 6f, core.Y) };
+                var jumpPoints = new List<PointFT> { new PointFT(target.X + 5.5f, core.Y) };
+
                 while (maxX > start)
                 {
                     earthQuakePoints.Add(new PointFT(start, core.Y));
@@ -349,11 +374,12 @@ namespace GoblinKnifeDeploy
                 if (wallsToTarget?.Count() > 0)
                     nearestWall = wallsToTarget.OrderBy(w => w.Location.GetCenter().X).First().Location.GetCenter();
 
-                var earthQuakePoints = new List<PointFT>();
-                var jumpPoints = new List<PointFT>();
-
                 var maxX = nearestWall.X + 5f;
                 var start = target.X - 4f;
+
+                var earthQuakePoints = new List<PointFT> { new PointFT(target.X - 6f, core.Y) };
+                var jumpPoints = new List<PointFT> { new PointFT(target.X - 5.5f, core.Y) };
+
                 while (maxX < start)
                 {
                     earthQuakePoints.Add(new PointFT(start, core.Y));
@@ -396,11 +422,12 @@ namespace GoblinKnifeDeploy
                 if (wallsToTarget?.Count() > 0)
                     nearestWall = wallsToTarget.OrderByDescending(w => w.Location.GetCenter().Y).First().Location.GetCenter();
 
-                var earthQuakePoints = new List<PointFT>();
-                var jumpPoints = new List<PointFT>();
-
                 var maxX = nearestWall.Y - 5f;
                 var start = target.Y + 4f;
+
+                var earthQuakePoints = new List<PointFT> { new PointFT(core.X, target.Y + 6f) };
+                var jumpPoints = new List<PointFT> { new PointFT(core.X, target.Y + 5.5f) };
+
                 while (maxX > start)
                 {
                     earthQuakePoints.Add(new PointFT(core.X, start));
@@ -444,16 +471,20 @@ namespace GoblinKnifeDeploy
                 if (wallsToTarget?.Count() > 0)
                     nearestWall = wallsToTarget.OrderBy(w => w.Location.GetCenter().Y).First().Location.GetCenter();
 
-                var earthQuakePoints = new List<PointFT>();
-                var jumpPoints = new List<PointFT>();
+                
 
                 var maxX = nearestWall.Y + 5f;
                 var start = target.Y - 4f;
+
+                var earthQuakePoints = new List<PointFT> { new PointFT(core.X, target.Y - 6f) };
+                var jumpPoints = new List<PointFT> { new PointFT(core.X, target.Y - 5.5f) };
+
                 while (maxX < start)
                 {
+                    start -= 0.25f;
                     earthQuakePoints.Add(new PointFT(core.X, start));
                     jumpPoints.Add(new PointFT(core.X, start + 0.5f));
-                    start -= 0.25f;
+                    
                 }
 
                 earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
@@ -568,7 +599,7 @@ namespace GoblinKnifeDeploy
             {
                 Log.Info($"[{AttackName}] deploy funnelling troops on sides");
                 
-                QW = queen?.Count > 0 && healer?.Count >= CurrentSetting("Number of healers to use on Queen") ? true : false;
+                QW = CurrentSetting("Use Queen Walk") == 1 && queen?.Count > 0 && healer?.Count >= CurrentSetting("Number of healers to use on Queen") ? true : false;
                 if(QW)
                 {
                     if (debug)
@@ -811,18 +842,29 @@ namespace GoblinKnifeDeploy
             else
             {
                 //use default order
-                foreach (var s in deployGolems())
-                    yield return s;
-                foreach (var s in deployFunnlling())
-                    yield return s;
-                foreach (var s in deployGiants())
-                    yield return s;
-                foreach (var s in deployHeroes())
-                    yield return s;
-                foreach (var s in deployWB())
-                    yield return s;
-                foreach (var s in deployNormalTroops())
-                    yield return s;
+                QW = CurrentSetting("Use Queen Walk") == 1 && queen?.Count > 0 && healer?.Count >= CurrentSetting("Number of healers to use on Queen") ? true : false;
+                if (QW)
+                {
+                    foreach (var s in deployFunnlling())
+                        yield return s;
+                    foreach (var s in deployGolems())
+                        yield return s;
+                }
+                else
+                {
+                    foreach (var s in deployGolems())
+                        yield return s;
+                    foreach (var s in deployFunnlling())
+                        yield return s;
+                    foreach (var s in deployGiants())
+                        yield return s;
+                    foreach (var s in deployHeroes())
+                        yield return s;
+                    foreach (var s in deployWB())
+                        yield return s;
+                    foreach (var s in deployNormalTroops())
+                        yield return s;
+                }
             }
 
             IEnumerable<int> DeployInCustomOrder(List<int> order)
@@ -943,42 +985,6 @@ namespace GoblinKnifeDeploy
 
             if (debug)
                 debugSpells();
-        }
-        
-        public override double ShouldAccept()
-        {
-            if (Opponent.MeetsRequirements(BaseRequirements.All))
-            {
-                Log.Debug($"[{AttackName}] searching for TownHall ....");
-                var TH = TownHall.Find()?.Location.GetCenter();
-                if (TH == null)
-                {
-                    Log.Debug("Couldn't found TH .. we will skip this base");
-                    Log.Error("Counld not locate TownHall .. skipping this base");
-                    return 0;
-                }
-                else
-                {
-                    var target = (PointFT)TH;
-                    maxTHDistance = CurrentSetting("maximum distance to townhall in tiles");
-                    if(maxTHDistance > 0 && maxTHDistance < 20)
-                    {
-                        var x = Math.Abs(target.X) ;
-                        var y = Math.Abs(target.Y) ;
-                        var distance = x >= y ? x : y;
-                        distance = 20 - distance;
-                        if(maxTHDistance < distance)
-                        {
-                            Log.Warning($"[{AttackName}] you set TH maximun distance to {maxTHDistance}");
-                            Log.Warning($"[{AttackName}] TownHall distance is {distance} tiles , skipping the base");
-                            return 0;
-                        }
-                    }
-                    Log.Debug($"[{AttackName}] Found TownHall .. move to CreateDeployPoints Method");
-                    return 1;
-                }
-            }
-            return 0;
         }
 
         public override string ToString()
