@@ -18,10 +18,10 @@ namespace GoblinKnifeDeploy
         Container<PointFT> orgin;
         Tuple<PointFT, PointFT> attackLine;
         PointFT QWHealear, queenRagePoint, nearestWall, core, earthQuakePoint, healPoint, ragePoint, ragePoint2, target, jumpPoint, jumpPoint1, red1, red2;
-        bool useJump = false, isWarden = false, QW = false, debug;
+        bool useJump = false, isWarden = false, QW = false, debug, isFunneled;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
-        const string Version = "1.1.2.45";
+        const string Version = "1.1.3.46";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -312,9 +312,9 @@ namespace GoblinKnifeDeploy
 
                 jumpPoint1 = new PointFT(nearestWall.X - 3f, core.Y);
 
-                ragePoint = new PointFT(orgin.Item.X - 9f, core.Y);
-                healPoint = new PointFT(orgin.Item.X - 15f, core.Y);
-                ragePoint2 = new PointFT(orgin.Item.X - 20f, core.Y);
+                ragePoint = new PointFT(orgin.Item.X - 10f, core.Y);
+                healPoint = new PointFT(orgin.Item.X - 16f, core.Y);
+                ragePoint2 = new PointFT(orgin.Item.X - 21f, core.Y);
 
 
                 //try to find better funneling points
@@ -366,9 +366,9 @@ namespace GoblinKnifeDeploy
 
                 jumpPoint1 = new PointFT(nearestWall.X + 3f, core.Y);
 
-                ragePoint = new PointFT(orgin.Item.X + 9f, core.Y);
-                healPoint = new PointFT(orgin.Item.X + 15f, core.Y);
-                ragePoint2 = new PointFT(orgin.Item.X + 20f, core.Y);
+                ragePoint = new PointFT(orgin.Item.X + 10f, core.Y);
+                healPoint = new PointFT(orgin.Item.X + 16f, core.Y);
+                ragePoint2 = new PointFT(orgin.Item.X + 21f, core.Y);
 
                 //try to find better funneling points
                 var frac = 0.65f;
@@ -419,9 +419,9 @@ namespace GoblinKnifeDeploy
 
                 jumpPoint1 = new PointFT(core.X, nearestWall.Y - 3f);
 
-                ragePoint = new PointFT(core.X, orgin.Item.Y - 9f);
-                healPoint = new PointFT(core.X, orgin.Item.Y - 15f);
-                ragePoint2 = new PointFT(core.X, orgin.Item.Y - 20f);
+                ragePoint = new PointFT(core.X, orgin.Item.Y - 10f);
+                healPoint = new PointFT(core.X, orgin.Item.Y - 16f);
+                ragePoint2 = new PointFT(core.X, orgin.Item.Y - 21f);
 
                 //try to find better funneling points
                 var frac = 0.65f;
@@ -473,9 +473,9 @@ namespace GoblinKnifeDeploy
 
                 jumpPoint1 = new PointFT(core.X, nearestWall.Y + 3f);
 
-                ragePoint = new PointFT(core.X, orgin.Item.Y + 9f);
-                healPoint = new PointFT(core.X, orgin.Item.Y + 15f);
-                ragePoint2 = new PointFT(core.X, orgin.Item.Y + 20f);
+                ragePoint = new PointFT(core.X, orgin.Item.Y + 10f);
+                healPoint = new PointFT(core.X, orgin.Item.Y + 16f);
+                ragePoint2 = new PointFT(core.X, orgin.Item.Y + 21f);
 
                 //try to find better funneling points
                 var frac = 0.65f;
@@ -568,6 +568,8 @@ namespace GoblinKnifeDeploy
             var healer = deployElements.ExtractOne(DeployId.Healer);
             var spells = deployElements.Extract(DeployElementType.Spell);
 
+            var wizard = deployElements.ExtractOne(DeployId.Wizard);
+
 
             var heroes = deployElements.Extract(x => x.IsHero);
 
@@ -588,6 +590,8 @@ namespace GoblinKnifeDeploy
                         yield return t;
                 }
 
+                yield return 1000;
+
                 if (debug)
                     DebugEQpells();
             }
@@ -598,7 +602,6 @@ namespace GoblinKnifeDeploy
                     DebugJumpspells();
             }
                 
-            yield return 1000;
 
             IEnumerable<int> deployGolems()
             {
@@ -612,19 +615,30 @@ namespace GoblinKnifeDeploy
                         foreach (var t in Deploy.AtPoint(clanCastle, orgin))
                             yield return t;
                     }
-                }else if(golem?.Count == 1 && CurrentSetting("use Clan Castle troops as") == 1 && clanCastle?.Count > 0)
+
+                    yield return 1000;
+
+                    foreach (var f in DeployWizard())
+                        yield return f;
+                }
+                else if(golem?.Count == 1 && CurrentSetting("use Clan Castle troops as") == 1 && clanCastle?.Count > 0)
                 {
                     foreach (var t in Deploy.AtPoint(golem, red1, golem.Count))
                         yield return t;
                    
                     foreach (var t in Deploy.AtPoint(clanCastle, red2))
                         yield return t;
-                }else if(clanCastle?.Count > 0 && CurrentSetting("use Clan Castle troops as") == 1)
+
+                    yield return 1000;
+
+                    foreach (var f in DeployWizard())
+                        yield return f;
+                }
+                else if(clanCastle?.Count > 0 && CurrentSetting("use Clan Castle troops as") == 1)
                 {
                     foreach (var t in Deploy.AtPoint(clanCastle, orgin))
                         yield return t;
                 }
-                yield return 1000;
             }
 
             IEnumerable<int> deployFunnlling()
@@ -660,76 +674,84 @@ namespace GoblinKnifeDeploy
                             }
                         }
                     }
+
                     yield return 10000;
-                    if (bowler?.Count > 0)
-                    {
-                        bowler.Select();
-                        bowlerFunnelCount = bowler.Count / 4;
-                        foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
-                            yield return t;
-                    }
-                    if (witch?.Count > 0)
-                    {
-                        witch.Select();
-                        witchFunnelCount = witch.Count / 4;
-                        foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
-                            yield return t;
-                    }
 
-                    if (healer?.Count > 0)
+                    if(!isFunneled)
                     {
-                        healer.Select();
-                        foreach (var t in Deploy.AtPoint(healer, red2, healer.Count))
-                            yield return t;
-                    }
+                        if (bowler?.Count > 0)
+                        {
+                            bowler.Select();
+                            bowlerFunnelCount = bowler.Count / 4;
+                            foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
+                                yield return t;
+                        }
+                        if (witch?.Count > 0)
+                        {
+                            witch.Select();
+                            witchFunnelCount = witch.Count / 4;
+                            foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
+                                yield return t;
+                        }
 
-                    yield return 3000;
+                        if (healer?.Count > 0)
+                        {
+                            healer.Select();
+                            foreach (var t in Deploy.AtPoint(healer, red2, healer.Count))
+                                yield return t;
+                        }
+
+                        yield return 5000;
+                    }
                 }
                 else
                 {
-                    if (bowler?.Count > 0)
+                    if ((bowler?.Count > 0 || witch?.Count > 0) && !isFunneled)
                     {
-                        bowler.Select();
-                        bowlerFunnelCount = bowler.Count / 4;
-                        foreach (var t in Deploy.AtPoint(bowler, red1, bowlerFunnelCount))
-                            yield return t;
-                    }
-                    if (witch?.Count > 0)
-                    {
-                        witch.Select();
-                        witchFunnelCount = witch.Count / 4;
-                        foreach (var t in Deploy.AtPoint(witch, red1, witchFunnelCount))
-                            yield return t;
-                    }
+                        if (bowler?.Count > 0)
+                        {
+                            bowler.Select();
+                            bowlerFunnelCount = bowler.Count / 4;
+                            foreach (var t in Deploy.AtPoint(bowler, red1, bowlerFunnelCount))
+                                yield return t;
+                        }
+                        if (witch?.Count > 0)
+                        {
+                            witch.Select();
+                            witchFunnelCount = witch.Count / 4;
+                            foreach (var t in Deploy.AtPoint(witch, red1, witchFunnelCount))
+                                yield return t;
+                        }
 
-                    if (healer?.Count >= 2)
-                    {
-                        healer.Select();
-                        healerFunnlCount = healer.Count <= 4 ? healer.Count / 2 : healer.Count / 3;
-                        foreach (var t in Deploy.AtPoint(healer, red1, healerFunnlCount))
-                            yield return t;
-                    }
+                        if (healer?.Count >= 2)
+                        {
+                            healer.Select();
+                            healerFunnlCount = healer.Count <= 4 ? healer.Count / 2 : healer.Count / 3;
+                            foreach (var t in Deploy.AtPoint(healer, red1, healerFunnlCount))
+                                yield return t;
+                        }
 
-                    if (bowler?.Count > 0)
-                    {
-                        bowler.Select();
-                        foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
-                            yield return t;
-                    }
-                    if (witch?.Count > 0)
-                    {
-                        witch.Select();
-                        foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
-                            yield return t;
-                    }
+                        if (bowler?.Count > 0)
+                        {
+                            bowler.Select();
+                            foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
+                                yield return t;
+                        }
+                        if (witch?.Count > 0)
+                        {
+                            witch.Select();
+                            foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
+                                yield return t;
+                        }
 
-                    if (healer?.Count > 0 && healerFunnlCount > 0)
-                    {
-                        healer.Select();
-                        foreach (var t in Deploy.AtPoint(healer, red2, healerFunnlCount))
-                            yield return t;
+                        if (healer?.Count > 0 && healerFunnlCount > 0)
+                        {
+                            healer.Select();
+                            foreach (var t in Deploy.AtPoint(healer, red2, healerFunnlCount))
+                                yield return t;
+                        }
+                        yield return 7000;
                     }
-                    yield return 7000;
                 }
             }
 
@@ -745,15 +767,26 @@ namespace GoblinKnifeDeploy
                             yield return t;
                     }
                 }
-                
-                if (giant?.Count > 0)
+
+                if (giant?.Count > 0 ) 
                 {
                     Log.Info($"[{AttackName}] deploy Giants ...");
                     giant.Select();
-                    foreach (var t in Deploy.AlongLine(giant, red1, red2, giant.Count, 2))
+                    foreach (var t in Deploy.AlongLine(giant, red1, red2, 6, 4))
+                        yield return t;
+
+                    yield return 1000;
+
+                    foreach (var f in DeployWizard())
+                        yield return f;
+
+                    foreach (var f in deployWB())
+                        yield return f;
+
+                    foreach (var t in Deploy.AtPoint(giant, orgin, giant.Count))
                         yield return t;
                 }
-
+                
                 if(clanCastle?.Count > 0 && CurrentSetting("use Clan Castle troops as") == 2)
                 {
                     clanCastle.Select();
@@ -799,23 +832,36 @@ namespace GoblinKnifeDeploy
                 }
             }
 
+            IEnumerable<int> DeployWizard()
+            {
+                if (wizard?.Count > 0)
+                {
+                    foreach (var t in Deploy.AlongLine(wizard, attackLine.Item1, attackLine.Item2, wizard.Count, 4))
+                        yield return t;
+                    isFunneled = true;
+                }
+            }
+
             IEnumerable<int> deployWB()
             {
-                Log.Info($"[{AttackName}] droping wallBreakers");
-                while (wallbreaker?.Count > 0)
+                if(wallbreaker?.Count > 0)
                 {
-                    var count = wallbreaker.Count;
-                    Log.Info($"[{AttackName}] send wall breakers in groups");
-                    wallbreaker.Select();
-                    foreach (var t in Deploy.AtPoint(wallbreaker, orgin, 3))
-                        yield return t;
+                    Log.Info($"[{AttackName}] droping wallBreakers");
+                    while (wallbreaker?.Count > 0)
+                    {
+                        var count = wallbreaker.Count;
+                        Log.Info($"[{AttackName}] send wall breakers in groups");
+                        wallbreaker.Select();
+                        foreach (var t in Deploy.AtPoint(wallbreaker, orgin, 3))
+                            yield return t;
 
-                    yield return 800;
-                    // prevent infinite loop if deploy point is on red
-                    if (wallbreaker.Count != count) continue;
+                        yield return 400;
+                        // prevent infinite loop if deploy point is on red
+                        if (wallbreaker.Count != count) continue;
 
-                    Log.Warning($"[{AttackName}] Couldn't deploy {wallbreaker.PrettyName}");
-                    break;
+                        Log.Warning($"[{AttackName}] Couldn't deploy {wallbreaker.PrettyName}");
+                        break;
+                    }
                 }
             }
 
@@ -953,9 +999,10 @@ namespace GoblinKnifeDeploy
             }
 
                
-            Log.Info($"[{AttackName}] deploy jump next to Townhall");
+            
             if (useJump && jumpSpellCount > 0)
             {
+                Log.Info($"[{AttackName}] deploy jump next to Townhall");
                 foreach (var unit in jumpSpell)
                 {
                     unit.Select();
@@ -1021,7 +1068,6 @@ namespace GoblinKnifeDeploy
                     }
                 }
             }
-
 
             yield return 4000;
             if (rageSpellCount > 0) 
