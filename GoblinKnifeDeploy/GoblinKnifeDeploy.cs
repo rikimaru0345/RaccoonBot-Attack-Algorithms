@@ -243,10 +243,12 @@ namespace GoblinKnifeDeploy
                 foreach (int t in Deploy.AtPoint(ragespell, _ragePoint))
                     yield return t;
             }
-
-            Log.Info($"[Goblin Knife] send test {wallbreaker.PrettyName} to check for bombs");
-            foreach (int t in Deploy.AtPoint(wallbreaker, _orgin, 1))
-                yield return t;
+            if(wallbreaker?.Count>0)
+            {
+                Log.Info($"[Goblin Knife] send test {wallbreaker.PrettyName} to check for bombs");
+                foreach (int t in Deploy.AtPoint(wallbreaker, _orgin, 1))
+                    yield return t;
+            }
 
             yield return 1000;
             while (wallbreaker?.Count > 0)
@@ -389,14 +391,6 @@ namespace GoblinKnifeDeploy
         #region override ShouldAccept() to check if we fing our tharget or not
         public override double ShouldAccept()
         {
-            /*var deployElements = Deploy.GetTroops();
-
-            var spells = deployElements.Extract(DeployElementType.Spell);
-            foreach(var unit in spells)
-            {
-                Log.Error($"we have {unit}");
-            }*/
-
             if (Opponent.MeetsRequirements(BaseRequirements.All))
             {
                 Log.Debug("[Goblin Knife] searching for DE Storage ....");

@@ -21,7 +21,7 @@ namespace GoblinKnifeDeploy
         bool useJump = false, isWarden = false, QW = false, debug, isFunneled;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
-        const string Version = "1.1.3.64";
+        const string Version = "1.1.3.66";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -310,7 +310,7 @@ namespace GoblinKnifeDeploy
                 earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
                 jumpPoint = jumpPoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
 
-                jumpPoint1 = new PointFT(nearestWall.X - 3f, core.Y);
+                jumpPoint1 = new PointFT(nearestWall.X - 2.75f, core.Y);
 
                 ragePoint = new PointFT(orgin.Item.X - 10f, core.Y);
                 healPoint = new PointFT(orgin.Item.X - 16f, core.Y);
@@ -364,7 +364,7 @@ namespace GoblinKnifeDeploy
                 earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
                 jumpPoint = jumpPoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
 
-                jumpPoint1 = new PointFT(nearestWall.X + 3f, core.Y);
+                jumpPoint1 = new PointFT(nearestWall.X + 2.75f, core.Y);
 
                 ragePoint = new PointFT(orgin.Item.X + 10f, core.Y);
                 healPoint = new PointFT(orgin.Item.X + 16f, core.Y);
@@ -418,7 +418,7 @@ namespace GoblinKnifeDeploy
                 earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
                 jumpPoint = jumpPoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
 
-                jumpPoint1 = new PointFT(core.X, nearestWall.Y - 3f);
+                jumpPoint1 = new PointFT(core.X, nearestWall.Y - 2.75f);
 
                 ragePoint = new PointFT(core.X, orgin.Item.Y - 10f);
                 healPoint = new PointFT(core.X, orgin.Item.Y - 16f);
@@ -473,7 +473,7 @@ namespace GoblinKnifeDeploy
                 earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
                 jumpPoint = jumpPoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
 
-                jumpPoint1 = new PointFT(core.X, nearestWall.Y + 3f);
+                jumpPoint1 = new PointFT(core.X, nearestWall.Y + 2.75f);
 
                 ragePoint = new PointFT(core.X, orgin.Item.Y + 10f);
                 healPoint = new PointFT(core.X, orgin.Item.Y + 16f);
@@ -628,13 +628,14 @@ namespace GoblinKnifeDeploy
                         yield return t;
                     if (clanCastle?.Count > 0 && clanCastleSettings == 1)
                     {
-                        foreach (var t in Deploy.AtPoint(clanCastle, red))
+                        foreach (var t in Deploy.AtPoint(clanCastle, orgin))
                             yield return t;
                     }
 
                     yield return 1000;
 
-                    foreach (var f in DeployWizard())
+                    var waves = wizard?.Count >= 12 ? 2 : 1;
+                    foreach (var f in DeployWizard(waves))
                         yield return f;
                 }
                 else if (golem?.Count == 1 && clanCastleSettings == 1 && clanCastle?.Count > 0)
@@ -647,14 +648,15 @@ namespace GoblinKnifeDeploy
 
                     yield return 1000;
 
-                    foreach (var f in DeployWizard())
+                    var waves = wizard?.Count >= 12 ? 2 : 1;
+                    foreach (var f in DeployWizard(waves))
                         yield return f;
                 }
                 else 
                 {
                     if (clanCastle?.Count > 0 && clanCastleSettings == 1)
                     {
-                        foreach (var t in Deploy.AtPoint(clanCastle, red))
+                        foreach (var t in Deploy.AtPoint(clanCastle, orgin))
                             yield return t;
                     }
                 }
@@ -780,22 +782,23 @@ namespace GoblinKnifeDeploy
                 if (giant?.Count > 0)
                 {
                     Log.Info($"[{AttackName}] deploy Giants ...");
-                    foreach (var t in Deploy.AlongLine(giant, red1, red2, 6, 4))
+                    foreach (var t in Deploy.AlongLine(giant, red1, red2, 8, 4))
                         yield return t;
 
-                    foreach (var f in DeployWizard())
+                    var waves = wizard?.Count >= 12 ? 2 : 1;
+                    foreach (var f in DeployWizard(waves))
                         yield return f;
 
                     foreach (var f in deployWB())
                         yield return f;
 
-                    foreach (var t in Deploy.AtPoint(giant, red, giant.Count))
+                    foreach (var t in Deploy.AtPoint(giant, orgin, giant.Count))
                         yield return t;
                 }
 
                 if (clanCastle?.Count > 0 && clanCastleSettings == 2)
                 {
-                    foreach (var t in Deploy.AtPoint(clanCastle, red))
+                    foreach (var t in Deploy.AtPoint(clanCastle, orgin))
                         yield return t;
                 }
 
@@ -815,20 +818,20 @@ namespace GoblinKnifeDeploy
                 {
                     foreach (var hero in heroes.Where(u => u.Count > 0))
                     {
-                        foreach (var t in Deploy.AtPoint(hero, red))
+                        foreach (var t in Deploy.AtPoint(hero, orgin))
                             yield return t;
                     }
                     Deploy.WatchHeroes(heroes);
                 }
                 if (queen?.Count > 0)
                 {
-                    foreach (var t in Deploy.AtPoint(queen, red))
+                    foreach (var t in Deploy.AtPoint(queen, orgin))
                         yield return t;
                     Deploy.WatchHeroes(new List<DeployElement> { queen });
                 }
                 if (isWarden)
                 {
-                    foreach (var t in Deploy.AtPoint(warden, red))
+                    foreach (var t in Deploy.AtPoint(warden, orgin))
                         yield return t;
                 }
             }
@@ -862,7 +865,7 @@ namespace GoblinKnifeDeploy
                     {
                         var count = wallbreaker.Count;
                         Log.Info($"[{AttackName}] send wall breakers in groups");
-                        foreach (var t in Deploy.AtPoint(wallbreaker, red, 3))
+                        foreach (var t in Deploy.AtPoint(wallbreaker, orgin, 3))
                             yield return t;
 
                         yield return 400;
@@ -885,7 +888,7 @@ namespace GoblinKnifeDeploy
                 }
                 if (bowler?.Count > 0)
                 {
-                    foreach (var t in Deploy.AtPoint(bowler, red, bowler.Count))
+                    foreach (var t in Deploy.AtPoint(bowler, orgin, bowler.Count))
                         yield return t;
                 }
                 if (witch?.Count > 0)
@@ -896,13 +899,13 @@ namespace GoblinKnifeDeploy
                 if (clanCastle?.Count > 0)
                 {
                     Log.Info($"[{AttackName}] Deploying {clanCastle.PrettyName}");
-                    foreach (var t in Deploy.AtPoint(clanCastle, red))
+                    foreach (var t in Deploy.AtPoint(clanCastle, orgin))
                         yield return t;
                 }
 
                 if (healer?.Count > 0)
                 {
-                    foreach (var t in Deploy.AtPoint(healer, red, healer.Count))
+                    foreach (var t in Deploy.AtPoint(healer, orgin, healer.Count))
                         yield return t;
                 }
 
@@ -918,11 +921,14 @@ namespace GoblinKnifeDeploy
                         }
                         else
                         {
-                            foreach (var t in Deploy.AtPoint(unit, red, unit.Count))
+                            foreach (var t in Deploy.AtPoint(unit, orgin, unit.Count))
                                 yield return t;
                         }
                     }
                 }
+
+                foreach (var w in DeployWizard())
+                    yield return w;
             }
 
             if (customOrder == 1)
@@ -1027,17 +1033,9 @@ namespace GoblinKnifeDeploy
                 }
             }
 
-            yield return 1000;
+            yield return 2000;
 
-            // activate Grand Warden apility
-            if (isWarden)
-            {
-                var heroList = new List<DeployElement> { warden };
-                TryActivateHeroAbilities(heroList, true, 5000);
-            }
-
-
-            yield return 1000;
+            
             if (ragespell?.Sum(u => u.Count) > 1)
             {
                 foreach (var unit in ragespell)
@@ -1081,6 +1079,12 @@ namespace GoblinKnifeDeploy
             }
 
             yield return 2500;
+            // activate Grand Warden apility
+            if (isWarden)
+            {
+                var heroList = new List<DeployElement> { warden };
+                TryActivateHeroAbilities(heroList, true, 1000);
+            }
             if (rageSpellCount > 0)
             {
                 foreach (var unit in ragespell)
@@ -1090,6 +1094,7 @@ namespace GoblinKnifeDeploy
                         yield return t;
                 }
             }
+            yield return 1000;
             if(hasteSpell.Sum(u => u.Count) > 0)
             {
                 foreach (var unit in hasteSpell)
