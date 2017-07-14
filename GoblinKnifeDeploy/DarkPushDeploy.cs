@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
-using CoC_Bot;
 using CoC_Bot.API;
 using CoC_Bot.API.Buildings;
 using CoC_Bot.Modules.Helpers;
@@ -16,12 +15,12 @@ namespace GoblinKnifeDeploy
     {
         RectangleT border;
         Container<PointFT> orgin;
-        Tuple<PointFT, PointFT> attackLine;
+        Tuple<PointFT, PointFT> attackLine, hasteLine, hasteLine2, rageLine, rageLine2;
         PointFT hastePoint, QWHealear, queenRagePoint, nearestWall, core, earthQuakePoint, healPoint, ragePoint, ragePoint2, target, jumpPoint, jumpPoint1, red, red1, red2;
-        bool useJump = false, isWarden = false, QW = false, debug, isFunneled;
+        bool useJump = false, isWarden = false, QW = false, debug, isFunneled, airAttack;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
-        const string Version = "1.1.3.64";
+        const string Version = "1.2.7.103";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -215,15 +214,15 @@ namespace GoblinKnifeDeploy
         }
 
         /// <summary>
-        /// check if there are walls in the EQ area or not "still working on it"
+        /// check how meny walls in the EQ area 
         /// </summary>
         /// <param name="point">pointFT of EQ </param>
         /// <returns>true or false</returns>
-        int GetMaxWallsInside(PointFT eqPoint, float eqRadius = 3.5f)
+        int GetWallsInsideEQ(PointFT eqPoint, float eqRadius = 3.5f)
         {
             var walls = Wall.Find();
             var eqWalls = walls.Count(w => w.Location.X >= eqPoint.X - eqRadius && w.Location.X <= eqPoint.X + eqRadius && w.Location.Y >= eqPoint.Y - eqRadius && w.Location.Y <= eqPoint.Y + eqRadius && w.Location.GetCenter().DistanceSq(eqPoint) <= eqRadius * eqRadius);
-            //var wall = Wall.Find().Where(w => w.Location.X >= eqPoint.X - eqRadius && w.Location.X <= eqPoint.X + eqRadius && w.Location.Y >= eqPoint.Y - eqRadius && w.Location.Y <= eqPoint.Y + eqRadius && w.Location.GetCenter().DistanceSq(eqPoint) <= eqRadius * eqRadius);
+
             return eqWalls;
         }
 
@@ -247,7 +246,7 @@ namespace GoblinKnifeDeploy
                 if (TH == null)
                 {
                     Log.Debug("Couldn't found TH .. we will skip this base");
-                    Log.Error("Couldn't not locate TownHall .. skipping this base");
+                    Log.Error("We can't find TownHall .. skipping this base");
                     return 0;
                 }
                 else
@@ -296,7 +295,7 @@ namespace GoblinKnifeDeploy
                 var earthQuakePoints = new List<PointFT> { new PointFT(target.X + 6f, core.Y) };
                 var jumpPoints = new List<PointFT> { new PointFT(target.X + 5.5f, core.Y) };
 
-                if (GetMaxWallsInside(earthQuakePoints[0], 4f) < 8)
+                if (GetWallsInsideEQ(earthQuakePoints[0], 4f) < 8)
                 {
                     while (maxX > start)
                     {
@@ -307,10 +306,10 @@ namespace GoblinKnifeDeploy
                 }
 
 
-                earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
-                jumpPoint = jumpPoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
+                earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetWallsInsideEQ(e)).FirstOrDefault();
+                jumpPoint = jumpPoints.OrderByDescending(e => GetWallsInsideEQ(e)).FirstOrDefault();
 
-                jumpPoint1 = new PointFT(nearestWall.X - 3f, core.Y);
+                jumpPoint1 = new PointFT(nearestWall.X - 2.75f, core.Y);
 
                 ragePoint = new PointFT(orgin.Item.X - 10f, core.Y);
                 healPoint = new PointFT(orgin.Item.X - 16f, core.Y);
@@ -325,6 +324,12 @@ namespace GoblinKnifeDeploy
 
                 red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+                hasteLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X - 10f, red1.Y), new PointFT(red2.X - 10f, red2.Y));
+                rageLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X - 18f, red1.Y), new PointFT(red2.X - 18f, red2.Y));
+
+                hasteLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X - 23f, red1.Y), new PointFT(red2.X - 23f, red2.Y));
+                rageLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X - 23f, red1.Y), new PointFT(red2.X - 23f, red2.Y));
 
                 QWHealear = new PointFT(24, red1.Y);
                 queenRagePoint = new PointFT(red1.X - 1, red1.Y);
@@ -351,7 +356,7 @@ namespace GoblinKnifeDeploy
                 var earthQuakePoints = new List<PointFT> { new PointFT(target.X - 6f, core.Y) };
                 var jumpPoints = new List<PointFT> { new PointFT(target.X - 5.5f, core.Y) };
 
-                if (GetMaxWallsInside(earthQuakePoints[0], 4f) < 8)
+                if (GetWallsInsideEQ(earthQuakePoints[0], 4f) < 8)
                 {
                     while (maxX < start)
                     {
@@ -361,10 +366,10 @@ namespace GoblinKnifeDeploy
                     }
                 }
 
-                earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
-                jumpPoint = jumpPoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
+                earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetWallsInsideEQ(e)).FirstOrDefault();
+                jumpPoint = jumpPoints.OrderByDescending(e => GetWallsInsideEQ(e)).FirstOrDefault();
 
-                jumpPoint1 = new PointFT(nearestWall.X + 3f, core.Y);
+                jumpPoint1 = new PointFT(nearestWall.X + 2.75f, core.Y);
 
                 ragePoint = new PointFT(orgin.Item.X + 10f, core.Y);
                 healPoint = new PointFT(orgin.Item.X + 16f, core.Y);
@@ -379,6 +384,12 @@ namespace GoblinKnifeDeploy
 
                 red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+                hasteLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X + 10f, red1.Y), new PointFT(red2.X + 10f, red2.Y));
+                rageLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X + 18f, red1.Y), new PointFT(red2.X + 18f, red2.Y));
+
+                hasteLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X + 23f, red1.Y), new PointFT(red2.X + 23f, red2.Y));
+                rageLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X + 23f, red1.Y), new PointFT(red2.X + 23f, red2.Y));
 
                 QWHealear = new PointFT(-24, red1.Y);
                 queenRagePoint = new PointFT(red1.X + 1, red1.Y);
@@ -404,7 +415,7 @@ namespace GoblinKnifeDeploy
                 var earthQuakePoints = new List<PointFT> { new PointFT(core.X, target.Y + 6f) };
                 var jumpPoints = new List<PointFT> { new PointFT(core.X, target.Y + 5.5f) };
 
-                if (GetMaxWallsInside(earthQuakePoints[0], 4f) < 8)
+                if (GetWallsInsideEQ(earthQuakePoints[0], 4f) < 8)
                 {
                     while (maxX > start)
                     {
@@ -415,10 +426,10 @@ namespace GoblinKnifeDeploy
                 }
 
 
-                earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
-                jumpPoint = jumpPoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
+                earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetWallsInsideEQ(e)).FirstOrDefault();
+                jumpPoint = jumpPoints.OrderByDescending(e => GetWallsInsideEQ(e)).FirstOrDefault();
 
-                jumpPoint1 = new PointFT(core.X, nearestWall.Y - 3f);
+                jumpPoint1 = new PointFT(core.X, nearestWall.Y - 2.75f);
 
                 ragePoint = new PointFT(core.X, orgin.Item.Y - 10f);
                 healPoint = new PointFT(core.X, orgin.Item.Y - 16f);
@@ -433,6 +444,12 @@ namespace GoblinKnifeDeploy
 
                 red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+                hasteLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y - 10f), new PointFT(red2.X, red2.Y - 10f));
+                rageLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y - 18f), new PointFT(red2.X, red2.Y - 18f));
+
+                hasteLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y - 23f), new PointFT(red2.X, red2.Y - 23f));
+                rageLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y - 23f), new PointFT(red2.X, red2.Y - 23f));
 
                 QWHealear = new PointFT(red1.X, 24);
                 queenRagePoint = new PointFT(red1.X, red1.Y - 1);
@@ -459,7 +476,7 @@ namespace GoblinKnifeDeploy
 
                 var earthQuakePoints = new List<PointFT> { new PointFT(core.X, target.Y - 6f) };
                 var jumpPoints = new List<PointFT> { new PointFT(core.X, target.Y - 5.5f) };
-                if (GetMaxWallsInside(earthQuakePoints[0], 4f) < 8)
+                if (GetWallsInsideEQ(earthQuakePoints[0], 4f) < 8)
                 {
                     while (maxX < start)
                     {
@@ -470,10 +487,10 @@ namespace GoblinKnifeDeploy
                     }
                 }
 
-                earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
-                jumpPoint = jumpPoints.OrderByDescending(e => GetMaxWallsInside(e)).FirstOrDefault();
+                earthQuakePoint = earthQuakePoints.OrderByDescending(e => GetWallsInsideEQ(e)).FirstOrDefault();
+                jumpPoint = jumpPoints.OrderByDescending(e => GetWallsInsideEQ(e)).FirstOrDefault();
 
-                jumpPoint1 = new PointFT(core.X, nearestWall.Y + 3f);
+                jumpPoint1 = new PointFT(core.X, nearestWall.Y + 2.75f);
 
                 ragePoint = new PointFT(core.X, orgin.Item.Y + 10f);
                 healPoint = new PointFT(core.X, orgin.Item.Y + 16f);
@@ -489,11 +506,20 @@ namespace GoblinKnifeDeploy
                 red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
 
+                hasteLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y + 10f), new PointFT(red2.X, red2.Y + 10f));
+                rageLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y + 18f), new PointFT(red2.X, red2.Y + 18f));
+
+                hasteLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y + 23f), new PointFT(red2.X, red2.Y + 23f));
+                rageLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y + 23f), new PointFT(red2.X, red2.Y + 23f));
+
                 QWHealear = new PointFT(red1.X, -24);
                 queenRagePoint = new PointFT(red1.X, red1.Y + 1);
             }
+
             red = new PointFT(attackLine.Item2.X + 0.5f * (attackLine.Item1.X - attackLine.Item2.X),
                              attackLine.Item2.Y + 0.5f * (attackLine.Item1.Y - attackLine.Item2.Y));
+            //red1 = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(red1)).First();
+            //red2 = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(red2)).First();
         }
 
         public override IEnumerable<int> AttackRoutine()
@@ -540,18 +566,18 @@ namespace GoblinKnifeDeploy
 
             var orginPoints = new[]
             {
-                new PointFT(maxRedPointX, core.Y),
-                new PointFT(minRedPointX, core.Y),
-                new PointFT(core.X, maxRedPointY),
-                new PointFT(core.X, minRedPointY)
+                new PointFT(GameGrid.DeployExtents.MaxX, core.Y),
+                new PointFT(GameGrid.DeployExtents.MinX, core.Y),
+                new PointFT(core.X, GameGrid.DeployExtents.MaxY),
+                new PointFT(core.X, GameGrid.DeployExtents.MinY)
             };
-
+            
             orgin = new Container<PointFT> { Item = orginPoints.OrderBy(point => point.DistanceSq(target)).First() };
 
             Log.Info($"[{AttackName}] V{Version} Deploy start");
 
             CreateDeployPoints(top, right, bottom, left);
-
+            
             //get troops (under respect of the user settings)
             var deployElements = Deploy.GetTroops();
 
@@ -578,6 +604,10 @@ namespace GoblinKnifeDeploy
 
 
             var heroes = deployElements.Extract(x => x.IsHero);
+            var lava = deployElements.ExtractOne(DeployId.LavaHound);
+
+            airAttack = lava?.Count > 0 ? true : false;
+
 
             //get warden in a seperated member
             var warden = heroes.ExtractOne(u => u.ElementType == DeployElementType.HeroWarden);
@@ -594,340 +624,351 @@ namespace GoblinKnifeDeploy
             int rageOnQWSettings = CurrentSetting("Drop 1 rage in the first of the QW");
             int customOrder = CurrentSetting("use custom deploy order");
 
-            //open near to dark elixer with 4 earthquakes
-            var EQCount = earthQuakeSpell?.Sum(u => u.Count);
-            if (EQCount >= 4)
+            
+            if (!airAttack)
             {
-                Log.Info($"[{AttackName}] break walls beside Twonhall ");
-                foreach (var unit in earthQuakeSpell)
+                //open near to dark elixer with 4 earthquakes
+                var EQCount = earthQuakeSpell?.Sum(u => u.Count);
+                if (EQCount >= 4)
                 {
-                    unit.Select();
-                    foreach (var t in Deploy.AtPoint(unit, earthQuakePoint, unit.Count))
-                        yield return t;
-                }
-
-                yield return 1000;
-
-                if (debug)
-                    DebugEQpells();
-            }
-            else
-            {
-                useJump = true;
-                if (debug)
-                    DebugJumpspells();
-            }
-
-
-            IEnumerable<int> deployGolems()
-            {
-                if (golem?.Count >= 2)
-                {
-                    Log.Info($"[{AttackName}] deploy Golems troops .. ");
-                    foreach (var t in Deploy.AlongLine(golem, attackLine.Item1, attackLine.Item2, golem.Count, golem.Count))
-                        yield return t;
-                    if (clanCastle?.Count > 0 && clanCastleSettings == 1)
+                    Log.Info($"[{AttackName}] break walls beside Twonhall ");
+                    foreach (var unit in earthQuakeSpell)
                     {
-                        foreach (var t in Deploy.AtPoint(clanCastle, red))
+                        unit.Select();
+                        foreach (var t in Deploy.AtPoint(unit, earthQuakePoint, unit.Count))
                             yield return t;
                     }
 
                     yield return 1000;
 
-                    foreach (var f in DeployWizard())
-                        yield return f;
-                }
-                else if (golem?.Count == 1 && clanCastleSettings == 1 && clanCastle?.Count > 0)
-                {
-                    foreach (var t in Deploy.AtPoint(golem, red1, golem.Count))
-                        yield return t;
-
-                    foreach (var t in Deploy.AtPoint(clanCastle, red2))
-                        yield return t;
-
-                    yield return 1000;
-
-                    foreach (var f in DeployWizard())
-                        yield return f;
-                }
-                else 
-                {
-                    if (clanCastle?.Count > 0 && clanCastleSettings == 1)
-                    {
-                        foreach (var t in Deploy.AtPoint(clanCastle, red))
-                            yield return t;
-                    }
-                }
-            }
-
-            IEnumerable<int> deployFunnlling()
-            {
-                Log.Info($"[{AttackName}] deploy funnelling troops on sides");
-
-                QW = QWSettings == 1 && queen?.Count > 0 && healer?.Count >= healerOnQWSettings ? true : false;
-                if (QW)
-                {
                     if (debug)
-                        DebugQueenWalk();
+                        DebugEQpells();
+                }
+                else
+                {
+                    useJump = true;
+                    if (debug)
+                        DebugJumpspells();
+                }
 
-                    foreach (var t in Deploy.AtPoint(queen, red1))
-                        yield return t;
 
-                    yield return 400;
-
-                    foreach (var t in Deploy.AtPoint(healer, QWHealear, healerOnQWSettings))
-                        yield return t;
-
-                    Deploy.WatchHeroes(new List<DeployElement> { queen });
-
-                    if (rageOnQWSettings == 1)
+                IEnumerable<int> deployGolems()
+                {
+                    if (golem?.Count >= 2)
                     {
-                        var rageCount = ragespell?.Sum(u => u.Count);
-                        if (rageCount > 0)
+                        Log.Info($"[{AttackName}] deploy Golems troops .. ");
+                        foreach (var t in Deploy.AlongLine(golem, attackLine.Item1, attackLine.Item2, golem.Count, golem.Count))
+                            yield return t;
+                        if (clanCastle?.Count > 0 && clanCastleSettings == 1)
                         {
-                            foreach (var unit in ragespell)
+                            foreach (var t in Deploy.AtPoint(clanCastle, orgin))
+                                yield return t;
+                        }
+
+                        yield return 1000;
+
+                        var waves = wizard?.Count >= 12 ? 2 : 1;
+                        foreach (var f in DeployWizard(waves))
+                            yield return f;
+                    }
+                    else if (golem?.Count == 1 && clanCastleSettings == 1 && clanCastle?.Count > 0)
+                    {
+                        foreach (var t in Deploy.AtPoint(golem, red1, golem.Count))
+                            yield return t;
+
+                        foreach (var t in Deploy.AtPoint(clanCastle, red2))
+                            yield return t;
+
+                        yield return 1000;
+
+                        var waves = wizard?.Count >= 12 ? 2 : 1;
+                        foreach (var f in DeployWizard(waves))
+                            yield return f;
+                    }
+                    else
+                    {
+                        if (clanCastle?.Count > 0 && clanCastleSettings == 1)
+                        {
+                            foreach (var t in Deploy.AtPoint(clanCastle, orgin))
+                                yield return t;
+                        }
+                    }
+                }
+
+                IEnumerable<int> deployFunnlling()
+                {
+                    Log.Info($"[{AttackName}] deploy funnelling troops on sides");
+
+                    QW = QWSettings == 1 && queen?.Count > 0 && healer?.Count >= healerOnQWSettings ? true : false;
+                    if (QW)
+                    {
+                        if (debug)
+                            DebugQueenWalk();
+
+                        foreach (var t in Deploy.AtPoint(queen, red1))
+                            yield return t;
+
+                        yield return 400;
+
+                        foreach (var t in Deploy.AtPoint(healer, QWHealear, healerOnQWSettings))
+                            yield return t;
+
+                        Deploy.WatchHeroes(new List<DeployElement> { queen });
+
+                        if (rageOnQWSettings == 1)
+                        {
+                            var rageCount = ragespell?.Sum(u => u.Count);
+                            if (rageCount > 0)
                             {
-                                unit.Select();
-                                foreach (var t in Deploy.AtPoint(unit, queenRagePoint))
+                                foreach (var unit in ragespell)
+                                {
+                                    unit.Select();
+                                    foreach (var t in Deploy.AtPoint(unit, queenRagePoint))
+                                        yield return t;
+                                }
+                            }
+                        }
+
+                        yield return 10000;
+
+                        if (!isFunneled)
+                        {
+                            if (bowler?.Count > 0)
+                            {
+                                bowlerFunnelCount = bowler.Count / 4;
+                                foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
+                                    yield return t;
+                            }
+                            if (witch?.Count > 0)
+                            {
+                                witchFunnelCount = witch.Count / 4;
+                                foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
+                                    yield return t;
+                            }
+
+                            if (healer?.Count > 0)
+                            {
+                                foreach (var t in Deploy.AtPoint(healer, red2, healer.Count))
+                                    yield return t;
+                            }
+
+                            yield return 5000;
+                        }
+                    }
+                    else
+                    {
+                        if ((bowler?.Count > 0 || witch?.Count > 0) && !isFunneled)
+                        {
+                            if (bowler?.Count > 0)
+                            {
+                                bowlerFunnelCount = bowler.Count / 4;
+                                foreach (var t in Deploy.AtPoint(bowler, red1, bowlerFunnelCount))
+                                    yield return t;
+                            }
+                            if (witch?.Count > 0)
+                            {
+                                witchFunnelCount = witch.Count / 4;
+                                foreach (var t in Deploy.AtPoint(witch, red1, witchFunnelCount))
+                                    yield return t;
+                            }
+
+                            if (healer?.Count >= 2)
+                            {
+                                healerFunnlCount = healer.Count <= 4 ? healer.Count / 2 : healer.Count / 3;
+                                foreach (var t in Deploy.AtPoint(healer, red1, healerFunnlCount))
+                                    yield return t;
+                            }
+
+                            if (bowler?.Count > 0)
+                            {
+                                foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
+                                    yield return t;
+                            }
+                            if (witch?.Count > 0)
+                            {
+                                foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
+                                    yield return t;
+                            }
+
+                            if (healer?.Count > 0 && healerFunnlCount > 0)
+                            {
+                                foreach (var t in Deploy.AtPoint(healer, red2, healerFunnlCount))
+                                    yield return t;
+                            }
+                            yield return 10000;
+                        }
+                    }
+                }
+
+                IEnumerable<int> deployGiants()
+                {
+                    jumpSpellCount = jumpSpell?.Sum(u => u.Count) > 0 ? jumpSpell.Sum(u => u.Count) : 0;
+                    if ((useJump && jumpSpellCount >= 2) || (!useJump && jumpSpellCount >= 1))
+                    {
+                        foreach (var unit in jumpSpell)
+                        {
+                            foreach (var t in Deploy.AtPoint(unit, jumpPoint1))
+                                yield return t;
+                        }
+                    }
+
+                    if (giant?.Count > 0)
+                    {
+                        Log.Info($"[{AttackName}] deploy Giants ...");
+                        foreach (var t in Deploy.AlongLine(giant, red1, red2, 8, 4))
+                            yield return t;
+
+                        var waves = wizard?.Count >= 12 ? 2 : 1;
+                        foreach (var f in DeployWizard(waves))
+                            yield return f;
+
+                        foreach (var f in deployWB())
+                            yield return f;
+
+                        foreach (var t in Deploy.AtPoint(giant, orgin, giant.Count))
+                            yield return t;
+                    }
+
+                    if (clanCastle?.Count > 0 && clanCastleSettings == 2)
+                    {
+                        foreach (var t in Deploy.AtPoint(clanCastle, orgin))
+                            yield return t;
+                    }
+
+                    //if one golem deploy after funnlling
+                    if (golem?.Count > 0)
+                    {
+                        Log.Info($"[{AttackName}] deploy Golem ...");
+                        foreach (var t in Deploy.AlongLine(golem, attackLine.Item1, attackLine.Item2, golem.Count, golem.Count))
+                            yield return t;
+                    }
+                }
+
+                IEnumerable<int> deployHeroes()
+                {
+                    Log.Info($"[{AttackName}] droping heroes");
+                    if (heroes.Any())
+                    {
+                        foreach (var hero in heroes.Where(u => u.Count > 0))
+                        {
+                            foreach (var t in Deploy.AtPoint(hero, orgin))
+                                yield return t;
+                        }
+                        Deploy.WatchHeroes(heroes);
+                    }
+                    if (queen?.Count > 0)
+                    {
+                        foreach (var t in Deploy.AtPoint(queen, orgin))
+                            yield return t;
+                        Deploy.WatchHeroes(new List<DeployElement> { queen });
+                    }
+                    if (isWarden)
+                    {
+                        foreach (var t in Deploy.AtPoint(warden, orgin))
+                            yield return t;
+                    }
+                }
+
+                IEnumerable<int> DeployWizard(int waves = 1)
+                {
+                    if (wizard?.Count > 0)
+                    {
+                        var count = wizard.Count / waves;
+                        if (!isFunneled)
+                        {
+                            foreach (var t in Deploy.AlongLine(wizard, attackLine.Item1, attackLine.Item2, wizard.Count, count))
+                                yield return t;
+
+                            isFunneled = true;
+                        }
+                        else
+                        {
+                            foreach (var t in Deploy.AlongLine(wizard, red1, red2, count, 4))
+                                yield return t;
+                        }
+                    }
+                }
+
+                IEnumerable<int> deployWB()
+                {
+                    if (wallbreaker?.Count > 0)
+                    {
+                        Log.Info($"[{AttackName}] droping wallBreakers");
+                        while (wallbreaker?.Count > 0)
+                        {
+                            var count = wallbreaker.Count;
+                            Log.Info($"[{AttackName}] send wall breakers in groups");
+                            foreach (var t in Deploy.AtPoint(wallbreaker, orgin, 3))
+                                yield return t;
+
+                            yield return 400;
+                            // prevent infinite loop if deploy point is on red
+                            if (wallbreaker.Count != count) continue;
+
+                            Log.Warning($"[{AttackName}] Couldn't deploy {wallbreaker.PrettyName}");
+                            break;
+                        }
+                    }
+                }
+
+                IEnumerable<int> deployNormalTroops()
+                {
+                    Log.Info($"[{AttackName}] deploy rest of troops");
+                    /*
+                    if (bowler?.Count > 0)
+                    {
+                        foreach (var t in Deploy.AlongLine(bowler, red1, red2, bowlerFunnelCount, 4))
+                            yield return t;
+                    }
+                    */
+                    if (bowler?.Count > 0)
+                    {
+                        foreach (var t in Deploy.AtPoint(bowler, orgin, bowler.Count))
+                            yield return t;
+                    }
+                    if (witch?.Count > 0)
+                    {
+                        foreach (var t in Deploy.AlongLine(witch, red1, red2, witch.Count, 4))
+                            yield return t;
+                    }
+                    if (clanCastle?.Count > 0)
+                    {
+                        Log.Info($"[{AttackName}] Deploying {clanCastle.PrettyName}");
+                        foreach (var t in Deploy.AtPoint(clanCastle, orgin))
+                            yield return t;
+                    }
+
+                    if (healer?.Count > 0)
+                    {
+                        foreach (var t in Deploy.AtPoint(healer, orgin, healer.Count))
+                            yield return t;
+                    }
+
+                    foreach (var unit in deployElements)
+                    {
+                        Log.Info($"[{AttackName}] deploy any remaining troops");
+                        if (unit?.Count > 0)
+                        {
+                            if (unit.IsRanged)
+                            {
+                                foreach (var t in Deploy.AlongLine(unit, red1, red2, unit.Count, 4))
+                                    yield return t;
+                            }
+                            else
+                            {
+                                foreach (var t in Deploy.AtPoint(unit, orgin, unit.Count))
                                     yield return t;
                             }
                         }
                     }
 
-                    yield return 10000;
-
-                    if (!isFunneled)
-                    {
-                        if (bowler?.Count > 0)
-                        {
-                            bowlerFunnelCount = bowler.Count / 4;
-                            foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
-                                yield return t;
-                        }
-                        if (witch?.Count > 0)
-                        {
-                            witchFunnelCount = witch.Count / 4;
-                            foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
-                                yield return t;
-                        }
-
-                        if (healer?.Count > 0)
-                        {
-                            foreach (var t in Deploy.AtPoint(healer, red2, healer.Count))
-                                yield return t;
-                        }
-
-                        yield return 5000;
-                    }
+                    foreach (var w in DeployWizard())
+                        yield return w;
                 }
-                else
+
+                if (customOrder == 1)
                 {
-                    if ((bowler?.Count > 0 || witch?.Count > 0) && !isFunneled)
-                    {
-                        if (bowler?.Count > 0)
-                        {
-                            bowlerFunnelCount = bowler.Count / 4;
-                            foreach (var t in Deploy.AtPoint(bowler, red1, bowlerFunnelCount))
-                                yield return t;
-                        }
-                        if (witch?.Count > 0)
-                        {
-                            witchFunnelCount = witch.Count / 4;
-                            foreach (var t in Deploy.AtPoint(witch, red1, witchFunnelCount))
-                                yield return t;
-                        }
-
-                        if (healer?.Count >= 2)
-                        {
-                            healerFunnlCount = healer.Count <= 4 ? healer.Count / 2 : healer.Count / 3;
-                            foreach (var t in Deploy.AtPoint(healer, red1, healerFunnlCount))
-                                yield return t;
-                        }
-
-                        if (bowler?.Count > 0)
-                        {
-                            foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
-                                yield return t;
-                        }
-                        if (witch?.Count > 0)
-                        {
-                            foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
-                                yield return t;
-                        }
-
-                        if (healer?.Count > 0 && healerFunnlCount > 0)
-                        {
-                            foreach (var t in Deploy.AtPoint(healer, red2, healerFunnlCount))
-                                yield return t;
-                        }
-                        yield return 10000;
-                    }
-                }
-            }
-
-            IEnumerable<int> deployGiants()
-            {
-                jumpSpellCount = jumpSpell?.Sum(u => u.Count) > 0 ? jumpSpell.Sum(u => u.Count) : 0;
-                if ((useJump && jumpSpellCount >= 2) || (!useJump && jumpSpellCount >= 1))
-                {
-                    foreach (var unit in jumpSpell)
-                    {
-                        foreach (var t in Deploy.AtPoint(unit, jumpPoint1))
-                            yield return t;
-                    }
-                }
-
-                if (giant?.Count > 0)
-                {
-                    Log.Info($"[{AttackName}] deploy Giants ...");
-                    foreach (var t in Deploy.AlongLine(giant, red1, red2, 6, 4))
-                        yield return t;
-
-                    foreach (var f in DeployWizard())
-                        yield return f;
-
-                    foreach (var f in deployWB())
-                        yield return f;
-
-                    foreach (var t in Deploy.AtPoint(giant, red, giant.Count))
-                        yield return t;
-                }
-
-                if (clanCastle?.Count > 0 && clanCastleSettings == 2)
-                {
-                    foreach (var t in Deploy.AtPoint(clanCastle, red))
-                        yield return t;
-                }
-
-                //if one golem deploy after funnlling
-                if (golem?.Count > 0)
-                {
-                    Log.Info($"[{AttackName}] deploy Golem ...");
-                    foreach (var t in Deploy.AlongLine(golem, attackLine.Item1, attackLine.Item2, golem.Count, golem.Count))
-                        yield return t;
-                }
-            }
-
-            IEnumerable<int> deployHeroes()
-            {
-                Log.Info($"[{AttackName}] droping heroes");
-                if (heroes.Any())
-                {
-                    foreach (var hero in heroes.Where(u => u.Count > 0))
-                    {
-                        foreach (var t in Deploy.AtPoint(hero, red))
-                            yield return t;
-                    }
-                    Deploy.WatchHeroes(heroes);
-                }
-                if (queen?.Count > 0)
-                {
-                    foreach (var t in Deploy.AtPoint(queen, red))
-                        yield return t;
-                    Deploy.WatchHeroes(new List<DeployElement> { queen });
-                }
-                if (isWarden)
-                {
-                    foreach (var t in Deploy.AtPoint(warden, red))
-                        yield return t;
-                }
-            }
-
-            IEnumerable<int> DeployWizard(int waves = 1)
-            {
-                if (wizard?.Count > 0)
-                {
-                    var count = wizard.Count / waves;
-                    if (!isFunneled)
-                    {
-                        foreach (var t in Deploy.AlongLine(wizard, attackLine.Item1, attackLine.Item2, wizard.Count, count))
-                            yield return t;
-                        
-                        isFunneled = true;
-                    }
-                    else
-                    {
-                        foreach (var t in Deploy.AlongLine(wizard, red1, red2, count, 4))
-                            yield return t;
-                    }
-                }
-            }
-
-            IEnumerable<int> deployWB()
-            {
-                if (wallbreaker?.Count > 0)
-                {
-                    Log.Info($"[{AttackName}] droping wallBreakers");
-                    while (wallbreaker?.Count > 0)
-                    {
-                        var count = wallbreaker.Count;
-                        Log.Info($"[{AttackName}] send wall breakers in groups");
-                        foreach (var t in Deploy.AtPoint(wallbreaker, red, 3))
-                            yield return t;
-
-                        yield return 400;
-                        // prevent infinite loop if deploy point is on red
-                        if (wallbreaker.Count != count) continue;
-
-                        Log.Warning($"[{AttackName}] Couldn't deploy {wallbreaker.PrettyName}");
-                        break;
-                    }
-                }
-            }
-
-            IEnumerable<int> deployNormalTroops()
-            {
-                Log.Info($"[{AttackName}] deploy rest of troops");
-                if (bowler?.Count > 0)
-                {
-                    foreach (var t in Deploy.AlongLine(bowler, red1, red2, bowlerFunnelCount, 4))
-                        yield return t;
-                }
-                if (bowler?.Count > 0)
-                {
-                    foreach (var t in Deploy.AtPoint(bowler, red, bowler.Count))
-                        yield return t;
-                }
-                if (witch?.Count > 0)
-                {
-                    foreach (var t in Deploy.AlongLine(witch, red1, red2, witch.Count, 4))
-                        yield return t;
-                }
-                if (clanCastle?.Count > 0)
-                {
-                    Log.Info($"[{AttackName}] Deploying {clanCastle.PrettyName}");
-                    foreach (var t in Deploy.AtPoint(clanCastle, red))
-                        yield return t;
-                }
-
-                if (healer?.Count > 0)
-                {
-                    foreach (var t in Deploy.AtPoint(healer, red, healer.Count))
-                        yield return t;
-                }
-
-                foreach (var unit in deployElements)
-                {
-                    Log.Info($"[{AttackName}] deploy any remaining troops");
-                    if (unit?.Count > 0)
-                    {
-                        if (unit.IsRanged)
-                        {
-                            foreach (var t in Deploy.AlongLine(unit, red1, red2, unit.Count, 4))
-                                yield return t;
-                        }
-                        else
-                        {
-                            foreach (var t in Deploy.AtPoint(unit, red, unit.Count))
-                                yield return t;
-                        }
-                    }
-                }
-            }
-
-            if (customOrder == 1)
-            {
-                var order = new List<int>
+                    var order = new List<int>
                 {
                     CurrentSetting("#1"),
                     CurrentSetting("#2"),
@@ -936,171 +977,417 @@ namespace GoblinKnifeDeploy
                     CurrentSetting("#5"),
                     CurrentSetting("#6")
                 };
-                //use custom order
-                foreach (var s in DeployInCustomOrder(order))
-                    yield return s;
-            }
-            else
-            {
-                //use default order
-                QW = QWSettings == 1 && queen?.Count > 0 && healer?.Count >= healerOnQWSettings ? true : false;
-                if (QW)
-                {
-                    foreach (var s in deployFunnlling())
-                        yield return s;
-                    foreach (var s in deployGolems())
+                    //use custom order
+                    foreach (var s in DeployInCustomOrder(order))
                         yield return s;
                 }
                 else
                 {
-                    foreach (var s in deployGolems())
-                        yield return s;
-                    foreach (var s in deployFunnlling())
-                        yield return s;
-                }
-                foreach (var s in deployGiants())
-                    yield return s;
-                foreach (var s in deployHeroes())
-                    yield return s;
-                foreach (var s in deployWB())
-                    yield return s;
-                foreach (var s in deployNormalTroops())
-                    yield return s;
-
-            }
-
-            IEnumerable<int> DeployInCustomOrder(List<int> order)
-            {
-                foreach (var o in order)
-                {
-                    switch (o)
+                    //use default order
+                    QW = QWSettings == 1 && queen?.Count > 0 && healer?.Count >= healerOnQWSettings ? true : false;
+                    if (QW)
                     {
-                        case 1:
-                            foreach (var s in deployGolems())
-                                yield return s;
-                            break;
-                        case 2:
-                            foreach (var s in deployFunnlling())
-                                yield return s;
-                            break;
-                        case 3:
-                            foreach (var s in deployGiants())
-                                yield return s;
-                            break;
-                        case 4:
-                            foreach (var s in deployHeroes())
-                                yield return s;
-                            break;
-                        case 5:
-                            foreach (var s in deployWB())
-                                yield return s;
-                            break;
-                        case 6:
-                            foreach (var s in deployNormalTroops())
-                                yield return s;
-                            break;
+                        foreach (var s in deployFunnlling())
+                            yield return s;
+                        foreach (var s in deployGolems())
+                            yield return s;
+                    }
+                    else
+                    {
+                        foreach (var s in deployGolems())
+                            yield return s;
+                        foreach (var s in deployFunnlling())
+                            yield return s;
+                    }
+                    foreach (var s in deployGiants())
+                        yield return s;
+                    foreach (var s in deployHeroes())
+                        yield return s;
+                    foreach (var s in deployWB())
+                        yield return s;
+                    foreach (var s in deployNormalTroops())
+                        yield return s;
+
+                }
+
+                IEnumerable<int> DeployInCustomOrder(List<int> order)
+                {
+                    foreach (var o in order)
+                    {
+                        switch (o)
+                        {
+                            case 1:
+                                foreach (var s in deployGolems())
+                                    yield return s;
+                                break;
+                            case 2:
+                                foreach (var s in deployFunnlling())
+                                    yield return s;
+                                break;
+                            case 3:
+                                foreach (var s in deployGiants())
+                                    yield return s;
+                                break;
+                            case 4:
+                                foreach (var s in deployHeroes())
+                                    yield return s;
+                                break;
+                            case 5:
+                                foreach (var s in deployWB())
+                                    yield return s;
+                                break;
+                            case 6:
+                                foreach (var s in deployNormalTroops())
+                                    yield return s;
+                                break;
+                        }
                     }
                 }
-            }
-
-
-
-            if (useJump && jumpSpellCount > 0)
-            {
-                Log.Info($"[{AttackName}] deploy jump next to Townhall");
-                foreach (var unit in jumpSpell)
+                //deploy spells
+                if (useJump && jumpSpellCount > 0)
                 {
-                    unit.Select();
-                    foreach (var t in Deploy.AtPoint(unit, jumpPoint))
-                        yield return t;
-                }
-            }
-            //deploy spells
-            var rageSpellCount = ragespell?.Sum(u => u.Count);
-            if (rageSpellCount > 0)
-            {
-                foreach (var unit in ragespell)
-                {
-                    unit.Select();
-                    foreach (var t in Deploy.AtPoint(unit, ragePoint))
-                        yield return t;
-                }
-            }
-
-            yield return 1000;
-
-            // activate Grand Warden apility
-            if (isWarden)
-            {
-                var heroList = new List<DeployElement> { warden };
-                TryActivateHeroAbilities(heroList, true, 5000);
-            }
-
-
-            yield return 1000;
-            if (ragespell?.Sum(u => u.Count) > 1)
-            {
-                foreach (var unit in ragespell)
-                {
-                    unit.Select();
-                    foreach (var t in Deploy.AtPoint(unit, healPoint))
-                        yield return t;
-                }
-            }else
-            {
-                foreach (var unit in hasteSpell)
-                {
-                    unit.Select();
-                    foreach (var t in Deploy.AtPoint(unit, healPoint))
-                        yield return t;
-                }
-            }
-            var healSpellCount = healspell?.Sum(u => u.Count);
-            if (healSpellCount > 0)
-            {
-                foreach (var unit in healspell)
-                {
-                    unit.Select();
-                    foreach (var t in Deploy.AtPoint(unit, healPoint))
-                        yield return t;
-                }
-            }
-            //use freeze if inferno is found
-            if (freezeSpell?.Count > 0)
-            {
-                var infernos = InfernoTower.Find();
-                // find and watch inferno towers
-                if (infernos != null)
-                {
-                    foreach (var inferno in infernos)
+                    Log.Info($"[{AttackName}] deploy jump next to Townhall");
+                    foreach (var unit in jumpSpell)
                     {
-                        inferno.FirstActivated += DropFreeze;
-                        inferno.StartWatching();
+                        unit.Select();
+                        foreach (var t in Deploy.AtPoint(unit, jumpPoint))
+                            yield return t;
                     }
                 }
-            }
+                //deploy spells
+                var rageSpellCount = ragespell?.Sum(u => u.Count);
+                if (rageSpellCount > 0)
+                {
+                    foreach (var unit in ragespell)
+                    {
+                        unit.Select();
+                        foreach (var t in Deploy.AtPoint(unit, ragePoint))
+                            yield return t;
+                    }
+                }
 
-            yield return 2500;
-            if (rageSpellCount > 0)
-            {
-                foreach (var unit in ragespell)
+                yield return 2000;
+
+
+                if (ragespell?.Sum(u => u.Count) > 1)
                 {
-                    unit.Select();
-                    foreach (var t in Deploy.AtPoint(unit, ragePoint2))
+                    foreach (var unit in ragespell)
+                    {
+                        unit.Select();
+                        foreach (var t in Deploy.AtPoint(unit, healPoint))
+                            yield return t;
+                    }
+                }
+                else
+                {
+                    foreach (var unit in hasteSpell)
+                    {
+                        unit.Select();
+                        foreach (var t in Deploy.AtPoint(unit, healPoint))
+                            yield return t;
+                    }
+                }
+                var healSpellCount = healspell?.Sum(u => u.Count);
+                if (healSpellCount > 0)
+                {
+                    foreach (var unit in healspell)
+                    {
+                        unit.Select();
+                        foreach (var t in Deploy.AtPoint(unit, healPoint))
+                            yield return t;
+                    }
+                }
+                //use freeze if inferno is found
+                if (freezeSpell?.Count > 0)
+                {
+                    var infernos = InfernoTower.Find();
+                    // find and watch inferno towers
+                    if (infernos != null)
+                    {
+                        foreach (var inferno in infernos)
+                        {
+                            inferno.FirstActivated += DropFreeze;
+                            inferno.StartWatching();
+                        }
+                    }
+                }
+
+                yield return 2500;
+                // activate Grand Warden apility
+                if (isWarden)
+                {
+                    var heroList = new List<DeployElement> { warden };
+                    TryActivateHeroAbilities(heroList, true, 1000);
+                }
+                if (rageSpellCount > 0)
+                {
+                    foreach (var unit in ragespell)
+                    {
+                        unit.Select();
+                        foreach (var t in Deploy.AtPoint(unit, ragePoint2))
+                            yield return t;
+                    }
+                }
+                yield return 1000;
+                if (hasteSpell.Sum(u => u.Count) > 0)
+                {
+                    foreach (var unit in hasteSpell)
+                    {
+                        unit.Select();
+                        foreach (var t in Deploy.AtPoint(unit, hastePoint))
+                            yield return t;
+                    }
+                }
+                if (debug)
+                    DebugSpells();
+            }
+            else //air attack
+            {
+                Log.Info($"[{AttackName}] V{Version} 'Air Attack' has been activated");
+
+                var balloon = deployElements.ExtractOne(DeployId.Balloon);
+                var minion = deployElements.ExtractOne(DeployId.Minion);
+                var babyDragon = deployElements.ExtractOne(DeployId.BabyDragon);
+                var dragon = deployElements.ExtractOne(DeployId.Dragon);
+
+                var dragonAttack = dragon?.Count >= 6 ? true : false;
+                var babyLoon = babyDragon?.Count >= 7 ? true : false;
+                var lavaloonion = minion?.Count >= 10 ? true : false;
+
+                var lightingSpell = spells.ExtractOne(DeployId.Lightning);
+
+                IEnumerable<int> zapAirDefense()
+                {
+                    var airDefenses = AirDefense.Find(CacheBehavior.ForceScan);
+                    var targetAirDefense = airDefenses.OrderBy(a => a.Location.GetCenter().DistanceSq(orgin.Item)).ElementAtOrDefault(2);
+                    if(targetAirDefense == null)
+                        targetAirDefense = airDefenses.OrderBy(a => a.Location.GetCenter().DistanceSq(orgin.Item)).ElementAtOrDefault(1);
+                    if (targetAirDefense == null)
+                        targetAirDefense = airDefenses.FirstOrDefault();
+
+                    var zapPoint = targetAirDefense.Location.GetCenter();
+
+
+                    if (earthQuakeSpell?.Sum(u => u.Count) > 0)
+                    {
+                        foreach (var unit in earthQuakeSpell)
+                        {
+                            foreach (var t in Deploy.AtPoint(unit, zapPoint, 1))
+                                yield return t;
+                        }
+                    }
+
+                    foreach (var t in Deploy.AtPoint(lightingSpell, zapPoint, 2)) 
+                        yield return t;
+
+                    yield return 1200;
+                }
+
+                if(lightingSpell?.Count >= 2)
+                {
+                    foreach (var t in zapAirDefense())
                         yield return t;
                 }
-            }
-            if(hasteSpell.Sum(u => u.Count) > 0)
-            {
-                foreach (var unit in hasteSpell)
+
+                if (lightingSpell?.Count >= 2)
                 {
-                    unit.Select();
-                    foreach (var t in Deploy.AtPoint(unit, hastePoint))
+                    foreach (var t in zapAirDefense())
                         yield return t;
                 }
+
+                if (dragon?.Count > 0)
+                {
+                    foreach (var t in Deploy.AtPoint(dragon, red1))
+                        yield return t;
+
+                    foreach (var t in Deploy.AtPoint(dragon, red2))
+                        yield return t;
+
+                    yield return 8000;
+
+                    foreach (var t in Deploy.AlongLine(dragon, red1, red2, dragon.Count, 4)) 
+                        yield return t;
+                }
+
+                if(babyDragon?.Count > 0)
+                {
+                    foreach (var t in Deploy.AtPoint(babyDragon, red1))
+                        yield return t;
+
+                    foreach (var t in Deploy.AtPoint(babyDragon, red2))
+                        yield return t;
+
+                    yield return 4000;
+
+                    foreach (var t in Deploy.AlongLine(babyDragon, red1, red2, dragon.Count, 4))
+                        yield return t;
+                }
+
+                yield return dragonAttack ? 2000 : 800;
+
+                if(balloon?.Count > 0)
+                {
+                    if(!dragonAttack)
+                    {
+                        foreach (var t in Deploy.AlongLine(balloon, attackLine.Item1, attackLine.Item2, balloon.Count, 4))
+                            yield return t;
+                    }else
+                    {
+                        var count = balloon.Count / 2;
+                        foreach (var t in Deploy.AtPoint(balloon, red1, count)) 
+                            yield return t;
+
+                        foreach (var t in Deploy.AtPoint(balloon, red2, count)) 
+                        yield return t;
+                    }
+                }
+
+                if (lava.Count >= 2)
+                {
+                    var count = lava.Count / 2;
+
+                    foreach (var t in Deploy.AtPoints(lava, new PointFT[] { red1, red2 }, count, 0, 200, 5))
+                        yield return t;
+
+                    if(lava?.Count>0)
+                    {
+                        foreach (var t in Deploy.AtPoint(lava, red2, lava.Count))
+                            yield return t;
+                    }
+
+                    if(clanCastle?.Count > 0 && clanCastleSettings < 3)
+                    {
+                        foreach (var t in Deploy.AtPoint(clanCastle, red1))
+                            yield return t;
+                    }
+                }
+                else
+                {
+                    if(clanCastle?.Count > 0 && clanCastleSettings < 3)
+                    {
+                        foreach (var t in Deploy.AtPoint(clanCastle, red1))
+                            yield return t;
+
+                        foreach (var t in Deploy.AtPoint(lava, red2))
+                            yield return t;
+                    }
+                    
+                }
+
+                if(clanCastle?.Count > 0)
+                {
+                    foreach (var t in Deploy.AtPoint(clanCastle, orgin))
+                        yield return t;
+                }
+
+                if (isWarden)
+                {
+                    foreach (var t in Deploy.AtPoint(warden, orgin))
+                        yield return t;
+                }
+
+                if (hasteSpell?.Sum(u => u.Count) > 0)
+                {
+                    foreach (var unit in hasteSpell)
+                    {
+                        foreach (var t in Deploy.AlongLine(unit, hasteLine.Item1, hasteLine.Item2, 3, 3))
+                            yield return t;
+                    }                     
+                }
+
+                if (minion?.Count > 0)
+                {
+                    foreach (var t in Deploy.AlongLine(minion, attackLine.Item1, attackLine.Item2, minion.Count, 4))
+                        yield return t;
+                }
+
+                yield return 5000;
+
+                if (ragespell?.Sum(u => u.Count) > 0)
+                {
+                    foreach (var unit in ragespell)
+                    {
+                        foreach (var t in Deploy.AlongLine(unit, rageLine.Item1, rageLine.Item2, unit.Count, unit.Count))
+                            yield return t;
+                    }
+                }
+                //use freeze if inferno is found
+                if (freezeSpell?.Count > 0)
+                {
+                    var infernos = InfernoTower.Find();
+                    // find and watch inferno towers
+                    if (infernos != null)
+                    {
+                        foreach (var inferno in infernos)
+                        {
+                            inferno.FirstActivated += DropFreeze;
+                            inferno.StartWatching();
+                        }
+                    }
+                }
+
+                if (isWarden)
+                {
+                    var heroList = new List<DeployElement> { warden };
+                    TryActivateHeroAbilities(heroList, true, 1000);
+                }
+
+                yield return 4000;
+
+                if (hasteSpell?.Sum(u => u.Count) > 0)
+                {
+                    foreach (var unit in hasteSpell)
+                    {
+                        foreach (var t in Deploy.AlongLine(unit, hasteLine2.Item1, hasteLine2.Item2, unit.Count, 2))
+                            yield return t;
+                    }
+                }
+                
+                if (ragespell?.Sum(u => u.Count) > 0)
+                {
+                    foreach (var unit in ragespell)
+                    {
+                        foreach (var t in Deploy.AlongLine(unit, rageLine2.Item1, rageLine2.Item2, unit.Count, 2))
+                            yield return t;
+                    }
+                }
+
+                if(wallbreaker?.Count > 0)
+                {
+                    while(wallbreaker.Count > 0)
+                    {
+                        var count = wallbreaker.Count;
+                        foreach (var t in Deploy.AtPoint(wallbreaker, orgin, 3))
+                            yield return t;
+
+                        yield return 400;
+
+                        // prevent infinite loop if deploy point is on red
+                        if (wallbreaker.Count != count) continue;
+
+                        Log.Warning($"[{AttackName}] Couldn't deploy {wallbreaker.PrettyName}");
+                    }
+                }
+
+                if(heroes.Any())
+                {
+                    foreach (var hero in heroes.Where(u => u.Count > 0))
+                    {
+                        foreach (var t in Deploy.AtPoint(hero, orgin))
+                            yield return t;
+                    }
+                    Deploy.WatchHeroes(heroes);
+                }
+
+
+                if (queen?.Count > 0)
+                {
+                    foreach (var t in Deploy.AtPoint(queen, orgin))
+                        yield return t;
+                    Deploy.WatchHeroes(new List<DeployElement> { queen });
+                }
+
             }
-            if (debug)
-                DebugSpells();
         }
 
         public override string ToString()
@@ -1125,9 +1412,8 @@ namespace GoblinKnifeDeploy
 
                     //draw rectangle around the target
                     Visualize.RectangleT(bmp, new RectangleT((int)target.X, (int)target.Y, 4, 4), new Pen(Color.Blue));
-
-                    g.FillEllipse(new SolidBrush(Color.FromArgb(128, Color.Magenta)),
-                        queenRagePoint.ToScreenAbsolute().ToRectangle((int)distance, (int)distance));
+                    
+                    Visualize.CircleT(bmp, queenRagePoint, 5, Color.Magenta, 64, 0);
                 }
                 var d = DateTime.UtcNow;
                 Screenshot.Save(bmp, $"{AttackName} Queen Walk {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
@@ -1140,12 +1426,6 @@ namespace GoblinKnifeDeploy
             {
                 using (var g = Graphics.FromImage(bmp))
                 {
-                    // find the radius of 5 tiles
-                    var p1 = new PointFT(0f, 0f).ToScreenAbsolute();
-                    var p2 = new PointFT(0f, 3.5f).ToScreenAbsolute();
-                    var distance = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
-
-                    //draw new deploy points for funnling troops
                     Visualize.RectangleT(bmp, new RectangleT((int)red1.X, (int)red1.Y, 1, 1), new Pen(Color.Blue));
                     Visualize.RectangleT(bmp, new RectangleT((int)red2.X, (int)red2.Y, 1, 1), new Pen(Color.Blue));
 
@@ -1153,12 +1433,9 @@ namespace GoblinKnifeDeploy
 
                     //draw rectangle around the target
                     Visualize.RectangleT(bmp, new RectangleT((int)target.X, (int)target.Y, 4, 4), new Pen(Color.Blue));
-
-                    g.FillEllipse(new SolidBrush(Color.FromArgb(128, Color.DarkGreen)),
-                        jumpPoint.ToScreenAbsolute().ToRectangle((int)distance, (int)distance));
-
-                    g.FillEllipse(new SolidBrush(Color.FromArgb(128, Color.DarkGreen)),
-                        jumpPoint1.ToScreenAbsolute().ToRectangle((int)distance, (int)distance));
+                    
+                    Visualize.CircleT(bmp, jumpPoint, 3.5f, Color.DarkGreen, 64, 0);
+                    Visualize.CircleT(bmp, jumpPoint1, 3.5f, Color.DarkGreen, 64, 0);
                 }
                 var d = DateTime.UtcNow;
                 Screenshot.Save(bmp, $"{AttackName} Jump Spells {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
@@ -1171,28 +1448,22 @@ namespace GoblinKnifeDeploy
             {
                 using (var g = Graphics.FromImage(bmp))
                 {
-                    // find the radius of 5 tiles
-                    var p1 = new PointFT(0f, 0f).ToScreenAbsolute();
-                    var p2 = new PointFT(0f, 3.5f).ToScreenAbsolute();
-                    var distance = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
-
-                    //draw new deploy points for funnling troops
+                    
                     Visualize.RectangleT(bmp, new RectangleT((int)red1.X, (int)red1.Y, 1, 1), new Pen(Color.Blue));
                     Visualize.RectangleT(bmp, new RectangleT((int)red2.X, (int)red2.Y, 1, 1), new Pen(Color.Blue));
+                    Visualize.RectangleT(bmp, new RectangleT((int)red.X, (int)red.Y, 1, 1), new Pen(Color.Yellow));
+
+                    Visualize.RectangleT(bmp, new RectangleT((int)orgin.Item.X, (int)orgin.Item.Y, 1, 1), new Pen(Color.Red));
 
                     Visualize.RectangleT(bmp, new RectangleT((int)nearestWall.X, (int)nearestWall.Y, 1, 1), new Pen(Color.White));
 
                     //draw rectangle around the target
-                    Visualize.RectangleT(bmp, new RectangleT((int)target.X, (int)target.Y, 4, 4), new Pen(Color.Blue));
+                    Visualize.RectangleT(bmp, new RectangleT((int)target.X, (int)target.Y, 3, 3), new Pen(Color.Blue));
 
-                    g.FillEllipse(new SolidBrush(Color.FromArgb(128, Color.DarkGreen)),
-                        jumpPoint1.ToScreenAbsolute().ToRectangle((int)distance, (int)distance));
+                    Visualize.CircleT(bmp, jumpPoint1, 3.5f, Color.DarkGreen, 64, 0);
 
-                    p2 = new PointFT(0f, 4f).ToScreenAbsolute();
-                    distance = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
 
-                    g.FillEllipse(new SolidBrush(Color.FromArgb(128, Color.SandyBrown)),
-                        earthQuakePoint.ToScreenAbsolute().ToRectangle((int)distance, (int)distance));
+                    Visualize.CircleT(bmp, earthQuakePoint, 4, Color.SandyBrown, 64, 0);
                 }
                 var d = DateTime.UtcNow;
                 Screenshot.Save(bmp, $"{AttackName} EQ Spells {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
@@ -1205,11 +1476,6 @@ namespace GoblinKnifeDeploy
             {
                 using (var g = Graphics.FromImage(bmp))
                 {
-                    // find the radius of 5 tiles
-                    var p1 = new PointFT(0f, 0f).ToScreenAbsolute();
-                    var p2 = new PointFT(0f, 5f).ToScreenAbsolute();
-                    var distance = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
-
                     Visualize.RectangleT(bmp, border, new Pen(Color.FromArgb(128, Color.Red)));
 
                     //g.DrawLine(new Pen(Color.FromArgb(192, Color.Orange)), attackLine.Item1.ToScreenAbsolute(), attackLine.Item2.ToScreenAbsolute());
@@ -1219,17 +1485,11 @@ namespace GoblinKnifeDeploy
                     Visualize.RectangleT(bmp, new RectangleT((int)red2.X, (int)red2.Y, 1, 1), new Pen(Color.Blue));
 
                     //draw rectangle around the target
-                    Visualize.RectangleT(bmp, new RectangleT((int)target.X, (int)target.Y, 4, 4), new Pen(Color.Blue));
+                    Visualize.RectangleT(bmp, new RectangleT((int)target.X, (int)target.Y, 3, 3), new Pen(Color.Blue));
 
-                    g.FillEllipse(new SolidBrush(Color.FromArgb(128, Color.Magenta)),
-                        ragePoint.ToScreenAbsolute().ToRectangle((int)distance, (int)distance));
-                    g.FillEllipse(new SolidBrush(Color.FromArgb(128, Color.Magenta)),
-                        ragePoint2.ToScreenAbsolute().ToRectangle((int)distance, (int)distance));
-                    g.FillEllipse(new SolidBrush(Color.FromArgb(128, Color.Yellow)),
-                       healPoint.ToScreenAbsolute().ToRectangle((int)distance, (int)distance));
-
-                    //Visualize.CircleT(bmp, jumpPoint, 3.5f, Color.DarkGreen, 130, 0);
-                    //Visualize.CircleT(bmp, jumpPoint1, 3.5f, Color.DarkGreen, 130, 0);
+                    Visualize.CircleT(bmp, ragePoint, 5, Color.Magenta, 64, 0);
+                    Visualize.CircleT(bmp, ragePoint2, 5, Color.Magenta, 64, 0);
+                    Visualize.CircleT(bmp, healPoint, 5, Color.Yellow, 64, 0);
                 }
                 var d = DateTime.UtcNow;
                 Screenshot.Save(bmp, $"{AttackName} Spells {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
