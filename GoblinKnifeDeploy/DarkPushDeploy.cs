@@ -20,7 +20,7 @@ namespace GoblinKnifeDeploy
         bool useJump = false, isWarden = false, QW = false, debug, isFunneled, airAttack;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
-        const string Version = "1.2.1.75";
+        const string Version = "1.2.7.103";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -1154,7 +1154,48 @@ namespace GoblinKnifeDeploy
                 var babyLoon = babyDragon?.Count >= 7 ? true : false;
                 var lavaloonion = minion?.Count >= 10 ? true : false;
 
-                if(dragon?.Count > 0)
+                var lightingSpell = spells.ExtractOne(DeployId.Lightning);
+
+                IEnumerable<int> zapAirDefense()
+                {
+                    var airDefenses = AirDefense.Find(CacheBehavior.ForceScan);
+                    var targetAirDefense = airDefenses.OrderBy(a => a.Location.GetCenter().DistanceSq(orgin.Item)).ElementAtOrDefault(2);
+                    if(targetAirDefense == null)
+                        targetAirDefense = airDefenses.OrderBy(a => a.Location.GetCenter().DistanceSq(orgin.Item)).ElementAtOrDefault(1);
+                    if (targetAirDefense == null)
+                        targetAirDefense = airDefenses.FirstOrDefault();
+
+                    var zapPoint = targetAirDefense.Location.GetCenter();
+
+
+                    if (earthQuakeSpell?.Sum(u => u.Count) > 0)
+                    {
+                        foreach (var unit in earthQuakeSpell)
+                        {
+                            foreach (var t in Deploy.AtPoint(unit, zapPoint, 1))
+                                yield return t;
+                        }
+                    }
+
+                    foreach (var t in Deploy.AtPoint(lightingSpell, zapPoint, 2)) 
+                        yield return t;
+
+                    yield return 1200;
+                }
+
+                if(lightingSpell?.Count >= 2)
+                {
+                    foreach (var t in zapAirDefense())
+                        yield return t;
+                }
+
+                if (lightingSpell?.Count >= 2)
+                {
+                    foreach (var t in zapAirDefense())
+                        yield return t;
+                }
+
+                if (dragon?.Count > 0)
                 {
                     foreach (var t in Deploy.AtPoint(dragon, red1))
                         yield return t;
@@ -1162,7 +1203,7 @@ namespace GoblinKnifeDeploy
                     foreach (var t in Deploy.AtPoint(dragon, red2))
                         yield return t;
 
-                    yield return 5000;
+                    yield return 8000;
 
                     foreach (var t in Deploy.AlongLine(dragon, red1, red2, dragon.Count, 4)) 
                         yield return t;
@@ -1266,7 +1307,7 @@ namespace GoblinKnifeDeploy
                 {
                     foreach (var unit in ragespell)
                     {
-                        foreach (var t in Deploy.AlongLine(unit, rageLine.Item1, rageLine.Item2, 3, 3))
+                        foreach (var t in Deploy.AlongLine(unit, rageLine.Item1, rageLine.Item2, unit.Count, unit.Count))
                             yield return t;
                     }
                 }
