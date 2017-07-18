@@ -20,7 +20,7 @@ namespace GoblinKnifeDeploy
         bool useJump = false, isWarden = false, QW = false, debug, isFunneled, airAttack;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
-        const string Version = "1.2.7.103";
+        const string Version = "1.2.7.109";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -322,8 +322,12 @@ namespace GoblinKnifeDeploy
                 red1 = new PointFT(orgin.Item.X + frac * (attackLine.Item1.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item1.Y - orgin.Item.Y));
 
+                red1 = new PointFT(GameGrid.DeployExtents.MaxX, red1.Y);
+
                 red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+                red2 = new PointFT(GameGrid.DeployExtents.MaxX, red2.Y);
 
                 hasteLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X - 10f, red1.Y), new PointFT(red2.X - 10f, red2.Y));
                 rageLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X - 18f, red1.Y), new PointFT(red2.X - 18f, red2.Y));
@@ -331,7 +335,7 @@ namespace GoblinKnifeDeploy
                 hasteLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X - 23f, red1.Y), new PointFT(red2.X - 23f, red2.Y));
                 rageLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X - 23f, red1.Y), new PointFT(red2.X - 23f, red2.Y));
 
-                QWHealear = new PointFT(24, red1.Y);
+                QWHealear = new PointFT(GameGrid.DeployExtents.MaxX, red1.Y);
                 queenRagePoint = new PointFT(red1.X - 1, red1.Y);
             }
 
@@ -382,8 +386,12 @@ namespace GoblinKnifeDeploy
                 red1 = new PointFT(orgin.Item.X + frac * (attackLine.Item1.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item1.Y - orgin.Item.Y));
 
+                red1 = new PointFT(GameGrid.DeployExtents.MinX, red1.Y);
+
                 red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+                red2 = new PointFT(GameGrid.DeployExtents.MinX, red2.Y);
 
                 hasteLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X + 10f, red1.Y), new PointFT(red2.X + 10f, red2.Y));
                 rageLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X + 18f, red1.Y), new PointFT(red2.X + 18f, red2.Y));
@@ -391,7 +399,7 @@ namespace GoblinKnifeDeploy
                 hasteLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X + 23f, red1.Y), new PointFT(red2.X + 23f, red2.Y));
                 rageLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X + 23f, red1.Y), new PointFT(red2.X + 23f, red2.Y));
 
-                QWHealear = new PointFT(-24, red1.Y);
+                QWHealear = new PointFT(GameGrid.DeployExtents.MinX, red1.Y);
                 queenRagePoint = new PointFT(red1.X + 1, red1.Y);
             }
 
@@ -442,8 +450,12 @@ namespace GoblinKnifeDeploy
                 red1 = new PointFT(orgin.Item.X + frac * (attackLine.Item1.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item1.Y - orgin.Item.Y));
 
+                red1 = new PointFT(red1.X, GameGrid.DeployExtents.MaxY);
+
                 red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+                red2 = new PointFT(red2.X, GameGrid.DeployExtents.MaxY);
 
                 hasteLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y - 10f), new PointFT(red2.X, red2.Y - 10f));
                 rageLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y - 18f), new PointFT(red2.X, red2.Y - 18f));
@@ -451,7 +463,7 @@ namespace GoblinKnifeDeploy
                 hasteLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y - 23f), new PointFT(red2.X, red2.Y - 23f));
                 rageLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y - 23f), new PointFT(red2.X, red2.Y - 23f));
 
-                QWHealear = new PointFT(red1.X, 24);
+                QWHealear = new PointFT(red1.X, GameGrid.DeployExtents.MaxY);
                 queenRagePoint = new PointFT(red1.X, red1.Y - 1);
             }
 
@@ -503,8 +515,12 @@ namespace GoblinKnifeDeploy
                 red1 = new PointFT(orgin.Item.X + frac * (attackLine.Item1.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item1.Y - orgin.Item.Y));
 
+                red1 = new PointFT(red1.X, GameGrid.DeployExtents.MinY);
+
                 red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
                              orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
+
+                red2 = new PointFT(red2.X, GameGrid.DeployExtents.MinY);
 
                 hasteLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y + 10f), new PointFT(red2.X, red2.Y + 10f));
                 rageLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y + 18f), new PointFT(red2.X, red2.Y + 18f));
@@ -512,14 +528,12 @@ namespace GoblinKnifeDeploy
                 hasteLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y + 23f), new PointFT(red2.X, red2.Y + 23f));
                 rageLine2 = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y + 23f), new PointFT(red2.X, red2.Y + 23f));
 
-                QWHealear = new PointFT(red1.X, -24);
+                QWHealear = new PointFT(red1.X, GameGrid.DeployExtents.MinY);
                 queenRagePoint = new PointFT(red1.X, red1.Y + 1);
             }
 
             red = new PointFT(attackLine.Item2.X + 0.5f * (attackLine.Item1.X - attackLine.Item2.X),
                              attackLine.Item2.Y + 0.5f * (attackLine.Item1.Y - attackLine.Item2.Y));
-            //red1 = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(red1)).First();
-            //red2 = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(red2)).First();
         }
 
         public override IEnumerable<int> AttackRoutine()
@@ -1052,50 +1066,63 @@ namespace GoblinKnifeDeploy
                         unit.Select();
                         foreach (var t in Deploy.AtPoint(unit, jumpPoint))
                             yield return t;
+                        break;
                     }
                 }
                 //deploy spells
-                var rageSpellCount = ragespell?.Sum(u => u.Count);
+
+                int rageSpellCount = (int)ragespell?.Sum(u => u.Count);
+                int hasteSpellCount = (int)hasteSpell?.Sum(u => u.Count);
+                int healSpellCount = (int)healspell?.Sum(u => u.Count);
+
                 if (rageSpellCount > 0)
                 {
                     foreach (var unit in ragespell)
                     {
-                        unit.Select();
                         foreach (var t in Deploy.AtPoint(unit, ragePoint))
                             yield return t;
+                        break;
                     }
+                    rageSpellCount--;
                 }
 
                 yield return 2000;
 
-
-                if (ragespell?.Sum(u => u.Count) > 1)
+                if (rageSpellCount > 1)
                 {
                     foreach (var unit in ragespell)
                     {
-                        unit.Select();
                         foreach (var t in Deploy.AtPoint(unit, healPoint))
                             yield return t;
+
+                        break;
                     }
+                    rageSpellCount--;
                 }
-                else
+                else if(healSpellCount == 0)
                 {
-                    foreach (var unit in hasteSpell)
+                    if (hasteSpellCount > 0)
                     {
-                        unit.Select();
-                        foreach (var t in Deploy.AtPoint(unit, healPoint))
-                            yield return t;
+                        
+                        foreach (var unit in hasteSpell)
+                        {
+                            foreach (var t in Deploy.AtPoint(unit, healPoint))
+                                yield return t;
+
+                            break;
+                        }
+                        hasteSpellCount--;
                     }
                 }
-                var healSpellCount = healspell?.Sum(u => u.Count);
                 if (healSpellCount > 0)
                 {
                     foreach (var unit in healspell)
                     {
-                        unit.Select();
                         foreach (var t in Deploy.AtPoint(unit, healPoint))
                             yield return t;
+                        break;
                     }
+                    healSpellCount--;
                 }
                 //use freeze if inferno is found
                 if (freezeSpell?.Count > 0)
@@ -1119,7 +1146,8 @@ namespace GoblinKnifeDeploy
                     var heroList = new List<DeployElement> { warden };
                     TryActivateHeroAbilities(heroList, true, 1000);
                 }
-                if (rageSpellCount > 0)
+
+                if (rageSpellCount > 0) 
                 {
                     foreach (var unit in ragespell)
                     {
@@ -1128,8 +1156,19 @@ namespace GoblinKnifeDeploy
                             yield return t;
                     }
                 }
+                
+                if (healSpellCount > 0) 
+                {
+                    foreach (var unit in healspell)
+                    {
+                        foreach (var t in Deploy.AtPoint(unit, ragePoint2))
+                            yield return t;
+                    }
+                }
+
                 yield return 1000;
-                if (hasteSpell.Sum(u => u.Count) > 0)
+
+                if (hasteSpellCount > 0)
                 {
                     foreach (var unit in hasteSpell)
                     {
@@ -1138,6 +1177,7 @@ namespace GoblinKnifeDeploy
                             yield return t;
                     }
                 }
+
                 if (debug)
                     DebugSpells();
             }
@@ -1172,8 +1212,9 @@ namespace GoblinKnifeDeploy
                     {
                         foreach (var unit in earthQuakeSpell)
                         {
-                            foreach (var t in Deploy.AtPoint(unit, zapPoint, 1))
+                            foreach (var t in Deploy.AtPoint(unit, zapPoint))
                                 yield return t;
+                            break;
                         }
                     }
 
@@ -1285,14 +1326,21 @@ namespace GoblinKnifeDeploy
                     foreach (var t in Deploy.AtPoint(warden, orgin))
                         yield return t;
                 }
+                //setting witch spell to start and the the line for deployment
+                var firstSpell = hasteSpell?.Sum(u => u.Count) >= ragespell?.Sum(u => u.Count) ? hasteSpell : ragespell;
+                var secondSpell = firstSpell == hasteSpell ? ragespell : hasteSpell;
 
-                if (hasteSpell?.Sum(u => u.Count) > 0)
+                var line = hasteLine;
+
+                if (firstSpell?.Sum(u => u.Count) > 0)
                 {
-                    foreach (var unit in hasteSpell)
+                    foreach (var unit in firstSpell)
                     {
-                        foreach (var t in Deploy.AlongLine(unit, hasteLine.Item1, hasteLine.Item2, 3, 3))
+                        var count = unit.Count >= 3 ? 3 : unit.Count;
+                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count))
                             yield return t;
-                    }                     
+                    }
+                    line = rageLine;
                 }
 
                 if (minion?.Count > 0)
@@ -1303,14 +1351,29 @@ namespace GoblinKnifeDeploy
 
                 yield return 5000;
 
-                if (ragespell?.Sum(u => u.Count) > 0)
+                if (secondSpell?.Sum(u => u.Count) > 0)
                 {
-                    foreach (var unit in ragespell)
+                    foreach (var unit in secondSpell)
                     {
-                        foreach (var t in Deploy.AlongLine(unit, rageLine.Item1, rageLine.Item2, unit.Count, unit.Count))
+                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, unit.Count, unit.Count))
                             yield return t;
                     }
+                    line = hasteLine2;
                 }
+                else
+                {
+                    if (firstSpell?.Sum(u => u.Count) > 0)
+                    {
+                        foreach (var unit in firstSpell)
+                        {
+                            var count = unit.Count >= 3 ? 3 : unit.Count;
+                            foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count))
+                                yield return t;
+                        }
+                        line = hasteLine2;
+                    }
+                }
+
                 //use freeze if inferno is found
                 if (freezeSpell?.Count > 0)
                 {
@@ -1334,20 +1397,22 @@ namespace GoblinKnifeDeploy
 
                 yield return 4000;
 
-                if (hasteSpell?.Sum(u => u.Count) > 0)
+                if (firstSpell?.Sum(u => u.Count) > 0)
                 {
-                    foreach (var unit in hasteSpell)
+                    foreach (var unit in firstSpell)
                     {
-                        foreach (var t in Deploy.AlongLine(unit, hasteLine2.Item1, hasteLine2.Item2, unit.Count, 2))
+                        var count = unit.Count >= 3 ? 3 : unit.Count;
+                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count))
                             yield return t;
                     }
+                    line = rageLine2;
                 }
                 
-                if (ragespell?.Sum(u => u.Count) > 0)
+                if (secondSpell?.Sum(u => u.Count) > 0)
                 {
-                    foreach (var unit in ragespell)
+                    foreach (var unit in secondSpell)
                     {
-                        foreach (var t in Deploy.AlongLine(unit, rageLine2.Item1, rageLine2.Item2, unit.Count, 2))
+                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, unit.Count, 2))
                             yield return t;
                     }
                 }
