@@ -20,7 +20,7 @@ namespace GoblinKnifeDeploy
         bool useJump = false, isWarden = false, QW = false, debug, isFunneled, airAttack;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
-        const string Version = "1.2.7.109";
+        const string Version = "1.2.7.112";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
