@@ -459,17 +459,19 @@ namespace SmartFourFingersDeploy
                                 yield return 6000;
 
                                 zapCount--;
-
-                                availableDEAfterZap = Opponent.GetAvailableLoot(false).DarkElixir;
-                                if (availableDE - availableDEAfterZap < DEAmount)
+                                if(zapCount > 0)
                                 {
-                                    Log.Warning($"{AttackName} Smart Zap Drills only {availableDE - availableDEAfterZap} DE from this drill .. you set it to {minDEAmount} .. will not zap it again ");
-                                    drills[i] = null;
-                                }
-                                else
-                                {
-                                    Log.Info($"{AttackName} Smart Zap Drills gain {availableDE - availableDEAfterZap} DE from this drill");
-                                    availableDE = availableDEAfterZap;
+                                    availableDEAfterZap = Opponent.GetAvailableLoot(false).DarkElixir;
+                                    if (availableDE - availableDEAfterZap < DEAmount)
+                                    {
+                                        Log.Warning($"{AttackName} Smart Zap Drills only {availableDE - availableDEAfterZap} DE from this drill .. you set it to {minDEAmount} .. will not zap it again ");
+                                        drills[i] = null;
+                                    }
+                                    else
+                                    {
+                                        Log.Info($"{AttackName} Smart Zap Drills gain {availableDE - availableDEAfterZap} DE from this drill");
+                                        availableDE = availableDEAfterZap;
+                                    }
                                 }
                             }
                             
