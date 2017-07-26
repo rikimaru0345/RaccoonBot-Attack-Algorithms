@@ -20,7 +20,7 @@ namespace GoblinKnifeDeploy
         bool useJump = false, isWarden = false, QW = false, debug, isFunneled, airAttack;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
-        const string Version = "1.2.7.112";
+        const string Version = "1.2.7.116";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -645,7 +645,7 @@ namespace GoblinKnifeDeploy
                 var EQCount = earthQuakeSpell?.Sum(u => u.Count);
                 if (EQCount >= 4)
                 {
-                    Log.Info($"[{AttackName}] break walls beside Twonhall ");
+                    Log.Info($"[{AttackName}] break walls beside TownHall ");
                     foreach (var unit in earthQuakeSpell)
                     {
                         unit.Select();
@@ -753,7 +753,7 @@ namespace GoblinKnifeDeploy
                                 foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
                                     yield return t;
                             }
-                            if (witch?.Count > 0)
+                            if (witch?.Count > 4)
                             {
                                 witchFunnelCount = witch.Count / 4;
                                 foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
@@ -779,7 +779,7 @@ namespace GoblinKnifeDeploy
                                 foreach (var t in Deploy.AtPoint(bowler, red1, bowlerFunnelCount))
                                     yield return t;
                             }
-                            if (witch?.Count > 0)
+                            if (witch?.Count > 4)
                             {
                                 witchFunnelCount = witch.Count / 4;
                                 foreach (var t in Deploy.AtPoint(witch, red1, witchFunnelCount))
@@ -798,7 +798,7 @@ namespace GoblinKnifeDeploy
                                 foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
                                     yield return t;
                             }
-                            if (witch?.Count > 0)
+                            if (witchFunnelCount > 0 && witch?.Count > 0)
                             {
                                 foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
                                     yield return t;
@@ -928,13 +928,17 @@ namespace GoblinKnifeDeploy
                 IEnumerable<int> deployNormalTroops()
                 {
                     Log.Info($"[{AttackName}] deploy rest of troops");
-                    /*
-                    if (bowler?.Count > 0)
+
+                    if(witch?.Count>4)
                     {
-                        foreach (var t in Deploy.AlongLine(bowler, red1, red2, bowlerFunnelCount, 4))
-                            yield return t;
+                        if (bowler?.Count > 0)
+                        {
+                            foreach (var t in Deploy.AlongLine(bowler, red1, red2, bowlerFunnelCount, 4))
+                                yield return t;
+                        }
                     }
-                    */
+                    
+                    
                     if (bowler?.Count > 0)
                     {
                         foreach (var t in Deploy.AtPoint(bowler, orgin, bowler.Count))
@@ -942,7 +946,9 @@ namespace GoblinKnifeDeploy
                     }
                     if (witch?.Count > 0)
                     {
-                        foreach (var t in Deploy.AlongLine(witch, red1, red2, witch.Count, 4))
+                        /*foreach (var t in Deploy.AlongLine(witch, red1, red2, witch.Count, 4))
+                            yield return t;*/
+                        foreach (var t in Deploy.AtPoint(witch, orgin, witch.Count))
                             yield return t;
                     }
                     if (clanCastle?.Count > 0)
@@ -1260,7 +1266,7 @@ namespace GoblinKnifeDeploy
 
                     yield return 4000;
 
-                    foreach (var t in Deploy.AlongLine(babyDragon, red1, red2, dragon.Count, 4))
+                    foreach (var t in Deploy.AlongLine(babyDragon, red1, red2, babyDragon.Count, 4))
                         yield return t;
                 }
 
@@ -1339,6 +1345,8 @@ namespace GoblinKnifeDeploy
                         var count = unit.Count >= 3 ? 3 : unit.Count;
                         foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count))
                             yield return t;
+
+                        break;
                     }
                     line = rageLine;
                 }
