@@ -120,6 +120,12 @@ namespace SmartFourFingersDeploy
             minDEAmount.HideInUiWhen.Add(new SettingOption("Smart Zap Drills", 0));
             settings.DefineSetting(minDEAmount);
 
+            var useEQOnDrills = new AlgorithmSetting("Use EarthQuake spell on drills", "use EarthQuake spell to gain DE from drills ", 0, SettingType.ActiveAndDead);
+            useEQOnDrills.PossibleValues.Add(new SettingOption("Off", 0));
+            useEQOnDrills.PossibleValues.Add(new SettingOption("On", 1));
+            useEQOnDrills.HideInUiWhen.Add(new SettingOption("Smart Zap Drills", 0));
+            settings.DefineSetting(useEQOnDrills);
+
             var endBattleAfterZap = new AlgorithmSetting("End Battle after zap ?(sec)", "end battle after this time in sec after Smart Zap is done (0 is disabled)", 10, SettingType.ActiveAndDead);
             endBattleAfterZap.MinValue = 0;
             endBattleAfterZap.MaxValue = 60;
@@ -131,6 +137,8 @@ namespace SmartFourFingersDeploy
             deployHeroesAt.PossibleValues.Add(new SettingOption("TownHall Side", 1));
             deployHeroesAt.PossibleValues.Add(new SettingOption("DE storage Side", 1));
             settings.DefineSetting(deployHeroesAt);
+
+
 
 
             return settings;
@@ -405,8 +413,10 @@ namespace SmartFourFingersDeploy
 
                 if (zapCount <= 0)
                 {
-                    Log.Error($"{AttackName} Smart Zap Drills No lighting Spells found for Smart Zap");
+                    Log.Warning($"{AttackName} Smart Zap Drills No lighting Spells found for Smart Zap");
                     zapDrill = false;
+                    foreach (var t in useEQOnDrills(lvl))
+                        yield return t;
                     foreach (var t in endBattle())
                         yield return t;
                     yield break;
@@ -416,8 +426,10 @@ namespace SmartFourFingersDeploy
 
                 if (drills == null)
                 {
-                    Log.Error("{AttackName} Smart Zap Drills didn't found Dark Drills matches the requirements");
+                    Log.Warning("{AttackName} Smart Zap Drills didn't found Dark Drills matches the requirements");
                     zapDrill = false;
+                    foreach (var t in useEQOnDrills(lvl))
+                        yield return t;
                     foreach (var t in endBattle())
                         yield return t;
                     yield break;
@@ -428,8 +440,9 @@ namespace SmartFourFingersDeploy
 
                 if (availableDE < DEAmount)
                 {
-                    Log.Error($"{AttackName} Smart Zap Drills this base only has {availableDE} DE .. it doesn't match the requirements ({minDEAmount})");
-                    zapDrill = false;
+                    Log.Warning($"{AttackName} Smart Zap Drills this base only has {availableDE} DE .. it doesn't match the requirements ({minDEAmount})");
+                    foreach (var t in useEQOnDrills(lvl))
+                        yield return t;
                     foreach (var t in endBattle())
                         yield return t;
                     yield break;
@@ -456,7 +469,7 @@ namespace SmartFourFingersDeploy
                                 foreach (var t in Deploy.AtPoint(zp, DP, 1))
                                     yield return t;
 
-                                yield return 6000;
+                                yield return 7000;
 
                                 zapCount--;
                                 if(zapCount > 0)
@@ -478,7 +491,7 @@ namespace SmartFourFingersDeploy
                             if (zapCount <= 0)
                                 break;
                         }
-                        yield return 4000;
+                        yield return 7000;
 
                         drills = DarkElixirDrill.Find(CacheBehavior.ForceScan, lvl);
                         if (!drills.Any())
@@ -487,10 +500,44 @@ namespace SmartFourFingersDeploy
                             break;
                         }
                     }
+
+                    foreach (var t in useEQOnDrills(lvl))
+                        yield return t;
+
                     foreach (var t in endBattle())
                         yield return t;
                     
                     yield break;
+                }
+            }
+
+            IEnumerable<int> useEQOnDrills(int drillLevel)
+            {
+                if (GetCurrentSetting("Use EarthQuake spell on drills") == 1)
+                {
+                    var EQSpell = spells.Extract(u => u.Id == DeployId.Earthquake);
+                    var EQCount = EQSpell.Sum(u => u.Count);
+                    if (EQCount > 0)
+                    {
+                        Log.Info($"{AttackName} start use EQ on drills");
+                        var drills = DarkElixirDrill.Find(CacheBehavior.ForceScan, drillLevel);
+                        if (drills.Any())
+                        {
+                            foreach (var d in drills)
+                            {
+                                var eq = EQSpell.FirstOrDefault()?.Count > 0 ? EQSpell.FirstOrDefault() : EQSpell.LastOrDefault();
+                                if(eq.Count > 0)
+                                {
+                                    foreach (var t in Deploy.AtPoint(eq, d.Location.GetCenter()))
+                                        yield return t;
+                                }
+                            }
+                        }
+                        else
+                            Log.Warning($"{AttackName} no Drills found to use EQ on !!");
+                    }
+                    else
+                        Log.Warning($"{AttackName} no EarthQuake spells found to use on drills");
                 }
             }
 
@@ -546,11 +593,11 @@ namespace SmartFourFingersDeploy
                 int collectorsCount = collectors != null ? collectors.Count() : 0;
                 int minesCount = mines != null ? mines.Count() : 0;
 
-                Log.Warning($"{AttackName} NO. of Colloctors & mines near from red line:");
-                Log.Warning($"elixir colloctors is {collectorsCount}");
-                Log.Warning($"gold mines is {minesCount}");
-                Log.Warning($"----------------------------");
-                Log.Warning($"sum of all is {collectorsCount + minesCount}");
+                Log.Info($"{AttackName} NO. of Colloctors & mines near from red line:");
+                Log.Info($"elixir colloctors is {collectorsCount}");
+                Log.Info($"gold mines is {minesCount}");
+                Log.Info($"----------------------------");
+                Log.Info($"sum of all is {collectorsCount + minesCount}");
 
                 var debug = GetCurrentSetting("Debug Mode");
 
@@ -585,7 +632,7 @@ namespace SmartFourFingersDeploy
                     return true;
                 else
                 {
-                    Log.Error($"{AttackName} this base doesn't meets Collocetors & Mines requirements");
+                    Log.Warning($"{AttackName} this base doesn't meets Collocetors & Mines requirements");
                     return false;
                 }
             }
