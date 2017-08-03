@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Linq;
@@ -17,10 +17,10 @@ namespace GoblinKnifeDeploy
         private Container<PointFT> _orgin;
         private Tuple<PointFT, PointFT> _attackLine;
         private PointFT _core, _earthQuakePoint, _healPoint, _ragePoint, _target, _jumpPoint;
-        private bool _useJump = false;
+        private bool _useJump = false, watchHeroes = false;
         private int _delay = 2000;
         private DeployElement _freezeSpell;
-        private const string Version = "1.0.6.45";
+        private const string Version = "1.0.6.47";
         #endregion
 
         #region drop freeze function 
@@ -47,16 +47,6 @@ namespace GoblinKnifeDeploy
         /// </summary>
         private void CreateDeployPoints()
         {
-            var DE = DarkElixirStorage.Find()?.FirstOrDefault()?.Location.GetCenter();
-            if(DE != null)
-                _target = (PointFT)DE;
-            else
-            {
-                Log.Debug("[Goblin Knife] coundn't locate the target after aligning the base");
-                Log.Error("Couldn't find DE Storage we will return home");
-                Surrender();
-            }
-
             float getOutRedArea = 0.25f;
 
             // don't include corners in case build huts are there
@@ -147,17 +137,43 @@ namespace GoblinKnifeDeploy
         #region Deployment troops and spells
         public override IEnumerable<int> AttackRoutine()
         {
-            yield return 5000;
+            var DE = DarkElixirStorage.Find()?.FirstOrDefault()?.Location.GetCenter();
+            //set the target
+            if (DE == null)
+            {
+                for (var i = 1; i <= 3; i++)
+                {
+                    Log.Warning($"bot didn't found the DE Storage .. we will attemp search NO. {i + 1}");
+                    yield return 1000;
+                    DE = DarkElixirStorage.Find()?.FirstOrDefault()?.Location.GetCenter();
+                    if (DE != null)
+                    {
+                        Log.Warning($"DE Storage found after {i + 1} retries");
+                        break;
+                    }
+
+                }
+            }
+
+            if (DE != null)
+                _target = (PointFT)DE;
+            else
+            {
+                Log.Debug("[Goblin Knife] coundn't locate the target after aligning the base");
+                Log.Error("Couldn't find DE Storage we will return home");
+                Surrender();
+
+                yield break;
+            }
             CreateDeployPoints();
             Log.Info($"[Goblin Knife] V{Version} Deploy start");
 
             //get troops
-
             var deployElements = Deploy.GetTroops();
 
             var clanCastle = deployElements.ExtractOne(u => u.ElementType == DeployElementType.ClanTroops && UserSettings.UseClanTroops);
 
-            var earthQuakeSpell = deployElements.ExtractOne(DeployId.Earthquake);
+            var earthQuakeSpell = deployElements.Extract(u => u.Id == DeployId.Earthquake);
             var jumpSpell = deployElements.ExtractOne(DeployId.Jump);
             var giant = deployElements.ExtractOne(DeployId.Giant);
             var goblin = deployElements.ExtractOne(DeployId.Goblin);
@@ -176,11 +192,14 @@ namespace GoblinKnifeDeploy
                 .ToList();
             
             //open near to dark elixer with 4 earthquakes
-            if (earthQuakeSpell?.Count >= 4)
+            if (earthQuakeSpell?.Sum(u => u.Count) >= 4)
             {
-                foreach (int t in Deploy.AtPoint(earthQuakeSpell, _earthQuakePoint, 4))
+                foreach(var unit in earthQuakeSpell)
                 {
-                    yield return t;
+                    foreach (int t in Deploy.AtPoint(unit, _earthQuakePoint, unit.Count))
+                    {
+                        yield return t;
+                    }
                 }
             }
             else
@@ -333,7 +352,7 @@ namespace GoblinKnifeDeploy
                     foreach (int t in Deploy.AtPoint(hero, _orgin))
                         yield return t;
                 }
-                Deploy.WatchHeroes(heroes, 7000);
+                watchHeroes = true;
             }
             yield return _delay;
 
@@ -381,6 +400,10 @@ namespace GoblinKnifeDeploy
 
             foreach (int t in Deploy.AtPoint(ragespell, _target))
                 yield return t;
+            if(watchHeroes == true)
+            {
+                Deploy.WatchHeroes(heroes, 7000);
+            }
         }
         #endregion
 
