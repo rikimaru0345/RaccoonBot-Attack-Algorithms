@@ -5,6 +5,7 @@ using System.Linq;
 using CoC_Bot.API;
 using CoC_Bot.API.Buildings;
 using CustomAlgorithmSettings;
+using System.Reflection;
 
 [assembly: Addon("SmartFourFingersDeploy", "deploy troops in for sides with human behavior", "Cobratst")]
 namespace SmartFourFingersDeploy
@@ -12,8 +13,9 @@ namespace SmartFourFingersDeploy
     [AttackAlgorithm("SmartFourFingersDeploy", "Four Fingers Deploy with advanced settings")]
     public class SmartFourFingersDeploy : BaseAttack
     {
-        const string Version = "1.0.0.12";
-        const string AttackName = "[Smart 4 Fingers Deploy]";
+        internal static readonly Version Version = Assembly.GetEntryAssembly().GetName().Version;
+        internal static readonly string FormattedVersionString = $"{Version.Major}.{Version.Minor}.{Version.Build}.{Version.Revision}";
+        public const string AttackName = "[Smart 4 Fingers Deploy]";
         PointFT target;
 
         public SmartFourFingersDeploy(Opponent opponent) : base(opponent)
@@ -30,7 +32,7 @@ namespace SmartFourFingersDeploy
         /// </summary>
         /// <param name="settingName">Name of the setting to Get</param>
         /// <returns>Current Value of the setting.</returns>
-        internal int CurrentSetting(string settingName)
+        internal int GetCurrentSetting(string settingName)
         {
             return SettingsController.Instance.GetSetting(AttackName, settingName, Opponent.IsDead());
         }
@@ -52,20 +54,20 @@ namespace SmartFourFingersDeploy
         /// </summary>
         public static void OnInit()
         {
-            //On load of the Plug-In DLL, Define the Default Settings for the Algorithm.
+            // On load of the Plug-In DLL, Define the Default Settings for the Algorithm.
             SettingsController.Instance.DefineCustomAlgorithmSettings(DefineSettings());
         }
 
         internal static AlgorithmSettings DefineSettings()
         {
-            var settings = new AlgorithmSettings();
+            var settings = new AlgorithmSettings()
+            {
+                AlgorithmName = AttackName,
+                AlgorithmDescriptionURL = "https://www.raccoonbot.com/forum/topic/24589-dark-push-deploy/"
+            };
 
-            settings.AlgorithmName = AttackName;
-            //settings.AlgorithmDescriptionURL = "https://www.raccoonbot.com/forum/topic/24589-dark-push-deploy/";
-
-            //Global Settings
-
-            var debugMode = new AlgorithmSetting("Debug Mode", "When on, Debug Images will be written out for each attack showing what the algorithm is seeing.", 1, SettingType.Global);
+            // Global Settings.
+            var debugMode = new AlgorithmSetting("Debug Mode", "When on, Debug Images will be written out for each attack showing what the algorithm is seeing.", 0, SettingType.Global);
             debugMode.PossibleValues.Add(new SettingOption("Off", 0));
             debugMode.PossibleValues.Add(new SettingOption("On", 1));
             settings.DefineSetting(debugMode);
@@ -75,21 +77,28 @@ namespace SmartFourFingersDeploy
             setCollMines.PossibleValues.Add(new SettingOption("On", 1));
             settings.DefineSetting(setCollMines);
 
-            var minDistance = new AlgorithmSetting("Acceptable Target Range", "the maximun numbers of tiles the collectors and drills can be far from red line", 6, SettingType.ActiveAndDead);
-            minDistance.MinValue = 2;
-            minDistance.MaxValue = 10;
+            // Show These ONLY when Set Exposed Collecotors & Mines is on.
+            var minDistance = new AlgorithmSetting("Acceptable Target Range", "the maximun numbers of tiles the collectors and drills can be far from red line", 6, SettingType.ActiveAndDead)
+            {
+                MinValue = 2,
+                MaxValue = 10
+            };
             minDistance.HideInUiWhen.Add(new SettingOption("Set Exposed Collecotors & Mines", 0));
             settings.DefineSetting(minDistance);
 
-            var minimElixir = new AlgorithmSetting("Minimum Exposed Colloctors", "Minimum Elixir Colloctores found outside before attack", 3, SettingType.ActiveAndDead);
-            minimElixir.MinValue = 0;
-            minimElixir.MaxValue = 7;
+            var minimElixir = new AlgorithmSetting("Minimum Exposed Colloctors", "Minimum Elixir Colloctores found outside before attack", 3, SettingType.ActiveAndDead)
+            {
+                MinValue = 0,
+                MaxValue = 7
+            };
             minimElixir.HideInUiWhen.Add(new SettingOption("Set Exposed Collecotors & Mines", 0));
             settings.DefineSetting(minimElixir);
 
-            var minimGold = new AlgorithmSetting("Minimum Exposed Mines", "Minimum Gold Mines found outside before attack", 3, SettingType.ActiveAndDead);
-            minimGold.MinValue = 0;
-            minimGold.MaxValue = 7;
+            var minimGold = new AlgorithmSetting("Minimum Exposed Mines", "Minimum Gold Mines found outside before attack", 3, SettingType.ActiveAndDead)
+            {
+                MinValue = 0,
+                MaxValue = 7
+            };
             minimGold.HideInUiWhen.Add(new SettingOption("Set Exposed Collecotors & Mines", 0));
             settings.DefineSetting(minimGold);
             
@@ -99,28 +108,42 @@ namespace SmartFourFingersDeploy
             useSmartZapDrills.PossibleValues.Add(new SettingOption("On", 1));
             settings.DefineSetting(useSmartZapDrills);
 
-            //Show These ONLY when Smart Zap Drills is on
-            var startZapAfter = new AlgorithmSetting("Start Zap Drills After ?(sec)", "change when bot start to use smart zap , this time start from deployment is done with all troops", 30, SettingType.ActiveAndDead);
-            startZapAfter.MinValue = 10;
-            startZapAfter.MaxValue = 60;
+            // Show These ONLY when Smart Zap Drills is on.
+            var startZapAfter = new AlgorithmSetting("Start Zap Drills After ?(sec)", "change when bot start to use smart zap , this time start from deployment is done with all troops", 30, SettingType.ActiveAndDead)
+            {
+                MinValue = 10,
+                MaxValue = 60
+            };
             startZapAfter.HideInUiWhen.Add(new SettingOption("Smart Zap Drills", 0));
             settings.DefineSetting(startZapAfter);
 
-            var minDrillLvl = new AlgorithmSetting("Min Drill Level", "select minimum level of the drill to be zapped", 3, SettingType.ActiveAndDead);
-            minDrillLvl.MinValue = 1;
-            minDrillLvl.MaxValue = 6;
+            var minDrillLvl = new AlgorithmSetting("Min Drill Level", "select minimum level of the drill to be zapped", 3, SettingType.ActiveAndDead)
+            {
+                MinValue = 1,
+                MaxValue = 6
+            };
             minDrillLvl.HideInUiWhen.Add(new SettingOption("Smart Zap Drills", 0));
             settings.DefineSetting(minDrillLvl);
 
-            var minDEAmount = new AlgorithmSetting("Min Dark Elixir per Zap", "we will zap only drills that have more than this amount of DE.", 200, SettingType.ActiveAndDead);
-            minDEAmount.MinValue = 100;
-            minDEAmount.MaxValue = 600;
+            var minDEAmount = new AlgorithmSetting("Min Dark Elixir per Zap", "we will zap only drills that have more than this amount of DE.", 200, SettingType.ActiveAndDead)
+            {
+                MinValue = 100,
+                MaxValue = 600
+            };
             minDEAmount.HideInUiWhen.Add(new SettingOption("Smart Zap Drills", 0));
             settings.DefineSetting(minDEAmount);
 
-            var endBattleAfterZap = new AlgorithmSetting("End Battle after zap ?(sec)", "end battle after this time in sec after Smart Zap is done", 10, SettingType.ActiveAndDead);
-            endBattleAfterZap.MinValue = 0;
-            endBattleAfterZap.MaxValue = 60;
+            var useEQOnDrills = new AlgorithmSetting("Use EarthQuake spell on drills", "use EarthQuake spell to gain DE from drills ", 0, SettingType.ActiveAndDead);
+            useEQOnDrills.PossibleValues.Add(new SettingOption("Off", 0));
+            useEQOnDrills.PossibleValues.Add(new SettingOption("On", 1));
+            useEQOnDrills.HideInUiWhen.Add(new SettingOption("Smart Zap Drills", 0));
+            settings.DefineSetting(useEQOnDrills);
+
+            var endBattleAfterZap = new AlgorithmSetting("End Battle after zap ?(sec)", "end battle after this time in sec after Smart Zap is done (0 is disabled)", 10, SettingType.ActiveAndDead)
+            {
+                MinValue = 0,
+                MaxValue = 60
+            };
             endBattleAfterZap.HideInUiWhen.Add(new SettingOption("Smart Zap Drills", 0));
             settings.DefineSetting(endBattleAfterZap);
 
@@ -131,6 +154,8 @@ namespace SmartFourFingersDeploy
             settings.DefineSetting(deployHeroesAt);
 
 
+
+
             return settings;
         }
 
@@ -138,7 +163,6 @@ namespace SmartFourFingersDeploy
         /// Called by the Bot Framework when This algorithm Row is selected in Attack Options tab
         /// to check to see whether or not this algorithm has Advanced Settings/Options
         /// </summary>
-        /// <returns>returns true if there are advanced settings.</returns>
         public static bool ShowAdvancedSettingsButton()
         {
             return true;
@@ -148,7 +172,7 @@ namespace SmartFourFingersDeploy
         /// </summary>
         public static void OnAdvancedSettingsButtonClicked()
         {
-            //Show the Settings Dialog for this Algorithm.
+            // Show the Settings Dialog for this Algorithm.
             SettingsController.Instance.ShowSettingsWindow(AttackName);
         }
 
@@ -157,13 +181,27 @@ namespace SmartFourFingersDeploy
         /// </summary>
         public static void OnShutdown()
         {
-            //Save settings for this algorithm.
+            // Save settings for this algorithm.
             SettingsController.Instance.SaveAlgorithmSettings(AttackName);
         }
 
+        // Get next item from list
         Tuple<PointFT, PointFT> NextOf(List<Tuple<PointFT, PointFT>> list, Tuple<PointFT, PointFT> item)
         {
             return list[(list.IndexOf(item) + 1) == list.Count ? 0 : (list.IndexOf(item) + 1)];
+        }
+
+        //TODO: use IsEngineeredBase to attack engineered bases even if it hasen't outside collectors and mines
+        bool IsEngineeredBase()
+        {
+            var defenses = ArcherTower.Find()?.Count();
+            defenses += WizardTower.Find()?.Count();
+            defenses += AirDefense.Find().Count();
+
+            if (defenses <= 3)
+                return true;
+
+            return false;
         }
 
         public override IEnumerable<int> AttackRoutine()
@@ -177,13 +215,14 @@ namespace SmartFourFingersDeploy
 
             var core = new PointFT(-0.01f, 0.01f);
 
-            //points to draw lines in deploy extends area
+            // Points to draw lines in deploy extends area.
             var topLeft = new PointFT((float)GameGrid.MaxX - 2, (float)GameGrid.DeployExtents.MaxY);
             var topRight = new PointFT((float)GameGrid.DeployExtents.MaxX, (float)GameGrid.MaxY - 2);
 
             var rightTop = new PointFT((float)GameGrid.DeployExtents.MaxX, (float)GameGrid.MinY + 2);
             var rightBottom = new PointFT((float)GameGrid.MaxX - 2, (float)GameGrid.DeployExtents.MinY);
 
+            // Move 8 tiles from bottom corner due to unitsbar.
             var bottomLeft = new PointFT((float)GameGrid.DeployExtents.MinX, (float)GameGrid.MinY + 8);
             var bottomRight = new PointFT((float)GameGrid.MinX + 8, (float)GameGrid.DeployExtents.MinY);
 
@@ -198,12 +237,13 @@ namespace SmartFourFingersDeploy
                 leftBottom, leftTop
             };
 
-            //my main for sides
+            // Main four lines of attack.
             var topRightLine = new Tuple<PointFT, PointFT>(topRight, rightTop);
             var bottomRightLine = new Tuple<PointFT, PointFT>(bottomRight, rightBottom);
             var bottomLeftLine = new Tuple<PointFT, PointFT>(bottomLeft, leftBottom);
             var topLeftLine = new Tuple<PointFT, PointFT>(topLeft, leftTop);
 
+            // List of the four attack lines in clocwise order
             var attackLines = new List<Tuple<PointFT, PointFT>>
             {
                 topLeftLine,
@@ -212,11 +252,11 @@ namespace SmartFourFingersDeploy
                 bottomLeftLine
             };
 
-            var userHeroesDeploy = CurrentSetting("Deploy Heroes At");
+            var deployHeroesAt = GetCurrentSetting("Deploy Heroes At");
 
-            if (userHeroesDeploy == 1)
+            // DeployHeroesAt -> 1 = townhall, 2 = DEstorage, 0 = normal behavior (after last line of troops).
+            if (deployHeroesAt == 1)
             {
-                //near townhall
                 var th = TownHall.Find()?.Location.GetCenter();
                 if (th == null)
                 {
@@ -229,21 +269,18 @@ namespace SmartFourFingersDeploy
                         {
                             Log.Warning($"TownHall found after {i + 2} retries");
                             target = (PointFT)th;
-                            userHeroesDeploy = 1;
+                            deployHeroesAt = 1;
                             break;
-                        }else
-                        {
-                            userHeroesDeploy = 0;
                         }
+                        else
+                            deployHeroesAt = 0;  
                     }
-                }else
-                {
-                    target = (PointFT)th;
                 }
+                else
+                    target = (PointFT)th;
             }
-            else if(userHeroesDeploy == 2)
+            else if(deployHeroesAt == 2)
             {
-                //near Dark Elixir Storage
                 var de = DarkElixirStorage.Find()?.FirstOrDefault()?.Location.GetCenter();
                 if (de == null)
                 {
@@ -256,27 +293,23 @@ namespace SmartFourFingersDeploy
                         {
                             Log.Warning($"DE Storage found after {i + 2} retries");
                             target = (PointFT)de;
-                            userHeroesDeploy = 2;
+                            deployHeroesAt = 2;
                             break;
                         }
                         else
-                        {
-                            userHeroesDeploy = 0;
-                        }
+                            deployHeroesAt = 0;
                     }
                 }
                 else
-                {
                     target = (PointFT)de;
-                }
             }
             else
             {
                 target = new PointFT(0f, 0f);
-                userHeroesDeploy = 0;
+                deployHeroesAt = 0;
             }
 
-            if(userHeroesDeploy != 0)
+            if(deployHeroesAt != 0)
             {
                 var nearestRedPointToTarget = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(target)).FirstOrDefault();
                 var nearestLinePoint = linesPointsList.OrderBy(p => p.DistanceSq(nearestRedPointToTarget)).FirstOrDefault();
@@ -290,90 +323,47 @@ namespace SmartFourFingersDeploy
             var spells = units.Extract(u => u.ElementType == DeployElementType.Spell);
 
             units.OrderForDeploy();
-            //get random line from attackLines list
 
+            // Get random line from attackLines list.
             int index = rnd.Next(attackLines.Count);
 
+            // Set first attack line 
+            // IF user didn't define deploy point for heroes -> random 
+            // ELSE -> start from the next line, So it ends with the user defined line.
             var line = heroesIndex == -1 ? attackLines[index] : NextOf(attackLines, attackLines[heroesIndex]);
             index = attackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
 
-            //deploy 1st group of troops
-            Log.Info($"{AttackName} deploy 1st group of troops");
-            var count = 0;
-            foreach (var unit in units)
+            // Start troops deployment on four sides.
+            for (var i = 4; i >= 1; i--)
             {
-                if (unit?.Count > 0)
+                foreach (var unit in units)
                 {
-                    count = unit.Count / 4;
-                    var fingers = count < 4 ? count : 4;
-                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, fingers, 50, waveDelay))
-                        yield return t;
-                    yield return waveDelay;
+                    if (unit?.Count > 0)
+                    {
+                        var count = unit.Count / i;
+                        var fingers = count < 4 ? count : 4;
+
+                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, fingers, 50, waveDelay))
+                            yield return t;
+
+                        yield return waveDelay;
+                    }
                 }
-            }
 
-            line = NextOf(attackLines, attackLines[index]);
-            index = attackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
-
-            //deploy 2ed group of troops
-            Log.Info($"{AttackName} deploy 2ed group of troops");
-
-            foreach (var unit in units)
-            {
-                if (unit?.Count > 0)
-                {
-                    count = unit.Count / 3;
-                    var fingers = count < 4 ? count : 4;
-                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, fingers, 50, waveDelay))
-                        yield return t;
-                    yield return waveDelay;
-                }
+                line = NextOf(attackLines, attackLines[index]);
+                index = attackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
             }
             
-            line = NextOf(attackLines, attackLines[index]);
-            index = attackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
-
-            //deploy 3rd group of troops
-            Log.Info($"{AttackName} deploy 3rd group of troops");
-
-            foreach (var unit in units)
-            {
-                if (unit?.Count > 0)
-                {
-                    count = unit.Count / 2;
-                    var fingers = count < 4 ? count : 4;
-                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, fingers, 50, waveDelay))
-                        yield return t;
-                    yield return waveDelay;
-                }
-            }
-
-            line = NextOf(attackLines, attackLines[index]);
-
-            //deploy last group of troops
-            Log.Info($"{AttackName} deploy last group of troops");
-
-            foreach (var unit in units)
-            {
-                if (unit?.Count > 0)
-                {
-                    count = unit.Count;
-                    var fingers = count < 4 ? count : 4;
-                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, fingers, 50, waveDelay))
-                        yield return t;
-                    yield return waveDelay;
-                }
-            }
-
             if (cc?.Count > 0)
             {
+                Log.Info($"{AttackName} Deploy Clan Castle troops");
                 foreach (var t in Deploy.AlongLine(cc, line.Item1, line.Item2, 1, 1, 50, waveDelay))
                     yield return t;
             }
 
             if (heroes.Any())
             {
-                Log.Info($"{AttackName} deploy heroes");
+                Log.Info($"{AttackName} Deploy Heroes");
                 foreach (var hero in heroes.Where(u => u.Count > 0))
                 {
                     foreach (var t in Deploy.AlongLine(hero, line.Item1, line.Item2, 1, 1, 50, waveDelay))
@@ -382,123 +372,44 @@ namespace SmartFourFingersDeploy
                 Deploy.WatchHeroes(heroes,5000);
             }
 
-            IEnumerable<int> smartZap(int DEAmount, int lvl)
+            
+            var minDEDrillLevel = GetCurrentSetting("Min Drill Level");
+
+            // start smart zap
+            if (GetCurrentSetting("Smart Zap Drills") == 1)
             {
-                Log.Info($"{AttackName} Smart Zap Drills module");
-                bool zapDrill = true;
-                var minDEAmount = CurrentSetting("Min Dark Elixir per Zap");
-
-                var zap = spells.Extract(u => u.Id == DeployId.Lightning);
-                var zapCount = zap?.Sum(u => u.Count);
-
-                if (zapCount <= 0)
-                {
-                    Log.Error($"{AttackName} Smart Zap Drills No lighting Spells found for Smart Zap");
-                    zapDrill = false;
-                    yield break;
-                }
-
-                var drills = DarkElixirDrill.Find(CacheBehavior.ForceScan, lvl);
-
-                if (drills == null)
-                {
-                    Log.Error("{AttackName} Smart Zap Drills didn't found Dark Drills matches the requirements");
-                    zapDrill = false;
-                    yield break;
-                }
-
-                var availableDE = Opponent.GetAvailableLoot(false).DarkElixir;
-
-
-                if (availableDE < DEAmount)
-                {
-                    Log.Error($"{AttackName} Smart Zap Drills this base only has {availableDE} DE .. it doesn't match the requirements ({minDEAmount})");
-                    zapDrill = false;
-                    yield break;
-                }
-
-                if (zapDrill)
-                {
-                    Log.Info($"{AttackName} Smart Zap Drills found {zap.Sum(u => u.Count)} Lighting Spell(s)");
-                    Log.Info($"{AttackName} Smart Zap Drills found {drills.Count()} Dark drill(s)");
-
-                    //var zapDrills = drills.OrderByDescending(d => d.Level);
-
-                    while (zapCount > 0)
-                    {
-                        for (var i = 0; i < drills.Count(); i++)
-                        {
-                            if (drills[i] != null)
-                            {
-                                //get location of each drill
-                                var DP = drills[i].Location.GetCenter();
-
-                                //if we have our own zap we will drop it first .. if we don't, use CC "beacuse IsClanSpell not working if only CC spell"
-                                var zp = zap.FirstOrDefault().Count > 0 ? zap.FirstOrDefault() : zap.LastOrDefault();
-
-                                foreach (var t in Deploy.AtPoint(zp, DP, 1))
-                                    yield return t;
-
-                                yield return 6000;
-
-                                zapCount--;
-
-                                var availableDEAfterZap = Opponent.GetAvailableLoot(false).DarkElixir;
-                                if (availableDE - availableDEAfterZap < DEAmount)
-                                {
-                                    Log.Warning($"{AttackName} Smart Zap Drills only {availableDE - availableDEAfterZap} DE from this drill .. you set it to {minDEAmount} .. will not zap it again ");
-                                    drills[i] = null;
-                                }
-                                else
-                                {
-                                    Log.Info($"{AttackName} Smart Zap Drills gain {availableDE - availableDEAfterZap} DE from this drill");
-                                }
-                            }
-
-                            if (zapCount <= 0)
-                                break;
-                        }
-
-                        if (!drills.Any())
-                        {
-                            Log.Warning("no other drills to zap");
-                            break;
-                        }
-
-                    }
-                }
-            }
-
-            if (CurrentSetting("Smart Zap Drills") == 1)
-            {
-                var waitBeforeSmartZap = CurrentSetting("Start Zap Drills After ?(sec)") * 1000;
-                var minDEAmount = CurrentSetting("Min Dark Elixir per Zap");
-                var minDEDrillLevel = CurrentSetting("Min Drill Level");
+                var waitBeforeSmartZap = GetCurrentSetting("Start Zap Drills After ?(sec)") * 1000;
+                var minDEAmount = GetCurrentSetting("Min Dark Elixir per Zap");
+                
 
                 yield return waitBeforeSmartZap;
 
-                foreach (var t in smartZap(minDEAmount, minDEDrillLevel))
+                foreach (var t in SmartZapping.smartZap(minDEAmount, minDEDrillLevel, spells))
                     yield return t;
-
-                var endBattle = CurrentSetting("End Battle after zap ?(sec)");
-
-                Log.Info($"end battle after {endBattle} sec");
-
-                for (var i = endBattle; i > 0; i--)
-                {
-                    Log.Info($"{AttackName} end battle after {i * 1000} sec");
-                    yield return 1000;
-                }
-                Surrender();
             }
+
+            // start Use EarthQuake spell on drills
+            if (GetCurrentSetting("Use EarthQuake spell on drills") == 1)
+            {
+                foreach (var t in SmartZapping.useEQOnDrills(minDEDrillLevel, spells)) 
+                    yield return t;
+            }
+
+            // end battle
+            var endBattleTime = GetCurrentSetting("End Battle after zap ?(sec)");
+            foreach (var t in SmartZapping.endBattle(endBattleTime))
+                yield return t;
         }
 
-        bool IsMatchedBase()
+        /// <summary>
+        /// check to see how many collector and mine near to the redline by user defined distance
+        /// </summary>
+        /// <returns>true if matches user defined min collectores and mines</returns>
+        bool IsBaseMinCollectorsAndMinesOutside()
         {
-            if(CurrentSetting("Set Exposed Collecotors & Mines") == 1)
+            if(GetCurrentSetting("Set Exposed Collecotors & Mines") == 1)
             {
-                var isMatch = false;
-                var userDistance = CurrentSetting("Acceptable Target Range");
+                var userDistance = GetCurrentSetting("Acceptable Target Range");
                 var distance = userDistance * userDistance;
 
                 var redPoints = GameGrid.RedPoints.Where(
@@ -506,19 +417,24 @@ namespace SmartFourFingersDeploy
                     !(point.X > 18 && point.Y > 18 || point.X > 18 && point.Y < -18 || point.X < -18 && point.Y > 18 ||
                     point.X < -18 && point.Y < -18));
 
-                var collectors = ElixirCollector.Find().Where(c => c.Location.GetCenter().DistanceSq(redPoints.OrderBy(p => p.DistanceSq(c.Location.GetCenter())).FirstOrDefault()) <= distance);
-                var mines = GoldMine.Find().Where(c => c.Location.GetCenter().DistanceSq(redPoints.OrderBy(p => p.DistanceSq(c.Location.GetCenter())).FirstOrDefault()) <= distance);
+                var collectors = ElixirCollector.Find().Where(c => c.Location.GetCenter()
+                    .DistanceSq(redPoints.OrderBy(p => p.DistanceSq(c.Location.GetCenter()))
+                    .FirstOrDefault()) <= distance);
+
+                var mines = GoldMine.Find().Where(c => c.Location.GetCenter()
+                    .DistanceSq(redPoints.OrderBy(p => p.DistanceSq(c.Location.GetCenter()))
+                    .FirstOrDefault()) <= distance);
 
                 int collectorsCount = collectors != null ? collectors.Count() : 0;
                 int minesCount = mines != null ? mines.Count() : 0;
 
-                Log.Warning($"{AttackName} NO. of Colloctors & mines near from red line:");
-                Log.Warning($"elixir colloctors is {collectorsCount}");
-                Log.Warning($"gold mines is {minesCount}");
-                Log.Warning($"----------------------------");
-                Log.Warning($"sum of all is {collectorsCount + minesCount}");
+                Log.Info($"{AttackName} NO. of Colloctors & mines near from red line:");
+                Log.Info($"elixir colloctors is {collectorsCount}");
+                Log.Info($"gold mines is {minesCount}");
+                Log.Info($"----------------------------");
+                Log.Info($"sum of all is {collectorsCount + minesCount}");
 
-                var debug = CurrentSetting("Debug Mode");
+                var debug = GetCurrentSetting("Debug Mode");
 
                 if (debug == 1)
                 {
@@ -540,31 +456,20 @@ namespace SmartFourFingersDeploy
                             }
                         }
                         var d = DateTime.UtcNow;
-                        Screenshot.Save(bmp,
-                            $"Collectors and Mines {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
+                        Screenshot.Save(bmp, "Collectors and Mines {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
                     }
                 }
 
-
-                /*
-                //check if Engineered base 
-                var defenses = ArcherTower.Find()?.Count();
-                defenses += WizardTower.Find()?.Count();
-                defenses += AirDefense.Find().Count();
-
-                if (defenses <= 3)
-                    Log.Error($"this is Engineered base");
-                */
-
-                var minCollectors = CurrentSetting("Minimum Exposed Colloctors");
-                var minMines = CurrentSetting("Minimum Exposed Mines");
-
-                isMatch = (collectorsCount >= minCollectors && minesCount >= minMines);
-
-                if (!isMatch)
-                    Log.Error($"{AttackName} this base doesn't meets Collocetors & Mines requirements");
-
-                return isMatch;
+                var minCollectors = GetCurrentSetting("Minimum Exposed Colloctors");
+                var minMines = GetCurrentSetting("Minimum Exposed Mines");
+                
+                if (collectorsCount >= minCollectors && minesCount >= minMines)
+                    return true;
+                else
+                {
+                    Log.Warning($"{AttackName} this base doesn't meets Collocetors & Mines requirements");
+                    return false;
+                }
             }
 
             return true;
@@ -575,7 +480,7 @@ namespace SmartFourFingersDeploy
             if (!Opponent.MeetsRequirements(BaseRequirements.All))
                 return 0;
 
-            if (!IsMatchedBase())
+            if (!IsBaseMinCollectorsAndMinesOutside())
                 return 0;
 
             return 1;

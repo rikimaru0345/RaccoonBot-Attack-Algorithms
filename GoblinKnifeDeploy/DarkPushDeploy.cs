@@ -20,7 +20,7 @@ namespace GoblinKnifeDeploy
         bool useJump = false, isWarden = false, QW = false, debug, isFunneled, airAttack;
         int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
         DeployElement freezeSpell;
-        const string Version = "1.2.7.112";
+        const string Version = "1.2.7.119";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -604,6 +604,7 @@ namespace GoblinKnifeDeploy
             freezeSpell = deployElements.ExtractOne(DeployId.Freeze);
             var jumpSpell = deployElements.Extract(u => u.Id == DeployId.Jump);
             var hasteSpell = deployElements.Extract(u => u.Id == DeployId.Haste);
+            var poison = deployElements.Extract(u => u.Id == DeployId.Poison);
             //tanks
             var giant = deployElements.ExtractOne(DeployId.Giant);
             var golem = deployElements.ExtractOne(DeployId.Golem);
@@ -645,7 +646,7 @@ namespace GoblinKnifeDeploy
                 var EQCount = earthQuakeSpell?.Sum(u => u.Count);
                 if (EQCount >= 4)
                 {
-                    Log.Info($"[{AttackName}] break walls beside Twonhall ");
+                    Log.Info($"[{AttackName}] break walls beside TownHall ");
                     foreach (var unit in earthQuakeSpell)
                     {
                         unit.Select();
@@ -753,7 +754,7 @@ namespace GoblinKnifeDeploy
                                 foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
                                     yield return t;
                             }
-                            if (witch?.Count > 0)
+                            if (witch?.Count > 4)
                             {
                                 witchFunnelCount = witch.Count / 4;
                                 foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
@@ -779,7 +780,7 @@ namespace GoblinKnifeDeploy
                                 foreach (var t in Deploy.AtPoint(bowler, red1, bowlerFunnelCount))
                                     yield return t;
                             }
-                            if (witch?.Count > 0)
+                            if (witch?.Count > 4)
                             {
                                 witchFunnelCount = witch.Count / 4;
                                 foreach (var t in Deploy.AtPoint(witch, red1, witchFunnelCount))
@@ -798,7 +799,7 @@ namespace GoblinKnifeDeploy
                                 foreach (var t in Deploy.AtPoint(bowler, red2, bowlerFunnelCount))
                                     yield return t;
                             }
-                            if (witch?.Count > 0)
+                            if (witchFunnelCount > 0 && witch?.Count > 0)
                             {
                                 foreach (var t in Deploy.AtPoint(witch, red2, witchFunnelCount))
                                     yield return t;
@@ -857,7 +858,7 @@ namespace GoblinKnifeDeploy
                             yield return t;
                     }
                 }
-
+                
                 IEnumerable<int> deployHeroes()
                 {
                     Log.Info($"[{AttackName}] droping heroes");
@@ -928,13 +929,17 @@ namespace GoblinKnifeDeploy
                 IEnumerable<int> deployNormalTroops()
                 {
                     Log.Info($"[{AttackName}] deploy rest of troops");
-                    /*
-                    if (bowler?.Count > 0)
+
+                    if(witch?.Count>4)
                     {
-                        foreach (var t in Deploy.AlongLine(bowler, red1, red2, bowlerFunnelCount, 4))
-                            yield return t;
+                        if (bowler?.Count > 0)
+                        {
+                            foreach (var t in Deploy.AlongLine(bowler, red1, red2, bowlerFunnelCount, 4))
+                                yield return t;
+                        }
                     }
-                    */
+                    
+                    
                     if (bowler?.Count > 0)
                     {
                         foreach (var t in Deploy.AtPoint(bowler, orgin, bowler.Count))
@@ -942,7 +947,9 @@ namespace GoblinKnifeDeploy
                     }
                     if (witch?.Count > 0)
                     {
-                        foreach (var t in Deploy.AlongLine(witch, red1, red2, witch.Count, 4))
+                        /*foreach (var t in Deploy.AlongLine(witch, red1, red2, witch.Count, 4))
+                            yield return t;*/
+                        foreach (var t in Deploy.AtPoint(witch, orgin, witch.Count))
                             yield return t;
                     }
                     if (clanCastle?.Count > 0)
@@ -1114,6 +1121,14 @@ namespace GoblinKnifeDeploy
                         hasteSpellCount--;
                     }
                 }
+                if(poison.Sum(u => u.Count) > 0)
+                {
+                    foreach(var unit in poison)
+                    {
+                        foreach (var t in Deploy.AtPoint(unit, healPoint))
+                            yield return t;
+                    }
+                }
                 if (healSpellCount > 0)
                 {
                     foreach (var unit in healspell)
@@ -1260,7 +1275,7 @@ namespace GoblinKnifeDeploy
 
                     yield return 4000;
 
-                    foreach (var t in Deploy.AlongLine(babyDragon, red1, red2, dragon.Count, 4))
+                    foreach (var t in Deploy.AlongLine(babyDragon, red1, red2, babyDragon.Count, 4))
                         yield return t;
                 }
 
@@ -1296,7 +1311,7 @@ namespace GoblinKnifeDeploy
                             yield return t;
                     }
 
-                    if(clanCastle?.Count > 0 && clanCastleSettings < 3)
+                    if(clanCastle?.Count > 0 && clanCastleSettings > 0)
                     {
                         foreach (var t in Deploy.AtPoint(clanCastle, red1))
                             yield return t;
@@ -1304,7 +1319,7 @@ namespace GoblinKnifeDeploy
                 }
                 else
                 {
-                    if(clanCastle?.Count > 0 && clanCastleSettings < 3)
+                    if(clanCastle?.Count > 0 && clanCastleSettings > 0)
                     {
                         foreach (var t in Deploy.AtPoint(clanCastle, red1))
                             yield return t;
@@ -1330,16 +1345,17 @@ namespace GoblinKnifeDeploy
                 var firstSpell = hasteSpell?.Sum(u => u.Count) >= ragespell?.Sum(u => u.Count) ? hasteSpell : ragespell;
                 var secondSpell = firstSpell == hasteSpell ? ragespell : hasteSpell;
 
+                var firstSpellUnit = firstSpell.FirstOrDefault()?.Count > 0 ? firstSpell.FirstOrDefault() : firstSpell.LastOrDefault();
+                var secondSpellUnit = secondSpell.FirstOrDefault()?.Count > 0 ? secondSpell.FirstOrDefault() : secondSpell.LastOrDefault();
+
                 var line = hasteLine;
 
-                if (firstSpell?.Sum(u => u.Count) > 0)
+                if (firstSpellUnit?.Count > 0)
                 {
-                    foreach (var unit in firstSpell)
-                    {
-                        var count = unit.Count >= 3 ? 3 : unit.Count;
-                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count))
-                            yield return t;
-                    }
+                    var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
+                    foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count))
+                        yield return t;
+
                     line = rageLine;
                 }
 
@@ -1351,25 +1367,23 @@ namespace GoblinKnifeDeploy
 
                 yield return 5000;
 
-                if (secondSpell?.Sum(u => u.Count) > 0)
+                if (secondSpellUnit?.Count > 0)
                 {
-                    foreach (var unit in secondSpell)
-                    {
-                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, unit.Count, unit.Count))
-                            yield return t;
-                    }
+                    var count = secondSpellUnit.Count >= 3 ? 3 : secondSpellUnit.Count;
+                    foreach (var t in Deploy.AlongLine(secondSpellUnit, line.Item1, line.Item2, count, count))
+                        yield return t;
+                    
                     line = hasteLine2;
                 }
                 else
-                {
+                {                    
                     if (firstSpell?.Sum(u => u.Count) > 0)
                     {
-                        foreach (var unit in firstSpell)
-                        {
-                            var count = unit.Count >= 3 ? 3 : unit.Count;
-                            foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count))
-                                yield return t;
-                        }
+                        firstSpellUnit = firstSpell.FirstOrDefault().Count > 0 ? firstSpell.FirstOrDefault() : firstSpell.LastOrDefault();
+                        var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
+                        foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count))
+                            yield return t;
+                        
                         line = hasteLine2;
                     }
                 }
@@ -1399,22 +1413,26 @@ namespace GoblinKnifeDeploy
 
                 if (firstSpell?.Sum(u => u.Count) > 0)
                 {
-                    foreach (var unit in firstSpell)
+                    foreach(var unit in firstSpell)
                     {
                         var count = unit.Count >= 3 ? 3 : unit.Count;
                         foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count))
                             yield return t;
                     }
+                    
                     line = rageLine2;
                 }
                 
                 if (secondSpell?.Sum(u => u.Count) > 0)
                 {
+                    secondSpellUnit = secondSpell.FirstOrDefault().Count > 0 ? secondSpell.FirstOrDefault() : secondSpell.LastOrDefault();
                     foreach (var unit in secondSpell)
                     {
-                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, unit.Count, 2))
+                        var count = unit.Count >= 3 ? 3 : unit.Count;
+                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count))
                             yield return t;
                     }
+                    
                 }
 
                 if(wallbreaker?.Count > 0)
