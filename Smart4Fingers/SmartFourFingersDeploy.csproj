@@ -34,19 +34,18 @@
   <ItemGroup>
     <Reference Include="CoC Bot.Core, Version=1.8.1.855, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\CoC Bot.Core.dll</HintPath>
+      <HintPath>..\..\CoCBot-public\CoC Bot.Main\bin\Debug\CoC Bot.Core.dll</HintPath>
     </Reference>
     <Reference Include="CustomAlgorithmSettings, Version=1.0.0.1, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\CustomAlgorithmSettings.dll</HintPath>
+      <HintPath>..\..\CoCBot-public\CoC Bot.Main\bin\Debug\CustomAlgorithmSettings.dll</HintPath>
     </Reference>
-    <Reference Include="Raccoon Bot, Version=1.20.7.2585, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\Raccoon Bot.exe</HintPath>
+    <Reference Include="Main">
+      <HintPath>..\..\CoCBot-public\CoC Bot.Main\bin\Debug\Main.exe</HintPath>
     </Reference>
     <Reference Include="Shared, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\Shared.dll</HintPath>
+      <HintPath>..\..\CoCBot-public\CoC Bot.Main\bin\Debug\Shared.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

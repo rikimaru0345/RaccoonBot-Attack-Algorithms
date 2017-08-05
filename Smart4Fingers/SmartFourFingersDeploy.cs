@@ -167,6 +167,7 @@ namespace SmartFourFingersDeploy
         {
             return true;
         }
+
         /// <summary>
         /// Called when the Advanced button is clicked in the Bot UI with this algorithm Selected.
         /// </summary>
@@ -384,20 +385,20 @@ namespace SmartFourFingersDeploy
 
                 yield return waitBeforeSmartZap;
 
-                foreach (var t in SmartZapping.smartZap(minDEAmount, minDEDrillLevel, spells))
+                foreach (var t in SmartZapping.SmartZap(minDEAmount, minDEDrillLevel, spells))
                     yield return t;
             }
 
             // start Use EarthQuake spell on drills
             if (GetCurrentSetting("Use EarthQuake spell on drills") == 1)
             {
-                foreach (var t in SmartZapping.useEQOnDrills(minDEDrillLevel, spells)) 
+                foreach (var t in SmartZapping.UseEQOnDrills(minDEDrillLevel, spells)) 
                     yield return t;
             }
 
             // end battle
             var endBattleTime = GetCurrentSetting("End Battle after zap ?(sec)");
-            foreach (var t in SmartZapping.endBattle(endBattleTime))
+            foreach (var t in SmartZapping.EndBattle(endBattleTime))
                 yield return t;
         }
 
