@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using CoC_Bot.API;
-using CoC_Bot.API.Buildings;
 using CustomAlgorithmSettings;
 using System.Reflection;
 
@@ -16,7 +14,6 @@ namespace SmartFourFingersDeploy
         internal static readonly Version Version = Assembly.GetEntryAssembly().GetName().Version;
         internal static readonly string FormattedVersionString = $"{Version.Major}.{Version.Minor}.{Version.Build}.{Version.Revision}";
         public const string AttackName = "[Smart 4 Fingers Deploy]";
-        PointFT target;
 
         public SmartFourFingersDeploy(Opponent opponent) : base(opponent)
         {
@@ -36,7 +33,7 @@ namespace SmartFourFingersDeploy
         {
             return SettingsController.Instance.GetSetting(AttackName, settingName, Opponent.IsDead());
         }
-
+        
         /// <summary>
         /// Returns a list of all current Algorithm Setting Values.
         /// </summary>
@@ -101,7 +98,7 @@ namespace SmartFourFingersDeploy
             };
             minimGold.HideInUiWhen.Add(new SettingOption("Set Exposed Collecotors & Mines", 0));
             settings.DefineSetting(minimGold);
-            
+
 
             var useSmartZapDrills = new AlgorithmSetting("Smart Zap Drills", "use lighting Drills with smart way to save lighting spells if no need to use (please disable default Lighting drills if you select this option)", 0, SettingType.ActiveAndDead);
             useSmartZapDrills.PossibleValues.Add(new SettingOption("Off", 0));
@@ -186,33 +183,11 @@ namespace SmartFourFingersDeploy
             SettingsController.Instance.SaveAlgorithmSettings(AttackName);
         }
 
-        // Get next item from list
-        Tuple<PointFT, PointFT> NextOf(List<Tuple<PointFT, PointFT>> list, Tuple<PointFT, PointFT> item)
-        {
-            return list[(list.IndexOf(item) + 1) == list.Count ? 0 : (list.IndexOf(item) + 1)];
-        }
-
-        //TODO: use IsEngineeredBase to attack engineered bases even if it hasen't outside collectors and mines
-        bool IsEngineeredBase()
-        {
-            var defenses = ArcherTower.Find()?.Count();
-            defenses += WizardTower.Find()?.Count();
-            defenses += AirDefense.Find().Count();
-
-            if (defenses <= 3)
-                return true;
-
-            return false;
-        }
-
         public override IEnumerable<int> AttackRoutine()
         {
             int waveLimit = UserSettings.WaveSize;
             int waveDelay = (int)(UserSettings.WaveDelay * 1000);
             int heroesIndex = -1;
-
-            
-            Random rnd = new Random();
 
             var core = new PointFT(-0.01f, 0.01f);
 
@@ -255,68 +230,13 @@ namespace SmartFourFingersDeploy
 
             var deployHeroesAt = GetCurrentSetting("Deploy Heroes At");
 
-            // DeployHeroesAt -> 1 = townhall, 2 = DEstorage, 0 = normal behavior (after last line of troops).
-            if (deployHeroesAt == 1)
-            {
-                var th = TownHall.Find()?.Location.GetCenter();
-                if (th == null)
-                {
-                    for (var i = 0; i < 3; i++)
-                    {
-                        Log.Warning($"bot didn't found the TownHall .. we will attemp search NO. {i + 2}");
-                        yield return 1000;
-                        th = TownHall.Find(CacheBehavior.ForceScan)?.Location.GetCenter();
-                        if (th != null)
-                        {
-                            Log.Warning($"TownHall found after {i + 2} retries");
-                            target = (PointFT)th;
-                            deployHeroesAt = 1;
-                            break;
-                        }
-                        else
-                            deployHeroesAt = 0;  
-                    }
-                }
-                else
-                    target = (PointFT)th;
-            }
-            else if(deployHeroesAt == 2)
-            {
-                var de = DarkElixirStorage.Find()?.FirstOrDefault()?.Location.GetCenter();
-                if (de == null)
-                {
-                    for (var i = 0; i < 3; i++)
-                    {
-                        Log.Warning($"bot didn't found the DE Storage .. we will attemp search NO. {i + 2}");
-                        yield return 1000;
-                        de = DarkElixirStorage.Find(CacheBehavior.ForceScan)?.FirstOrDefault()?.Location.GetCenter();
-                        if (de != null)
-                        {
-                            Log.Warning($"DE Storage found after {i + 2} retries");
-                            target = (PointFT)de;
-                            deployHeroesAt = 2;
-                            break;
-                        }
-                        else
-                            deployHeroesAt = 0;
-                    }
-                }
-                else
-                    target = (PointFT)de;
-            }
-            else
-            {
-                target = new PointFT(0f, 0f);
-                deployHeroesAt = 0;
-            }
+            
+            var target = SmartFourFingersHelper.GetHeroesTarget(deployHeroesAt);
 
-            if(deployHeroesAt != 0)
-            {
-                var nearestRedPointToTarget = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(target)).FirstOrDefault();
-                var nearestLinePoint = linesPointsList.OrderBy(p => p.DistanceSq(nearestRedPointToTarget)).FirstOrDefault();
+            var nearestRedPointToTarget = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(target)).FirstOrDefault();
+            var nearestLinePoint = linesPointsList.OrderBy(p => p.DistanceSq(nearestRedPointToTarget)).FirstOrDefault();
 
-                heroesIndex = attackLines.FindIndex(u => (u.Item1.X == nearestLinePoint.X && u.Item1.Y == nearestLinePoint.Y) || (u.Item2.X == nearestLinePoint.X && u.Item2.Y == nearestLinePoint.Y));
-            }
+            heroesIndex = attackLines.FindIndex(u => (u.Item1.X == nearestLinePoint.X && u.Item1.Y == nearestLinePoint.Y) || (u.Item2.X == nearestLinePoint.X && u.Item2.Y == nearestLinePoint.Y));
 
             var units = Deploy.GetTroops();
             var heroes = units.Extract(x => x.IsHero);
@@ -325,15 +245,12 @@ namespace SmartFourFingersDeploy
 
             units.OrderForDeploy();
 
-            // Get random line from attackLines list.
-            int index = rnd.Next(attackLines.Count);
-
             // Set first attack line 
-            // IF user didn't define deploy point for heroes -> random 
-            // ELSE -> start from the next line, So it ends with the user defined line.
-            var line = heroesIndex == -1 ? attackLines[index] : NextOf(attackLines, attackLines[heroesIndex]);
-            index = attackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
+            // Start from the next line to user defined to end with user defined line
+            var line = attackLines.NextOf(attackLines[heroesIndex]);
+            var index = attackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
 
+            Log.Info($"{AttackName} {Version} starts");
             // Start troops deployment on four sides.
             for (var i = 4; i >= 1; i--)
             {
@@ -342,23 +259,22 @@ namespace SmartFourFingersDeploy
                     if (unit?.Count > 0)
                     {
                         var count = unit.Count / i;
-                        var fingers = count < 4 ? count : 4;
-
-                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, fingers, 50, waveDelay))
+                        var fingers = count % 4 <= 1 ? count : 4;
+                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, fingers, 0, waveDelay))
                             yield return t;
-
-                        yield return waveDelay;
                     }
                 }
-
-                line = NextOf(attackLines, attackLines[index]);
-                index = attackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
+                if(i != 1)
+                {
+                    line = attackLines.NextOf(attackLines[index]);
+                    index = attackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
+                }
             }
-            
+
             if (cc?.Count > 0)
             {
                 Log.Info($"{AttackName} Deploy Clan Castle troops");
-                foreach (var t in Deploy.AlongLine(cc, line.Item1, line.Item2, 1, 1, 50, waveDelay))
+                foreach (var t in Deploy.AlongLine(cc, line.Item1, line.Item2, 1, 1, 0, waveDelay))
                     yield return t;
             }
 
@@ -367,13 +283,13 @@ namespace SmartFourFingersDeploy
                 Log.Info($"{AttackName} Deploy Heroes");
                 foreach (var hero in heroes.Where(u => u.Count > 0))
                 {
-                    foreach (var t in Deploy.AlongLine(hero, line.Item1, line.Item2, 1, 1, 50, waveDelay))
+                    foreach (var t in Deploy.AlongLine(hero, line.Item1, line.Item2, 1, 1, 0, waveDelay))
                         yield return t;
                 }
-                Deploy.WatchHeroes(heroes,5000);
+                Deploy.WatchHeroes(heroes, 5000);
             }
 
-            
+
             var minDEDrillLevel = GetCurrentSetting("Min Drill Level");
 
             // start smart zap
@@ -381,7 +297,7 @@ namespace SmartFourFingersDeploy
             {
                 var waitBeforeSmartZap = GetCurrentSetting("Start Zap Drills After ?(sec)") * 1000;
                 var minDEAmount = GetCurrentSetting("Min Dark Elixir per Zap");
-                
+
 
                 yield return waitBeforeSmartZap;
 
@@ -392,7 +308,7 @@ namespace SmartFourFingersDeploy
             // start Use EarthQuake spell on drills
             if (GetCurrentSetting("Use EarthQuake spell on drills") == 1)
             {
-                foreach (var t in SmartZapping.UseEQOnDrills(minDEDrillLevel, spells)) 
+                foreach (var t in SmartZapping.UseEQOnDrills(minDEDrillLevel, spells))
                     yield return t;
             }
 
@@ -402,88 +318,15 @@ namespace SmartFourFingersDeploy
                 yield return t;
         }
 
-        /// <summary>
-        /// check to see how many collector and mine near to the redline by user defined distance
-        /// </summary>
-        /// <returns>true if matches user defined min collectores and mines</returns>
-        bool IsBaseMinCollectorsAndMinesOutside()
-        {
-            if(GetCurrentSetting("Set Exposed Collecotors & Mines") == 1)
-            {
-                var userDistance = GetCurrentSetting("Acceptable Target Range");
-                var distance = userDistance * userDistance;
-
-                var redPoints = GameGrid.RedPoints.Where(
-                    point =>
-                    !(point.X > 18 && point.Y > 18 || point.X > 18 && point.Y < -18 || point.X < -18 && point.Y > 18 ||
-                    point.X < -18 && point.Y < -18));
-
-                var collectors = ElixirCollector.Find().Where(c => c.Location.GetCenter()
-                    .DistanceSq(redPoints.OrderBy(p => p.DistanceSq(c.Location.GetCenter()))
-                    .FirstOrDefault()) <= distance);
-
-                var mines = GoldMine.Find().Where(c => c.Location.GetCenter()
-                    .DistanceSq(redPoints.OrderBy(p => p.DistanceSq(c.Location.GetCenter()))
-                    .FirstOrDefault()) <= distance);
-
-                int collectorsCount = collectors != null ? collectors.Count() : 0;
-                int minesCount = mines != null ? mines.Count() : 0;
-
-                Log.Info($"{AttackName} NO. of Colloctors & mines near from red line:");
-                Log.Info($"elixir colloctors is {collectorsCount}");
-                Log.Info($"gold mines is {minesCount}");
-                Log.Info($"----------------------------");
-                Log.Info($"sum of all is {collectorsCount + minesCount}");
-
-                var debug = GetCurrentSetting("Debug Mode");
-
-                if (debug == 1)
-                {
-                    using (Bitmap bmp = Screenshot.Capture())
-                    {
-                        using (Graphics g = Graphics.FromImage(bmp))
-                        {
-                            foreach (var c in collectors)
-                            {
-                                var point = c.Location.GetCenter();
-                                Visualize.RectangleT(bmp, new RectangleT((int)point.X, (int)point.Y, 2, 2), new Pen(Color.Blue));
-                            }
-
-
-                            foreach (var c in mines)
-                            {
-                                var point = c.Location.GetCenter();
-                                Visualize.RectangleT(bmp, new RectangleT((int)point.X, (int)point.Y, 2, 2), new Pen(Color.White));
-                            }
-                        }
-                        var d = DateTime.UtcNow;
-                        Screenshot.Save(bmp, "Collectors and Mines {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
-                    }
-                }
-
-                var minCollectors = GetCurrentSetting("Minimum Exposed Colloctors");
-                var minMines = GetCurrentSetting("Minimum Exposed Mines");
-                
-                if (collectorsCount >= minCollectors && minesCount >= minMines)
-                    return true;
-                else
-                {
-                    Log.Warning($"{AttackName} this base doesn't meets Collocetors & Mines requirements");
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
         public override double ShouldAccept()
         {
             if (!Opponent.MeetsRequirements(BaseRequirements.All))
                 return 0;
-
-            if (!IsBaseMinCollectorsAndMinesOutside())
-                return 0;
-
+            if (GetCurrentSetting("Set Exposed Collecotors & Mines") == 1)
+            {
+                if (!SmartFourFingersHelper.IsBaseMinCollectorsAndMinesOutside(GetCurrentSetting("Acceptable Target Range"), GetCurrentSetting("Minimum Exposed Colloctors"), GetCurrentSetting("Minimum Exposed Mines"), AttackName, GetCurrentSetting("Debug Mode"))) 
+                    return 0;
+            }
             return 1;
         }
     }
