@@ -85,6 +85,9 @@ namespace SmartFourFingersDeploy
                                     availableDE = availableDEAfterZap;
                                 }
                             }
+                            var remDrills = DarkElixirDrill.Find(CacheBehavior.ForceScan, drillLevel);
+                            if (!remDrills.Any())
+                                break;
                         }
 
                         if (zapCount <= 0)
@@ -144,7 +147,7 @@ namespace SmartFourFingersDeploy
         {
             if (endBattleTime == 0)
                 yield break;
-            
+
             Log.Info($"end battle after {endBattleTime} sec");
 
             for (var i = endBattleTime; i > 0; i--)
@@ -152,7 +155,7 @@ namespace SmartFourFingersDeploy
                 Log.Info($"{SmartFourFingersDeploy.AttackName} end battle after {i} sec");
                 yield return 1000;
             }
-            Attack.Surrender();        
+            Attack.Surrender();
         }
     }
 }
