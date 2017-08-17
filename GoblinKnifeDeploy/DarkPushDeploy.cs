@@ -17,10 +17,10 @@ namespace GoblinKnifeDeploy
         Container<PointFT> orgin;
         Tuple<PointFT, PointFT> attackLine, hasteLine, hasteLine2, rageLine, rageLine2;
         PointFT hastePoint, QWHealear, queenRagePoint, nearestWall, core, earthQuakePoint, healPoint, ragePoint, ragePoint2, target, jumpPoint, jumpPoint1, red, red1, red2;
-        bool useJump = false, isWarden = false, QW = false, debug, isFunneled, airAttack;
-        int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount, maxTHDistance;
+        bool targetIsSet = false, watchHeroes = false, watchQueen = false, useJump = false, isWarden = false, QW = false, debug, isFunneled, airAttack;
+        int bowlerFunnelCount, witchFunnelCount, healerFunnlCount, jumpSpellCount;
         DeployElement freezeSpell;
-        const string Version = "1.2.7.119";
+        const string Version = "1.2.8.132";
         const string AttackName = "Dark Push Deploy";
         const float MinDistace = 18f;
 
@@ -96,10 +96,11 @@ namespace GoblinKnifeDeploy
             debugMode.PossibleValues.Add(new SettingOption("On", 1));
             settings.DefineSetting(debugMode);
 
-            var HowFarIsTH = new AlgorithmSetting("maximum distance to townhall in tiles", "Attack only bases that TownHall is not deep in the center (20 is the center , 1 is the first tile , 0 is any where)", 0, SettingType.ActiveAndDead);
-            HowFarIsTH.MinValue = 0;
-            HowFarIsTH.MaxValue = 20;
-            settings.DefineSetting(HowFarIsTH);
+            var setTargetTo = new AlgorithmSetting("Select Your Target", "", 0, SettingType.ActiveAndDead);
+            setTargetTo.PossibleValues.Add(new SettingOption("TownHall", 0));
+            setTargetTo.PossibleValues.Add(new SettingOption("Dark Elixir Storage", 1));
+            setTargetTo.PossibleValues.Add(new SettingOption("Eagle Artilary", 2));
+            settings.DefineSetting(setTargetTo);
 
             var UseQueenWalk = new AlgorithmSetting("Use Queen Walk", "When on, healer will be used for Queen walk, When off: it will be used for Bowler and Witch walk", 0, SettingType.ActiveAndDead);
             UseQueenWalk.PossibleValues.Add(new SettingOption("Off", 0));
@@ -251,35 +252,36 @@ namespace GoblinKnifeDeploy
                 }
                 else
                 {
-                    var target = (PointFT)TH;
-                    maxTHDistance = CurrentSetting("maximum distance to townhall in tiles");
-                    if (maxTHDistance > 0 && maxTHDistance < 20)
-                    {
-                        var x = Math.Abs(target.X);
-                        var y = Math.Abs(target.Y);
-                        var distance = x >= y ? x : y;
-                        distance = 20 - distance;
-                        if (maxTHDistance < distance)
-                        {
-                            Log.Warning($"[{AttackName}] you set TH maximun distance to {maxTHDistance}");
-                            Log.Warning($"[{AttackName}] TownHall distance is {distance} tiles , skipping the base");
-                            return 0;
-                        }
-                    }
-                    Log.Debug($"[{AttackName}] Found TownHall .. move to CreateDeployPoints Method");
                     return 1;
                 }
             }
             return 0;
         }
 
-        void CreateDeployPoints(PointFT top, PointFT right, PointFT bottom, PointFT left)
+        void CreateDeployPoints()
         {
+            // Top right side
+            var topRight = new PointFT((float)GameGrid.DeployExtents.MaxX, (float)GameGrid.MaxY - 2);
+            var rightTop = new PointFT((float)GameGrid.DeployExtents.MaxX, (float)GameGrid.MinY + 2);
+
+            // Bottom right side
+            var rightBottom = new PointFT((float)GameGrid.MaxX - 2, (float)GameGrid.DeployExtents.MinY);
+            var bottomRight = new PointFT((float)GameGrid.MinX + 8, (float)GameGrid.DeployExtents.MinY);
+            
+            // Bottom left side
+            // Move 8 tiles from bottom corner due to unitsbar.
+            var bottomLeft = new PointFT((float)GameGrid.DeployExtents.MinX, (float)GameGrid.MinY + 8);
+            var leftBottom = new PointFT((float)GameGrid.DeployExtents.MinX, (float)GameGrid.MaxY - 2);
+
+            // Top Left side
+            var leftTop = new PointFT((float)GameGrid.MinX + 2, (float)GameGrid.DeployExtents.MaxY);
+            var topLeft = new PointFT((float)GameGrid.MaxX - 2, (float)GameGrid.DeployExtents.MaxY);
+
             if (orgin.Item.X > core.X)
             {
                 Log.Info($"[{AttackName}] Attacking from the top right");
 
-                attackLine = new Tuple<PointFT, PointFT>(top, right);
+                attackLine = new Tuple<PointFT, PointFT>(topRight, rightTop);
 
                 var distance = orgin.Item.X - this.target.X;
                 var target = distance >= MinDistace ? this.target : core;
@@ -316,6 +318,8 @@ namespace GoblinKnifeDeploy
                 ragePoint2 = new PointFT(orgin.Item.X - 21f, core.Y);
                 hastePoint = new PointFT(orgin.Item.X - 25f, core.Y);
 
+                orgin = new Container<PointFT> { Item = new PointFT(GameGrid.DeployExtents.MaxX, orgin.Item.Y) };
+
                 //try to find better funneling points
                 var frac = 0.65f;
 
@@ -343,7 +347,7 @@ namespace GoblinKnifeDeploy
             {
                 Log.Info($"[{AttackName}] Attacking from the bottom left");
 
-                attackLine = new Tuple<PointFT, PointFT>(left, bottom);
+                attackLine = new Tuple<PointFT, PointFT>(leftBottom, bottomLeft);
 
                 var distance = (orgin.Item.X - this.target.X) * -1;
                 var target = distance >= MinDistace ? this.target : core;
@@ -380,6 +384,8 @@ namespace GoblinKnifeDeploy
                 ragePoint2 = new PointFT(orgin.Item.X + 21f, core.Y);
                 hastePoint = new PointFT(orgin.Item.X + 25f, core.Y);
 
+                orgin = new Container<PointFT> { Item = new PointFT(GameGrid.DeployExtents.MinX, orgin.Item.Y) };
+
                 //try to find better funneling points
                 var frac = 0.65f;
 
@@ -388,10 +394,7 @@ namespace GoblinKnifeDeploy
 
                 red1 = new PointFT(GameGrid.DeployExtents.MinX, red1.Y);
 
-                red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
-                             orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
-
-                red2 = new PointFT(GameGrid.DeployExtents.MinX, red2.Y);
+                red2 = bottomLeft;
 
                 hasteLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X + 10f, red1.Y), new PointFT(red2.X + 10f, red2.Y));
                 rageLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X + 18f, red1.Y), new PointFT(red2.X + 18f, red2.Y));
@@ -407,7 +410,7 @@ namespace GoblinKnifeDeploy
             {
                 Log.Info($"[{AttackName}] Attacking from the top left");
 
-                attackLine = new Tuple<PointFT, PointFT>(left, top);
+                attackLine = new Tuple<PointFT, PointFT>(leftTop, topLeft);
 
                 var distance = orgin.Item.Y - this.target.Y;
                 var target = distance >= MinDistace ? this.target : core;
@@ -444,6 +447,8 @@ namespace GoblinKnifeDeploy
                 ragePoint2 = new PointFT(core.X, orgin.Item.Y - 21f);
                 hastePoint = new PointFT(core.X, orgin.Item.Y - 25f);
 
+                orgin = new Container<PointFT> { Item = new PointFT(orgin.Item.X, GameGrid.DeployExtents.MaxY) };
+
                 //try to find better funneling points
                 var frac = 0.65f;
 
@@ -471,7 +476,7 @@ namespace GoblinKnifeDeploy
             {
                 Log.Info($"[{AttackName}] Attacking from the bottom right");
 
-                attackLine = new Tuple<PointFT, PointFT>(right, bottom);
+                attackLine = new Tuple<PointFT, PointFT>(rightBottom, bottomRight);
 
                 var distance = (orgin.Item.Y - this.target.Y) * -1;
                 var target = distance >= MinDistace ? this.target : core;
@@ -509,6 +514,8 @@ namespace GoblinKnifeDeploy
                 ragePoint2 = new PointFT(core.X, orgin.Item.Y + 21f);
                 hastePoint = new PointFT(core.X, orgin.Item.Y + 25f);
 
+                orgin = new Container<PointFT> { Item = new PointFT(orgin.Item.X, GameGrid.DeployExtents.MinY) };
+
                 //try to find better funneling points
                 var frac = 0.65f;
 
@@ -516,11 +523,10 @@ namespace GoblinKnifeDeploy
                              orgin.Item.Y + frac * (attackLine.Item1.Y - orgin.Item.Y));
 
                 red1 = new PointFT(red1.X, GameGrid.DeployExtents.MinY);
+                
+                red2 = bottomRight;
 
-                red2 = new PointFT(orgin.Item.X + frac * (attackLine.Item2.X - orgin.Item.X),
-                             orgin.Item.Y + frac * (attackLine.Item2.Y - orgin.Item.Y));
-
-                red2 = new PointFT(red2.X, GameGrid.DeployExtents.MinY);
+                
 
                 hasteLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y + 10f), new PointFT(red2.X, red2.Y + 10f));
                 rageLine = new Tuple<PointFT, PointFT>(new PointFT(red1.X, red1.Y + 18f), new PointFT(red2.X, red2.Y + 18f));
@@ -559,25 +565,72 @@ namespace GoblinKnifeDeploy
             core = border.GetCenter();
 
             //set the target
-            var th = TownHall.Find()?.Location.GetCenter();
-            if (th == null)
-            {
-                for (var i = 0; i < 3; i++)
-                {
-                    Log.Warning($"bot didn't found the target .. we will attemp search NO. {i + 2}");
-                    yield return 1000;
-                    th = TownHall.Find(CacheBehavior.ForceScan)?.Location.GetCenter();
-                    if (th != null)
-                    {
-                        Log.Warning($"Targat found after {i + 2} retries");
-                        break;
-                    }
+            var settingsTarget = CurrentSetting("Select Your Target");
 
+            if (settingsTarget == 2)
+            {
+                foreach (var f in setTarget(EagleArtillery.Find(CacheBehavior.ForceScan)))
+                    yield return f;
+
+                if (targetIsSet == false)
+                {
+                    foreach (var f in setTarget(TownHall.Find(CacheBehavior.ForceScan)))
+                        yield return f;
+                }
+            }
+            else if(settingsTarget == 0)
+            {
+                foreach (var f in setTarget(TownHall.Find(CacheBehavior.ForceScan)))
+                    yield return f;
+
+                if (targetIsSet == false)
+                {
+                    target = core;
+                    targetIsSet = true;
+                }
+            }
+            else if(settingsTarget == 1)
+            {
+                foreach (var f in setTarget(DarkElixirStorage.Find(CacheBehavior.ForceScan)?.FirstOrDefault()))
+                    yield return f;
+
+                if (targetIsSet == false)
+                {
+                    foreach (var f in setTarget(TownHall.Find(CacheBehavior.ForceScan)))
+                        yield return f;
                 }
             }
 
-            target = th != null ? (PointFT)th : core;
+            if (targetIsSet == false)
+            {
+                target = core;
+            }
 
+            IEnumerable<int> setTarget(Building building)
+            {
+                var target = building?.Location.GetCenter();
+                if (target == null)
+                {
+                    for (var i = 2; i <= 4; i++)
+                    {
+                        Log.Warning($"Bot didn't find the target .. we will attemp search NO. {i}");
+                        yield return 1000;
+                        target = building?.Location.GetCenter();
+                        if (target != null)
+                        {
+                            Log.Warning($"Target found after {i} retries");
+                            this.target = (PointFT)target;
+                            targetIsSet = true;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    this.target = (PointFT)target;
+                    targetIsSet = true;
+                }
+            }
             var orginPoints = new[]
             {
                 new PointFT(GameGrid.DeployExtents.MaxX, core.Y),
@@ -590,7 +643,7 @@ namespace GoblinKnifeDeploy
 
             Log.Info($"[{AttackName}] V{Version} Deploy start");
 
-            CreateDeployPoints(top, right, bottom, left);
+            CreateDeployPoints();
             
             //get troops (under respect of the user settings)
             var deployElements = Deploy.GetTroops();
@@ -654,7 +707,7 @@ namespace GoblinKnifeDeploy
                             yield return t;
                     }
 
-                    yield return 1000;
+                    yield return 1500;
 
                     if (debug)
                         DebugEQpells();
@@ -780,9 +833,9 @@ namespace GoblinKnifeDeploy
                                 foreach (var t in Deploy.AtPoint(bowler, red1, bowlerFunnelCount))
                                     yield return t;
                             }
-                            if (witch?.Count > 4)
+                            if (witch?.Count > 0)
                             {
-                                witchFunnelCount = witch.Count / 4;
+                                witchFunnelCount = witch.Count > 4 ? witch.Count / 4 : witch.Count / 2;
                                 foreach (var t in Deploy.AtPoint(witch, red1, witchFunnelCount))
                                     yield return t;
                             }
@@ -810,7 +863,7 @@ namespace GoblinKnifeDeploy
                                 foreach (var t in Deploy.AtPoint(healer, red2, healerFunnlCount))
                                     yield return t;
                             }
-                            yield return 10000;
+                            yield return 13000;
                         }
                     }
                 }
@@ -869,13 +922,14 @@ namespace GoblinKnifeDeploy
                             foreach (var t in Deploy.AtPoint(hero, orgin))
                                 yield return t;
                         }
-                        Deploy.WatchHeroes(heroes);
+                        watchHeroes = true;
                     }
+                    
                     if (queen?.Count > 0)
                     {
                         foreach (var t in Deploy.AtPoint(queen, orgin))
                             yield return t;
-                        Deploy.WatchHeroes(new List<DeployElement> { queen });
+                        watchQueen = true;
                     }
                     if (isWarden)
                     {
@@ -947,8 +1001,6 @@ namespace GoblinKnifeDeploy
                     }
                     if (witch?.Count > 0)
                     {
-                        /*foreach (var t in Deploy.AlongLine(witch, red1, red2, witch.Count, 4))
-                            yield return t;*/
                         foreach (var t in Deploy.AtPoint(witch, orgin, witch.Count))
                             yield return t;
                     }
@@ -1154,7 +1206,7 @@ namespace GoblinKnifeDeploy
                     }
                 }
 
-                yield return 2500;
+                yield return 3000;
                 // activate Grand Warden apility
                 if (isWarden)
                 {
@@ -1191,6 +1243,17 @@ namespace GoblinKnifeDeploy
                         foreach (var t in Deploy.AtPoint(unit, hastePoint))
                             yield return t;
                     }
+                }
+
+                // Start watching heroes
+                if (watchHeroes == true)
+                {
+                    Deploy.WatchHeroes(heroes);
+                }
+
+                if(watchQueen == true)
+                {
+                    Deploy.WatchHeroes(new List<DeployElement> { queen });
                 }
 
                 if (debug)
@@ -1305,7 +1368,7 @@ namespace GoblinKnifeDeploy
                     foreach (var t in Deploy.AtPoints(lava, new PointFT[] { red1, red2 }, count, 0, 200, 5))
                         yield return t;
 
-                    if(lava?.Count>0)
+                    if (lava?.Count > 0) 
                     {
                         foreach (var t in Deploy.AtPoint(lava, red2, lava.Count))
                             yield return t;
@@ -1327,7 +1390,6 @@ namespace GoblinKnifeDeploy
                         foreach (var t in Deploy.AtPoint(lava, red2))
                             yield return t;
                     }
-                    
                 }
 
                 if(clanCastle?.Count > 0)
@@ -1469,7 +1531,6 @@ namespace GoblinKnifeDeploy
                         yield return t;
                     Deploy.WatchHeroes(new List<DeployElement> { queen });
                 }
-
             }
         }
 
