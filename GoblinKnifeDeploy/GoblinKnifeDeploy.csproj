@@ -17,7 +17,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.6.2571\RaccoonBot v1.20.6.2571\Addons\</OutputPath>
+    <OutputPath>..\..\..\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\Addons\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -33,17 +33,16 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CoC Bot.Core">
-      <HintPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.6.2571\RaccoonBot v1.20.6.2571\CoC Bot.Core.dll</HintPath>
+      <HintPath>..\..\..\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\CoC Bot.Core.dll</HintPath>
     </Reference>
-    <Reference Include="CustomAlgorithmSettings, Version=1.0.0.1, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.6.2571\RaccoonBot v1.20.6.2571\CustomAlgorithmSettings.dll</HintPath>
+    <Reference Include="CustomAlgorithmSettings">
+      <HintPath>..\..\..\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\CustomAlgorithmSettings.dll</HintPath>
     </Reference>
     <Reference Include="Raccoon Bot">
-      <HintPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.6.2571\RaccoonBot v1.20.6.2571\Raccoon Bot.exe</HintPath>
+      <HintPath>..\..\..\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\Raccoon Bot.exe</HintPath>
     </Reference>
     <Reference Include="Shared">
-      <HintPath>C:\Users\mmelo\Downloads\Compressed\RaccoonBot_1.20.6.2571\RaccoonBot v1.20.6.2571\Shared.dll</HintPath>
+      <HintPath>..\..\..\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\Shared.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -56,7 +55,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DarkPushDeploy.cs" />
     <Compile Include="GoblinKnifeDeploy.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
