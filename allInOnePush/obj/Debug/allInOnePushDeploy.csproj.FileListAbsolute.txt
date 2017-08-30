@@ -1,6 +1,0 @@
-D:\apps\c#\AllInOnePushDeploy\allInOnePush\allInOnePush\obj\Debug\allInOnePushDeploy.csprojResolveAssemblyReference.cache
-D:\apps\c#\AllInOnePushDeploy\allInOnePush\allInOnePush\obj\Debug\allInOnePushDeploy.csproj.CoreCompileInputs.cache
-D:\sources\android\RaccoonBot_1.20.7.2593\RaccoonBot v1.20.7.2593\Addons\allInOnePushDeploy.dll
-D:\sources\android\RaccoonBot_1.20.7.2593\RaccoonBot v1.20.7.2593\Addons\allInOnePushDeploy.pdb
-D:\apps\c#\AllInOnePushDeploy\allInOnePush\allInOnePush\obj\Debug\allInOnePushDeploy.dll
-D:\apps\c#\AllInOnePushDeploy\allInOnePush\allInOnePush\obj\Debug\allInOnePushDeploy.pdb
