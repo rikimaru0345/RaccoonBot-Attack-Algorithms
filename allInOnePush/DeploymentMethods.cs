@@ -2,6 +2,7 @@
 using System.Linq;
 using CoC_Bot.API;
 using CoC_Bot.API.Buildings;
+using System;
 
 namespace AllInOnePushDeploy
 {
@@ -17,12 +18,13 @@ namespace AllInOnePushDeploy
             var EQCount = eq?.Sum(u => u.Count);
             if (EQCount >= 4)
             {
-                Log.Info($"[{AllInOnePushDeploy.AttackName}] break walls beside Target ");
+                Log.Info($"[{AllInOnePushDeploy.AttackName}] Use earthquakes spells to open walls near target."); ;
                 foreach (var unit in eq)
                 {
                     foreach (var t in Deploy.AtPoint(unit, AllInOnePushDeploy.EqPoint, unit.Count, 50))
                         yield return t;
                 }
+                yield return new Random().Next(2000, 4000);
             }
             else
             {
@@ -82,7 +84,7 @@ namespace AllInOnePushDeploy
                     }
                 }
 
-                yield return 1000;
+                yield return new Random().Next(800, 1500);
 
                 var waves = wizard?.Count >= 12 ? 2 : 1;
                 foreach (var f in DeployWizard(waves))
@@ -212,7 +214,8 @@ namespace AllInOnePushDeploy
                         foreach (var t in Deploy.AtPoint(healer, AllInOnePushDeploy.SecondFunnellingPoint, healerFunnlCount))
                             yield return t;
                     }
-                    yield return 10000;
+
+                    yield return new Random().Next(10000, 13000);
                 }
             }
         }
@@ -236,7 +239,7 @@ namespace AllInOnePushDeploy
                 foreach (var t in Deploy.AlongLine(giant, AllInOnePushDeploy.FirstFunnellingPoint, AllInOnePushDeploy.SecondFunnellingPoint, 8, 4))
                     yield return t;
 
-                var waves = wizard?.Count >= 12 ? 2 : 1;
+                var waves = wizard?.Count >= 8 ? 2 : 1;
                 foreach (var f in DeployWizard(waves))
                     yield return f;
 
@@ -295,6 +298,8 @@ namespace AllInOnePushDeploy
 
         public static IEnumerable<int> DeployHeroes()
         {
+            yield return new Random().Next(600, 1000);
+
             Log.Info($"[{AllInOnePushDeploy.AttackName}] droping heroes");
             if (heroes.Any())
             {
@@ -472,7 +477,7 @@ namespace AllInOnePushDeploy
             foreach (var t in Deploy.AtPoint(lightingSpell, zapPoint, 2))
                 yield return t;
 
-            yield return 1200;
+            yield return new Random().Next(1200, 2500);
         }
 
         public static IEnumerable<int> DeployInCustomOrderAir(List<int> order)
@@ -509,17 +514,7 @@ namespace AllInOnePushDeploy
 
         public static IEnumerable<int> AirFunnelling()
         {
-            if (babyDragon?.Count > 0)
-            {
-                foreach (var t in Deploy.AtPoint(babyDragon, AllInOnePushDeploy.FirstFunnellingPoint))
-                    yield return t;
-
-                foreach (var t in Deploy.AtPoint(babyDragon, AllInOnePushDeploy.SecondFunnellingPoint))
-                    yield return t;
-
-                yield return 4000;
-            }
-            else if (dragon?.Count > 0)
+            if (dragon?.Count > 0)
             {
                 foreach (var t in Deploy.AtPoint(dragon, AllInOnePushDeploy.FirstFunnellingPoint))
                     yield return t;
@@ -528,6 +523,16 @@ namespace AllInOnePushDeploy
                     yield return t;
 
                 yield return 8000;
+            }
+            else if (babyDragon?.Count > 0)
+            {
+                foreach (var t in Deploy.AtPoint(babyDragon, AllInOnePushDeploy.FirstFunnellingPoint))
+                    yield return t;
+
+                foreach (var t in Deploy.AtPoint(babyDragon, AllInOnePushDeploy.SecondFunnellingPoint))
+                    yield return t;
+
+                yield return 4000;
             }
         }
 
@@ -573,7 +578,7 @@ namespace AllInOnePushDeploy
 
         public static IEnumerable<int> DeployLava()
         {
-            if (lava.Count >= 2)
+            if (lava?.Count >= 2)
             {
                 var count = lava.Count / 2;
 

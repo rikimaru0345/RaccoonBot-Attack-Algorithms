@@ -42,9 +42,6 @@ namespace AllInOnePushDeploy
             foreach (var t in DeploymentMethods.DropEQ())
                 yield return t;
 
-            // wait for 2 secs
-            yield return 2000;
-
             if (customOrder == 1)
             {
                 foreach (var t in DeploymentMethods.DeployInCustomOrder(AllInOnePushDeploy.CustomOrderList))
@@ -52,7 +49,7 @@ namespace AllInOnePushDeploy
             }
             else
             {
-                //use default order
+                // Check if queen walk is active
                 var QW = AllInOnePushDeploy.QWSettings == 1 && DeploymentMethods.queen?.Count > 0 && DeploymentMethods.healer?.Count >= AllInOnePushDeploy.HealerOnQWSettings ? true : false;
                 if (QW)
                 {
@@ -216,11 +213,11 @@ namespace AllInOnePushDeploy
 
                     foreach (var t in DeploymentMethods.DeployBabyDragons())
                         yield return t;
-                    
-                    foreach (var t in DeploymentMethods.DeployLava())
-                        yield return t;
 
                     foreach (var t in DeploymentMethods.DeployBalloons())
+                        yield return t;
+
+                    foreach (var t in DeploymentMethods.DeployLava())
                         yield return t;
                 }
                 else if(DeploymentMethods.dragonAttack)
@@ -263,8 +260,12 @@ namespace AllInOnePushDeploy
             {
                 foreach (var t in Deploy.AtPoint(DeploymentMethods.warden, AllInOnePushDeploy.Origin))
                     yield return t;
+
+
                 DeploymentMethods.isWarden = true;
             }
+            else
+                DeploymentMethods.isWarden = false;
 
             //setting witch spell to start and the the line for deployment
             var firstSpell = DeploymentMethods.hasteSpell?.Sum(u => u.Count) >= DeploymentMethods.rageSpell?.Sum(u => u.Count) ? DeploymentMethods.hasteSpell : DeploymentMethods.rageSpell;
@@ -278,7 +279,7 @@ namespace AllInOnePushDeploy
             if (firstSpellUnit?.Count > 0)
             {
                 var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
-                foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count))
+                foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 100))
                     yield return t;
 
                 line = AllInOnePushDeploy.FirstRageLine;
@@ -292,7 +293,7 @@ namespace AllInOnePushDeploy
             if (secondSpellUnit?.Count > 0)
             {
                 var count = secondSpellUnit.Count >= 3 ? 3 : secondSpellUnit.Count;
-                foreach (var t in Deploy.AlongLine(secondSpellUnit, line.Item1, line.Item2, count, count))
+                foreach (var t in Deploy.AlongLine(secondSpellUnit, line.Item1, line.Item2, count, count, 100))
                     yield return t;
 
                 line = AllInOnePushDeploy.SecondHasteLine;
@@ -303,18 +304,18 @@ namespace AllInOnePushDeploy
                 {
                     firstSpellUnit = firstSpell.FirstOrDefault().Count > 0 ? firstSpell.FirstOrDefault() : firstSpell.LastOrDefault();
                     var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
-                    foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count))
+                    foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 100))
                         yield return t;
 
                     line = AllInOnePushDeploy.SecondHasteLine;
                 }
             }
 
-            //use freeze if inferno is found
+            // Use freeze if inferno is found
             if (DeploymentMethods.freezeSpell?.Count > 0)
             {
                 var infernos = InfernoTower.Find();
-                // find and watch inferno towers
+                // Find and watch inferno towers
                 if (infernos != null)
                 {
                     foreach (var inferno in infernos)
@@ -338,7 +339,7 @@ namespace AllInOnePushDeploy
                 foreach (var unit in firstSpell)
                 {
                     var count = unit.Count >= 3 ? 3 : unit.Count;
-                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count))
+                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count, 50))
                         yield return t;
                 }
 
@@ -351,7 +352,7 @@ namespace AllInOnePushDeploy
                 foreach (var unit in secondSpell)
                 {
                     var count = unit.Count >= 3 ? 3 : unit.Count;
-                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count))
+                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count, 50))
                         yield return t;
                 }
 

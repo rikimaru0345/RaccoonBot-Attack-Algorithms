@@ -131,16 +131,18 @@ namespace AllInOnePushDeploy
         {
             var target = building?.Location.GetCenter();
 
+            // If didn't find the target search for it every 1 sec for more  times.
             if (target == null)
             {
                 for (var i = 2; i <= 4; i++)
                 {
-                    Log.Warning($"Bot didn't find the target .. we will attemp search NO. {i}");
+                    Log.Warning($"[{AllInOnePushDeploy.AttackName}] Bot didn't find the target .. we will attemp search NO. {i}");
+
                     yield return 1000;
                     target = building?.Location.GetCenter();
                     if (target != null)
                     {
-                        Log.Warning($"Target found after {i} retries");
+                        Log.Warning($"[{AllInOnePushDeploy.AttackName}] Found the target after {i} retries");
                         AllInOnePushDeploy.Target = (PointFT)target;
                         targetIsSet = true;
                         break;
@@ -149,6 +151,8 @@ namespace AllInOnePushDeploy
             }
             else
             {
+                Log.Info($"[{AllInOnePushDeploy.AttackName}] Successful located the target");
+
                 AllInOnePushDeploy.Target = (PointFT)target;
                 targetIsSet = true;
             }
@@ -431,10 +435,8 @@ namespace AllInOnePushDeploy
 
                 // Look for closest redpoint from the center of bottom right side
                 // if it's more than 6 tiles far from the center will attack from the next closest side to the target.
-                var redPoints = GameGrid.RedPoints;
-
-                var closestOriginRedpoint = redPoints.OrderBy(p => p.DistanceSq(AllInOnePushDeploy.Origin)).First();
-                if (Math.Abs(AllInOnePushDeploy.Origin.X - closestOriginRedpoint.X) > 6)
+                var avoidBottomRight = true;
+                if (avoidBottomRight)
                 {
                     var originPoints = new[]
                     {
@@ -444,7 +446,7 @@ namespace AllInOnePushDeploy
                         new PointFT(AllInOnePushDeploy.Core.X, GameGrid.DeployExtents.MinY)
                     };
                     AllInOnePushDeploy.Origin = originPoints.OrderBy(point => point.DistanceSq(AllInOnePushDeploy.Target)).ElementAt(1);
-                    Log.Warning($"No red points detected on that side,We will attack from next closest side to the target");
+                    Log.Warning($"Avoid bottom right side set to true, We will attack from next closest side to the target");
                     using (var bmp = Screenshot.Capture())
                     {
                         var d = DateTime.UtcNow;
@@ -594,7 +596,7 @@ namespace AllInOnePushDeploy
                 Screenshot.Save(bmp, $"{AllInOnePushDeploy.AttackName} Spells {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
             }
         }
-
+        
         public static void DebugBottomRightSidePoints()
         {
             using (var bmp = Screenshot.Capture())
