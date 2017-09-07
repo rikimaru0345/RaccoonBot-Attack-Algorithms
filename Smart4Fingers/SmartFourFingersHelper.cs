@@ -42,10 +42,12 @@ namespace SmartFourFingersDeploy
             switch (deployHeroesAt)
             {
                 case 1:
-                    target = (PointFT)TownHall.Find()?.Location.GetCenter();
+                    var th = TownHall.Find()?.Location.GetCenter();
+                    target = th != null ? (PointFT)th : target;
                     break;
                 case 2:
-                    target = (PointFT)DarkElixirStorage.Find()?.FirstOrDefault()?.Location.GetCenter();
+                    var de = DarkElixirStorage.Find()?.FirstOrDefault()?.Location.GetCenter();
+                    target = de != null ? (PointFT)de : target;
                     break;
             }
             return target;
