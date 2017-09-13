@@ -15,6 +15,7 @@ namespace AllInOnePushDeploy
         public static string AttackName = "All In One Push";
         public static int MinDistace = 18;
         public static bool Debug = false;
+        public static List<DeployElement> deployElements;
 
         public static PointFT Core { get; set; }
         public static PointFT Origin { get; set; }
@@ -42,6 +43,7 @@ namespace AllInOnePushDeploy
         public static int QWSettings { get; set; }
         public static int HealerOnQWSettings { get; set; }
         public static int RageOnQWSettings { get; set; }
+        public static int ShiftSpells { get; set; }
 
         public static bool IsAirAttack { get; set; }
         public static List<int> CustomOrderList { get; set; }
@@ -112,8 +114,7 @@ namespace AllInOnePushDeploy
             settings.AlgorithmName = AttackName;
             settings.AlgorithmDescriptionURL = "https://www.raccoonbot.com/forum/topic/24589-dark-push-deploy/";
 
-            //Global Settings
-
+            // Global Settings
             var debugMode = new AlgorithmSetting("Debug Mode", "When on, Debug Images will be written out for each attack showing what the algorithm is seeing.", 0, SettingType.Global);
             debugMode.PossibleValues.Add(new SettingOption("Off", 0));
             debugMode.PossibleValues.Add(new SettingOption("On", 1));
@@ -130,7 +131,7 @@ namespace AllInOnePushDeploy
             UseQueenWalk.PossibleValues.Add(new SettingOption("On", 1));
             settings.DefineSetting(UseQueenWalk);
 
-            //Show These ONLY when Use Queen Walk Mode is on
+            // Show These ONLY when Use Queen Walk Mode is on
             var HealersForQueenWalk = new AlgorithmSetting("Number of healers to use on Queen", "How meny healers to follow the queen , the rest will be dropped on the main troops", 4, SettingType.ActiveAndDead)
             {
                 MinValue = 1,
@@ -151,12 +152,19 @@ namespace AllInOnePushDeploy
             useCCAs.PossibleValues.Add(new SettingOption("Giants (deploy before normal troops)", 2));
             settings.DefineSetting(useCCAs);
 
+            var ShiftSpells = new AlgorithmSetting("Shift Spells In(+) and Out(-)", "Shift spells to inward or upward", 0, SettingType.ActiveAndDead)
+            {
+                MinValue = -5,
+                MaxValue = 5
+            };
+            settings.DefineSetting(ShiftSpells);
+
             var customDeployOrder = new AlgorithmSetting("use custom deploy order", "Change the deploying troops order, the default order is: 1-Golems if more than 1, 2- funnling, 3-giants or one golem, 4-heroes, 5-wallBreakers, 6-Normal troops", 0, SettingType.Global);
             customDeployOrder.PossibleValues.Add(new SettingOption("Off", 0));
             customDeployOrder.PossibleValues.Add(new SettingOption("On", 1));
             settings.DefineSetting(customDeployOrder);
 
-            // deploy order if custom deploy is on
+            // Deploy order if custom deploy is on
             var deploy1 = new AlgorithmSetting("#1", "", 1, SettingType.Global);
             deploy1.PossibleValues.Add(new SettingOption("Golems", 1));
             deploy1.PossibleValues.Add(new SettingOption("Ground Funnelling", 2));
@@ -256,12 +264,13 @@ namespace AllInOnePushDeploy
         public override IEnumerable<int> AttackRoutine()
         {
             Log.Info($"[{AttackName}] V{Version} Deploy start");
-            
+
             // Get user settings
             ClanCastleSettings = GetCurrentSetting("use Clan Castle troops as");
             QWSettings = GetCurrentSetting("Use Queen Walk");
             HealerOnQWSettings = GetCurrentSetting("Number of healers to use on Queen");
             RageOnQWSettings = GetCurrentSetting("Drop 1 rage in the first of the QW");
+            ShiftSpells = GetCurrentSetting("Shift Spells In(+) and Out(-)");
             int customOrder = GetCurrentSetting("use custom deploy order");
             Debug = GetCurrentSetting("Debug Mode") == 1 ? true : false;
 
@@ -282,6 +291,11 @@ namespace AllInOnePushDeploy
                 new PointFT(Core.X, GameGrid.DeployExtents.MinY)
             };
             Origin = originPoints.OrderBy(point => point.DistanceSq(Target)).First();
+
+
+            // Set deploy elements
+            deployElements = Deploy.GetTroops(useCache: false);
+            Log.Info($"[{AttackName}] Deployable Troops: " + ToUnitString(deployElements));
 
             // Check attack type (air or ground attack)
             AllInOnePushHelper.IsAirAttack();

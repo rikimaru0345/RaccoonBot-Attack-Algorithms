@@ -180,6 +180,9 @@ namespace AllInOnePushDeploy
             var leftTop = new PointFT((float)GameGrid.MinX + 2, (float)GameGrid.DeployExtents.MaxY);
             var topLeft = new PointFT((float)GameGrid.MaxX - 2, (float)GameGrid.DeployExtents.MaxY);
 
+            var isJumpSpell = Deploy.GetTroops().ExtractOne(DeployId.Jump)?.Count > 0 ? true : false;
+            
+
             if (AllInOnePushDeploy.Origin.X > AllInOnePushDeploy.Core.X)
             {
                 Log.Info($"[{AllInOnePushDeploy.AttackName}] Attacking from the top right");
@@ -192,7 +195,7 @@ namespace AllInOnePushDeploy
                 var firstWall = GetFirstWallForJump(AllInOnePushDeploy.Origin.Y, "Y");
                 AllInOnePushDeploy.FirstJumpPoint = new PointFT(firstWall.X - 2.75f, AllInOnePushDeploy.Core.Y);
 
-                var maxX = AllInOnePushDeploy.FirstJumpPoint.X - 5f;
+                var maxX = isJumpSpell ? AllInOnePushDeploy.FirstJumpPoint.X - 5f : firstWall.X - 1.5f;
                 var start = target.X + 4f;
 
                 var earthQuakePoints = new List<PointFT> { new PointFT(AllInOnePushDeploy.Target.X + 6f, AllInOnePushDeploy.Core.Y) };
@@ -208,21 +211,20 @@ namespace AllInOnePushDeploy
                     }
                 }
 
-
                 AllInOnePushDeploy.EqPoint = earthQuakePoints.OrderByDescending(e => GetWallsInsideSpell(e)).FirstOrDefault();
 
                 // Prevent overlaping EQ with jump
-                if (AllInOnePushDeploy.FirstJumpPoint.X - AllInOnePushDeploy.EqPoint.X < 7f)
+                if (isJumpSpell && AllInOnePushDeploy.FirstJumpPoint.X - AllInOnePushDeploy.EqPoint.X < 7f)
                 {
                     AllInOnePushDeploy.EqPoint = new PointFT(AllInOnePushDeploy.FirstJumpPoint.X - 7f, AllInOnePushDeploy.FirstJumpPoint.Y);
                 }
                 AllInOnePushDeploy.SecondJumpPoint = new PointFT(AllInOnePushDeploy.EqPoint.X - 0.5f, AllInOnePushDeploy.EqPoint.Y);
 
-
-                AllInOnePushDeploy.FirstRagePoint = new PointFT(AllInOnePushDeploy.Origin.X - 11f, AllInOnePushDeploy.Core.Y);
-                AllInOnePushDeploy.FirstHealPoint = new PointFT(AllInOnePushDeploy.Origin.X - 17f, AllInOnePushDeploy.Core.Y);
-                AllInOnePushDeploy.SecondRagePoint = new PointFT(AllInOnePushDeploy.Origin.X - 22f, AllInOnePushDeploy.Core.Y);
-                AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Origin.X - 26f, AllInOnePushDeploy.Core.Y);
+                var shiftSpells = AllInOnePushDeploy.ShiftSpells;
+                AllInOnePushDeploy.FirstRagePoint = new PointFT(AllInOnePushDeploy.Origin.X - 11f - shiftSpells, AllInOnePushDeploy.Core.Y);
+                AllInOnePushDeploy.FirstHealPoint = new PointFT(AllInOnePushDeploy.Origin.X - 17f - shiftSpells, AllInOnePushDeploy.Core.Y);
+                AllInOnePushDeploy.SecondRagePoint = new PointFT(AllInOnePushDeploy.Origin.X - 22f - shiftSpells, AllInOnePushDeploy.Core.Y);
+                AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Origin.X - 26f - shiftSpells, AllInOnePushDeploy.Core.Y);
 
                 //try to find better funneling points
                 var frac = 0.65f;
@@ -239,24 +241,24 @@ namespace AllInOnePushDeploy
 
                 AllInOnePushDeploy.FirstHasteLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 11f, AllInOnePushDeploy.FirstFunnellingPoint.Y),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 11f, AllInOnePushDeploy.SecondFunnellingPoint.Y)
+                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 11f - shiftSpells, AllInOnePushDeploy.FirstFunnellingPoint.Y),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 11f - shiftSpells, AllInOnePushDeploy.SecondFunnellingPoint.Y)
                 );
                 AllInOnePushDeploy.FirstRageLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 19f, AllInOnePushDeploy.FirstFunnellingPoint.Y),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 19f, AllInOnePushDeploy.SecondFunnellingPoint.Y)
+                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 19f - shiftSpells, AllInOnePushDeploy.FirstFunnellingPoint.Y),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 19f - shiftSpells, AllInOnePushDeploy.SecondFunnellingPoint.Y)
                 );
 
                 AllInOnePushDeploy.SecondHasteLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 24f, AllInOnePushDeploy.FirstFunnellingPoint.Y),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 24f, AllInOnePushDeploy.SecondFunnellingPoint.Y)
+                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 24f - shiftSpells, AllInOnePushDeploy.FirstFunnellingPoint.Y),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 24f - shiftSpells, AllInOnePushDeploy.SecondFunnellingPoint.Y)
                 );
                 AllInOnePushDeploy.SecondRageLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 24f, AllInOnePushDeploy.FirstFunnellingPoint.Y),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 24f, AllInOnePushDeploy.SecondFunnellingPoint.Y)
+                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 24f - shiftSpells, AllInOnePushDeploy.FirstFunnellingPoint.Y),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 24f - shiftSpells, AllInOnePushDeploy.SecondFunnellingPoint.Y)
                 );
 
                 AllInOnePushDeploy.QWHealer = new PointFT(GameGrid.DeployExtents.MaxX, AllInOnePushDeploy.FirstFunnellingPoint.Y);
@@ -275,7 +277,7 @@ namespace AllInOnePushDeploy
                 var firstWall = GetFirstWallForJump(AllInOnePushDeploy.Origin.Y, "Y");
                 AllInOnePushDeploy.FirstJumpPoint = new PointFT(firstWall.X + 2.75f, AllInOnePushDeploy.Core.Y);
 
-                var maxX = AllInOnePushDeploy.FirstJumpPoint.X + 5f;
+                var maxX = isJumpSpell ? AllInOnePushDeploy.FirstJumpPoint.X + 5f : firstWall.X + 1.5f ;
                 var start = target.X - 4f;
 
                 var earthQuakePoints = new List<PointFT> { new PointFT(AllInOnePushDeploy.Target.X - 6f, AllInOnePushDeploy.Core.Y) };
@@ -294,18 +296,18 @@ namespace AllInOnePushDeploy
                 AllInOnePushDeploy.EqPoint = earthQuakePoints.OrderByDescending(e => GetWallsInsideSpell(e)).FirstOrDefault();
 
                 // Prevent overlaping EQ with jump
-                if (Math.Abs(AllInOnePushDeploy.FirstJumpPoint.X - AllInOnePushDeploy.EqPoint.X) < 7f) 
+                if (isJumpSpell && Math.Abs(AllInOnePushDeploy.FirstJumpPoint.X - AllInOnePushDeploy.EqPoint.X) < 7f) 
                 {
                     AllInOnePushDeploy.EqPoint = new PointFT(AllInOnePushDeploy.FirstJumpPoint.X + 7f, AllInOnePushDeploy.FirstJumpPoint.Y);
                 }
 
                 AllInOnePushDeploy.SecondJumpPoint = new PointFT(AllInOnePushDeploy.EqPoint.X + 0.5f, AllInOnePushDeploy.EqPoint.Y);
 
-
-                AllInOnePushDeploy.FirstRagePoint = new PointFT(AllInOnePushDeploy.Origin.X + 11f, AllInOnePushDeploy.Core.Y);
-                AllInOnePushDeploy.FirstHealPoint = new PointFT(AllInOnePushDeploy.Origin.X + 17f, AllInOnePushDeploy.Core.Y);
-                AllInOnePushDeploy.SecondRagePoint = new PointFT(AllInOnePushDeploy.Origin.X + 22f, AllInOnePushDeploy.Core.Y);
-                AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Origin.X + 26f, AllInOnePushDeploy.Core.Y);
+                var shiftSpells = AllInOnePushDeploy.ShiftSpells;
+                AllInOnePushDeploy.FirstRagePoint = new PointFT(AllInOnePushDeploy.Origin.X + 11f + shiftSpells, AllInOnePushDeploy.Core.Y);
+                AllInOnePushDeploy.FirstHealPoint = new PointFT(AllInOnePushDeploy.Origin.X + 17f + shiftSpells, AllInOnePushDeploy.Core.Y);
+                AllInOnePushDeploy.SecondRagePoint = new PointFT(AllInOnePushDeploy.Origin.X + 22f + shiftSpells, AllInOnePushDeploy.Core.Y);
+                AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Origin.X + 26f + shiftSpells, AllInOnePushDeploy.Core.Y);
 
                 //try to find better funneling points
                 var frac = 0.65f;
@@ -319,26 +321,26 @@ namespace AllInOnePushDeploy
 
                 AllInOnePushDeploy.FirstHasteLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 11f, AllInOnePushDeploy.FirstFunnellingPoint.Y),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 11f, AllInOnePushDeploy.SecondFunnellingPoint.Y)
+                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 11f + shiftSpells, AllInOnePushDeploy.FirstFunnellingPoint.Y),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 11f + shiftSpells, AllInOnePushDeploy.SecondFunnellingPoint.Y)
                 );
 
                 AllInOnePushDeploy.FirstRageLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 19f, AllInOnePushDeploy.FirstFunnellingPoint.Y),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 19f, AllInOnePushDeploy.SecondFunnellingPoint.Y)
+                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 19f + shiftSpells, AllInOnePushDeploy.FirstFunnellingPoint.Y),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 19f + shiftSpells, AllInOnePushDeploy.SecondFunnellingPoint.Y)
                 );
 
                 AllInOnePushDeploy.SecondHasteLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT (AllInOnePushDeploy.FirstFunnellingPoint.X + 24f, AllInOnePushDeploy.FirstFunnellingPoint.Y),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 24f, AllInOnePushDeploy.SecondFunnellingPoint.Y)
+                    new PointFT (AllInOnePushDeploy.FirstFunnellingPoint.X + 24f + shiftSpells, AllInOnePushDeploy.FirstFunnellingPoint.Y),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 24f + shiftSpells, AllInOnePushDeploy.SecondFunnellingPoint.Y)
                 );
 
                 AllInOnePushDeploy.SecondRageLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 24f, AllInOnePushDeploy.FirstFunnellingPoint.Y),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 24f, AllInOnePushDeploy.SecondFunnellingPoint.Y)
+                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 24f + shiftSpells, AllInOnePushDeploy.FirstFunnellingPoint.Y),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 24f + shiftSpells, AllInOnePushDeploy.SecondFunnellingPoint.Y)
                 );
 
                 AllInOnePushDeploy.QWHealer = new PointFT(GameGrid.DeployExtents.MinX, AllInOnePushDeploy.FirstFunnellingPoint.Y);
@@ -351,13 +353,13 @@ namespace AllInOnePushDeploy
 
                 AllInOnePushDeploy.AttackLine = new Tuple<PointFT, PointFT>(leftTop, topLeft);
 
-                var distance = Math.Abs(AllInOnePushDeploy.Origin.X) - Math.Abs(AllInOnePushDeploy.Target.X);
+                var distance = Math.Abs(AllInOnePushDeploy.Origin.Y) - Math.Abs(AllInOnePushDeploy.Target.Y);
                 var target = distance >= AllInOnePushDeploy.MinDistace ? AllInOnePushDeploy.Target : AllInOnePushDeploy.Core;
 
                 var firstWall = GetFirstWallForJump(AllInOnePushDeploy.Origin.X, "X");
                 AllInOnePushDeploy.FirstJumpPoint = new PointFT(AllInOnePushDeploy.Core.X, firstWall.Y - 2.75f);
 
-                var maxX = AllInOnePushDeploy.FirstJumpPoint.Y - 5f;
+                var maxX = isJumpSpell ? AllInOnePushDeploy.FirstJumpPoint.Y - 5f : firstWall.Y - 1.5f;
                 var start = target.Y + 4f;
 
                 var earthQuakePoints = new List<PointFT> { new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Target.Y + 6f) };
@@ -376,17 +378,17 @@ namespace AllInOnePushDeploy
                 AllInOnePushDeploy.EqPoint = earthQuakePoints.OrderByDescending(e => GetWallsInsideSpell(e)).FirstOrDefault();
 
                 // Prevent overlaping EQ with jump
-                if (AllInOnePushDeploy.FirstJumpPoint.Y - AllInOnePushDeploy.EqPoint.Y < 7f)
+                if (isJumpSpell && AllInOnePushDeploy.FirstJumpPoint.Y - AllInOnePushDeploy.EqPoint.Y < 7f)
                 {
                     AllInOnePushDeploy.EqPoint = new PointFT(AllInOnePushDeploy.FirstJumpPoint.X, AllInOnePushDeploy.FirstJumpPoint.Y - 7f);
                 }
                 AllInOnePushDeploy.SecondJumpPoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.EqPoint.Y - 0.5f);
 
-
-                AllInOnePushDeploy.FirstRagePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y - 11f);
-                AllInOnePushDeploy.FirstHealPoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y - 17f);
-                AllInOnePushDeploy.SecondRagePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y - 22f);
-                AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y - 26f);
+                var shiftSpells = AllInOnePushDeploy.ShiftSpells;
+                AllInOnePushDeploy.FirstRagePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y - 11f - shiftSpells);
+                AllInOnePushDeploy.FirstHealPoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y - 17f - shiftSpells);
+                AllInOnePushDeploy.SecondRagePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y - 22f - shiftSpells);
+                AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y - 26f - shiftSpells);
 
                 //try to find better funneling points
                 var frac = 0.65f;
@@ -403,26 +405,26 @@ namespace AllInOnePushDeploy
 
                 AllInOnePushDeploy.FirstHasteLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y - 11f),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y - 11f)
+                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y - 11f - shiftSpells),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y - 11f - shiftSpells)
                 );
 
                 AllInOnePushDeploy.FirstRageLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y - 19f),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y - 19f)
+                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y - 19f - shiftSpells),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y - 19f - shiftSpells)
                 );
 
                 AllInOnePushDeploy.SecondHasteLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y - 24f),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y - 24f)
+                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y - 24f - shiftSpells),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y - 24f - shiftSpells)
                 );
 
                 AllInOnePushDeploy.SecondRageLine = new Tuple<PointFT, PointFT>
                 (
-                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y - 24f),
-                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y - 24f)
+                    new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y - 24f - shiftSpells),
+                    new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y - 24f - shiftSpells)
                 );
 
                 AllInOnePushDeploy.QWHealer = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, GameGrid.DeployExtents.MaxY);
@@ -433,8 +435,7 @@ namespace AllInOnePushDeploy
             {
                 Log.Info($"[{AllInOnePushDeploy.AttackName}] Attacking from the bottom right");
 
-                // Look for closest redpoint from the center of bottom right side
-                // if it's more than 6 tiles far from the center will attack from the next closest side to the target.
+                // Avoid bottom right side until fix zoom out on attack progress issue
                 var avoidBottomRight = true;
                 if (avoidBottomRight)
                 {
@@ -447,24 +448,20 @@ namespace AllInOnePushDeploy
                     };
                     AllInOnePushDeploy.Origin = originPoints.OrderBy(point => point.DistanceSq(AllInOnePushDeploy.Target)).ElementAt(1);
                     Log.Warning($"Avoid bottom right side set to true, We will attack from next closest side to the target");
-                    using (var bmp = Screenshot.Capture())
-                    {
-                        var d = DateTime.UtcNow;
-                        Screenshot.Save(bmp, $"AvoidBottomRight {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
-                    }
+                    
                     SetDeployPoints();
                 }
                 else
                 {
                     AllInOnePushDeploy.AttackLine = new Tuple<PointFT, PointFT>(rightBottom, bottomRight);
 
-                    var distance = Math.Abs(AllInOnePushDeploy.Origin.X) - Math.Abs(AllInOnePushDeploy.Target.X);
+                    var distance = Math.Abs(AllInOnePushDeploy.Origin.Y) - Math.Abs(AllInOnePushDeploy.Target.Y);
                     var target = distance >= AllInOnePushDeploy.MinDistace ? AllInOnePushDeploy.Target : AllInOnePushDeploy.Core;
 
                     var firstWall = GetFirstWallForJump(AllInOnePushDeploy.Origin.X, "X");
                     AllInOnePushDeploy.FirstJumpPoint = new PointFT(AllInOnePushDeploy.Core.X, firstWall.Y + 2.75f);
 
-                    var maxX = AllInOnePushDeploy.FirstJumpPoint.Y + 5f;
+                    var maxX = isJumpSpell ? AllInOnePushDeploy.FirstJumpPoint.Y + 5f : firstWall.Y + 1.5f;
                     var start = target.Y - 4f;
 
                     var earthQuakePoints = new List<PointFT> { new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Target.Y - 6f) };
@@ -483,17 +480,17 @@ namespace AllInOnePushDeploy
                     AllInOnePushDeploy.EqPoint = earthQuakePoints.OrderByDescending(e => GetWallsInsideSpell(e)).FirstOrDefault();
 
                     // Prevent overlaping EQ with jump
-                    if (Math.Abs(AllInOnePushDeploy.FirstJumpPoint.Y - AllInOnePushDeploy.EqPoint.Y) < 7f)
+                    if (isJumpSpell && Math.Abs(AllInOnePushDeploy.FirstJumpPoint.Y - AllInOnePushDeploy.EqPoint.Y) < 7f)
                     {
                         AllInOnePushDeploy.EqPoint = new PointFT(AllInOnePushDeploy.FirstJumpPoint.X, AllInOnePushDeploy.FirstJumpPoint.Y + 7f);
                     }
                     AllInOnePushDeploy.SecondJumpPoint = new PointFT(AllInOnePushDeploy.EqPoint.X, AllInOnePushDeploy.EqPoint.Y + 0.5f);
 
-
-                    AllInOnePushDeploy.FirstRagePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 11f);
-                    AllInOnePushDeploy.FirstHealPoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 17f);
-                    AllInOnePushDeploy.SecondRagePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 22f);
-                    AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 26f);
+                    var shiftSpells = AllInOnePushDeploy.ShiftSpells;
+                    AllInOnePushDeploy.FirstRagePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 11f + shiftSpells);
+                    AllInOnePushDeploy.FirstHealPoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 17f + shiftSpells);
+                    AllInOnePushDeploy.SecondRagePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 22f + shiftSpells);
+                    AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 26f + shiftSpells);
 
                     //try to find better funneling points
                     var frac = 0.65f;
@@ -507,26 +504,26 @@ namespace AllInOnePushDeploy
 
                     AllInOnePushDeploy.FirstHasteLine = new Tuple<PointFT, PointFT>
                     (
-                        new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y + 11f),
-                        new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y + 11f)
+                        new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y + 11f + shiftSpells),
+                        new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y + 11f + shiftSpells)
                     );
 
                     AllInOnePushDeploy.FirstRageLine = new Tuple<PointFT, PointFT>
                     (
-                        new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y + 19f),
-                        new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y + 19f)
+                        new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y + 19f + shiftSpells),
+                        new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y + 19f + shiftSpells)
                     );
 
                     AllInOnePushDeploy.SecondHasteLine = new Tuple<PointFT, PointFT>
                     (
-                        new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y + 24f),
-                        new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y + 24f)
+                        new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y + 24f + shiftSpells),
+                        new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y + 24f + shiftSpells)
                     );
 
                     AllInOnePushDeploy.SecondRageLine = new Tuple<PointFT, PointFT>
                     (
-                        new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y + 24f),
-                        new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y + 24f)
+                        new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y + 24f + shiftSpells),
+                        new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X, AllInOnePushDeploy.SecondFunnellingPoint.Y + 24f + shiftSpells)
                     );
 
                     AllInOnePushDeploy.QWHealer = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, GameGrid.DeployExtents.MinY);
@@ -535,7 +532,9 @@ namespace AllInOnePushDeploy
             }
         }
 
-        // Read troops to check if it's air attack or not
+        /// <summary>
+        /// Read troops to check if it's air attack or not
+        /// </summary>
         public static void IsAirAttack()
         {
             var deployElements = Deploy.GetTroops();

@@ -323,6 +323,8 @@ namespace AllInOnePushDeploy
                     yield return t;
                 isWarden = true;
             }
+            else
+                isWarden = false;
         }
 
         public static IEnumerable<int> DeployNormalTroops()
@@ -362,7 +364,7 @@ namespace AllInOnePushDeploy
                     yield return t;
             }
 
-            foreach (var unit in TroopsDeployment.deployElements)
+            foreach (var unit in AllInOnePushDeploy.deployElements)
             {
                 Log.Info($"[{AllInOnePushDeploy.AttackName}] deploy any remaining troops");
                 if (unit?.Count > 0)
@@ -454,6 +456,7 @@ namespace AllInOnePushDeploy
 
         public static IEnumerable<int> ZapAirDefense()
         {
+            // Todo: use 3 lighting if th7.
             var airDefenses = AirDefense.Find(CacheBehavior.ForceScan);
             var targetAirDefense = airDefenses.OrderBy(a => a.Location.GetCenter().DistanceSq(AllInOnePushDeploy.Origin)).ElementAtOrDefault(2);
             if (targetAirDefense == null)
@@ -522,7 +525,7 @@ namespace AllInOnePushDeploy
                 foreach (var t in Deploy.AtPoint(dragon, AllInOnePushDeploy.SecondFunnellingPoint))
                     yield return t;
 
-                yield return 8000;
+                yield return new Random().Next(8000, 9000);
             }
             else if (babyDragon?.Count > 0)
             {
@@ -532,7 +535,7 @@ namespace AllInOnePushDeploy
                 foreach (var t in Deploy.AtPoint(babyDragon, AllInOnePushDeploy.SecondFunnellingPoint))
                     yield return t;
 
-                yield return 4000;
+                yield return new Random().Next(5000, 6500);
             }
         }
 
@@ -549,14 +552,14 @@ namespace AllInOnePushDeploy
         {
             if (babyDragon?.Count > 0)
             {
-                foreach (var t in Deploy.AlongLine(babyDragon, AllInOnePushDeploy.FirstFunnellingPoint, AllInOnePushDeploy.SecondFunnellingPoint, babyDragon.Count, 4))
+                foreach (var t in Deploy.AlongLine(babyDragon, AllInOnePushDeploy.FirstFunnellingPoint, AllInOnePushDeploy.SecondFunnellingPoint, babyDragon.Count, 4, 50))
                     yield return t;
             }
         }
 
         public static IEnumerable<int> DeployBalloons()
         {
-            yield return dragonAttack ? 2000 : (babyLoon ? 800 : 0);
+            yield return dragonAttack ? 2000 : (babyLoon ? 500 : 0);
             if (balloon?.Count > 0)
             {
                 if (!dragonAttack)
@@ -605,6 +608,11 @@ namespace AllInOnePushDeploy
                         yield return t;
 
                     foreach (var t in Deploy.AtPoint(lava, AllInOnePushDeploy.SecondFunnellingPoint))
+                        yield return t;
+                }
+                else
+                {
+                    foreach (var t in Deploy.AtPoint(lava, AllInOnePushDeploy.Origin))
                         yield return t;
                 }
             }

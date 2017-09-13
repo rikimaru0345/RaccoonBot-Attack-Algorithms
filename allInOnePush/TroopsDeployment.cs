@@ -9,32 +9,29 @@ namespace AllInOnePushDeploy
 {
     static class TroopsDeployment
     {
-        public static List<DeployElement> deployElements;
-
         public static IEnumerable<int> GroundAttack(int customOrder)
         {
-            deployElements = Deploy.GetTroops();
-            DeploymentMethods.clanCastle = deployElements.ExtractOne(u => u.ElementType == DeployElementType.ClanTroops);
-            DeploymentMethods.eq = deployElements.Extract(u => u.Id == DeployId.Earthquake);
-            DeploymentMethods.rageSpell = deployElements.Extract(u => u.Id == DeployId.Rage);
-            DeploymentMethods.healSpell = deployElements.Extract(u => u.Id == DeployId.Heal);
-            DeploymentMethods.freezeSpell = deployElements.ExtractOne(DeployId.Freeze);
-            DeploymentMethods.jumpSpell = deployElements.Extract(u => u.Id == DeployId.Jump);
-            DeploymentMethods.hasteSpell = deployElements.Extract(u => u.Id == DeployId.Haste);
-            DeploymentMethods.poison = deployElements.Extract(u => u.Id == DeployId.Poison);
+            DeploymentMethods.clanCastle = AllInOnePushDeploy.deployElements.ExtractOne(u => u.ElementType == DeployElementType.ClanTroops);
+            DeploymentMethods.eq = AllInOnePushDeploy.deployElements.Extract(u => u.Id == DeployId.Earthquake);
+            DeploymentMethods.rageSpell = AllInOnePushDeploy.deployElements.Extract(u => u.Id == DeployId.Rage);
+            DeploymentMethods.healSpell = AllInOnePushDeploy.deployElements.Extract(u => u.Id == DeployId.Heal);
+            DeploymentMethods.freezeSpell = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Freeze);
+            DeploymentMethods.jumpSpell = AllInOnePushDeploy.deployElements.Extract(u => u.Id == DeployId.Jump);
+            DeploymentMethods.hasteSpell = AllInOnePushDeploy.deployElements.Extract(u => u.Id == DeployId.Haste);
+            DeploymentMethods.poison = AllInOnePushDeploy.deployElements.Extract(u => u.Id == DeployId.Poison);
             //tanks
-            DeploymentMethods.giant = deployElements.ExtractOne(DeployId.Giant);
-            DeploymentMethods.golem = deployElements.ExtractOne(DeployId.Golem);
+            DeploymentMethods.giant = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Giant);
+            DeploymentMethods.golem = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Golem);
             //main troops
-            DeploymentMethods.wallbreaker = deployElements.ExtractOne(DeployId.WallBreaker);
-            DeploymentMethods.bowler = deployElements.ExtractOne(DeployId.Bowler);
-            DeploymentMethods.witch = deployElements.ExtractOne(DeployId.Witch);
-            DeploymentMethods.healer = deployElements.ExtractOne(DeployId.Healer);
-            DeploymentMethods.wizard = deployElements.ExtractOne(DeployId.Wizard);
+            DeploymentMethods.wallbreaker = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.WallBreaker);
+            DeploymentMethods.bowler = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Bowler);
+            DeploymentMethods.witch = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Witch);
+            DeploymentMethods.healer = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Healer);
+            DeploymentMethods.wizard = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Wizard);
 
-            DeploymentMethods.spells = deployElements.Extract(DeployElementType.Spell);
+            DeploymentMethods.spells = AllInOnePushDeploy.deployElements.Extract(DeployElementType.Spell);
 
-            DeploymentMethods.heroes = deployElements.Extract(x => x.IsHero);
+            DeploymentMethods.heroes = AllInOnePushDeploy.deployElements.Extract(x => x.IsHero);
             DeploymentMethods.warden = DeploymentMethods.heroes.ExtractOne(u => u.ElementType == DeployElementType.HeroWarden);
             DeploymentMethods.queen = DeploymentMethods.heroes.ExtractOne(DeployId.Queen);
 
@@ -101,10 +98,11 @@ namespace AllInOnePushDeploy
                     yield return s;
             }
 
-            foreach (var s in DeploymentMethods.DeploySpell(DeploymentMethods.poison, AllInOnePushDeploy.FirstHealPoint))
-                yield return s;
+            if (DeploymentMethods.poison?.Count > 0) 
+                foreach (var s in DeploymentMethods.DeploySpell(DeploymentMethods.poison, AllInOnePushDeploy.FirstHealPoint))
+                    yield return s;
 
-            //use freeze if inferno is found
+            // Use freeze if inferno is found
             if (DeploymentMethods.freezeSpell?.Count > 0)
             {
                 var infernos = InfernoTower.Find();
@@ -159,16 +157,14 @@ namespace AllInOnePushDeploy
         {
             Log.Info($"[{AllInOnePushDeploy.AttackName}] 'Air Attack' has been activated");
 
-            deployElements = Deploy.GetTroops();
+            DeploymentMethods.wallbreaker = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.WallBreaker);
+            DeploymentMethods.balloon = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Balloon);
+            DeploymentMethods.minion = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Minion);
+            DeploymentMethods.babyDragon = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.BabyDragon);
+            DeploymentMethods.dragon = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Dragon);
+            DeploymentMethods.lava = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.LavaHound);
 
-            DeploymentMethods.wallbreaker = deployElements.ExtractOne(DeployId.WallBreaker);
-            DeploymentMethods.balloon = deployElements.ExtractOne(DeployId.Balloon);
-            DeploymentMethods.minion = deployElements.ExtractOne(DeployId.Minion);
-            DeploymentMethods.babyDragon = deployElements.ExtractOne(DeployId.BabyDragon);
-            DeploymentMethods.dragon = deployElements.ExtractOne(DeployId.Dragon);
-            DeploymentMethods.lava = deployElements.ExtractOne(DeployId.LavaHound);
-
-            DeploymentMethods.spells = deployElements.Extract(DeployElementType.Spell);
+            DeploymentMethods.spells = AllInOnePushDeploy.deployElements.Extract(DeployElementType.Spell);
 
             DeploymentMethods.lightingSpell = DeploymentMethods.spells.ExtractOne(DeployId.Lightning);
             DeploymentMethods.eq = DeploymentMethods.spells.Extract(u => u.Id == DeployId.Earthquake);
@@ -176,9 +172,9 @@ namespace AllInOnePushDeploy
             DeploymentMethods.rageSpell = DeploymentMethods.spells.Extract(u => u.Id == DeployId.Rage);
             DeploymentMethods.freezeSpell = DeploymentMethods.spells.ExtractOne(DeployId.Freeze);
 
-            DeploymentMethods.clanCastle = deployElements.ExtractOne(DeployId.ClanCastle);
+            DeploymentMethods.clanCastle = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.ClanCastle);
 
-            DeploymentMethods.heroes = deployElements.Extract(x => x.IsHero);
+            DeploymentMethods.heroes = AllInOnePushDeploy.deployElements.Extract(x => x.IsHero);
 
             DeploymentMethods.warden = DeploymentMethods.heroes.ExtractOne(u => u.ElementType == DeployElementType.HeroWarden);
             DeploymentMethods.queen = DeploymentMethods.heroes.ExtractOne(DeployId.Queen);
@@ -267,7 +263,7 @@ namespace AllInOnePushDeploy
             else
                 DeploymentMethods.isWarden = false;
 
-            //setting witch spell to start and the the line for deployment
+            // Start with haste <IF> it's more than or equal rages count <ELSE> start with rages.
             var firstSpell = DeploymentMethods.hasteSpell?.Sum(u => u.Count) >= DeploymentMethods.rageSpell?.Sum(u => u.Count) ? DeploymentMethods.hasteSpell : DeploymentMethods.rageSpell;
             var secondSpell = firstSpell == DeploymentMethods.hasteSpell ? DeploymentMethods.rageSpell : DeploymentMethods.hasteSpell;
 
@@ -275,6 +271,8 @@ namespace AllInOnePushDeploy
             var secondSpellUnit = secondSpell.FirstOrDefault()?.Count > 0 ? secondSpell.FirstOrDefault() : secondSpell.LastOrDefault();
 
             var line = AllInOnePushDeploy.FirstHasteLine;
+
+            // Todo: deploy rages for TH8, 2 on the first line then 1 on the second line.
 
             if (firstSpellUnit?.Count > 0)
             {
