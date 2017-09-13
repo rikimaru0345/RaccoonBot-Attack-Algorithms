@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("allInOnePushDeploy")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Push for all TH levels")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("allInOnePushDeploy")]
