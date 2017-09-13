@@ -5,14 +5,13 @@ using CoC_Bot.API;
 using CustomAlgorithmSettings;
 using System.Reflection;
 
-[assembly: Addon("SmartFourFingersDeploy", "deploy troops in for sides with human behavior", "Cobratst")]
+[assembly: Addon("SmartFourFingersDeploy", "deploy troops in for sides with human behavior", "CobraTST")]
 namespace SmartFourFingersDeploy
 {
     [AttackAlgorithm("SmartFourFingersDeploy", "Four Fingers Deploy with advanced settings")]
     public class SmartFourFingersDeploy : BaseAttack
     {
-        internal static readonly Version Version = Assembly.GetEntryAssembly().GetName().Version;
-        internal static readonly string FormattedVersionString = $"{Version.Major}.{Version.Minor}.{Version.Build}.{Version.Revision}";
+        internal static readonly string Version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
         public const string AttackName = "[Smart 4 Fingers Deploy]";
 
         public SmartFourFingersDeploy(Opponent opponent) : base(opponent)
@@ -147,7 +146,7 @@ namespace SmartFourFingersDeploy
             var deployHeroesAt = new AlgorithmSetting("Deploy Heroes At", "choose where to deploy Heroes", 0, SettingType.ActiveAndDead);
             deployHeroesAt.PossibleValues.Add(new SettingOption("Normal (at the end)", 0));
             deployHeroesAt.PossibleValues.Add(new SettingOption("TownHall Side", 1));
-            deployHeroesAt.PossibleValues.Add(new SettingOption("DE storage Side", 1));
+            deployHeroesAt.PossibleValues.Add(new SettingOption("DE Storage Side", 2));
             settings.DefineSetting(deployHeroesAt);
 
 
@@ -233,6 +232,18 @@ namespace SmartFourFingersDeploy
             
             var target = SmartFourFingersHelper.GetHeroesTarget(deployHeroesAt);
 
+            // Search for target if not found for 3 more times
+            if(target.X == 0f && target.Y == 0f)
+            {
+                for (var i = 1; i <= 3; i++)
+                {
+                    yield return 1000;
+                    target = SmartFourFingersHelper.GetHeroesTarget(deployHeroesAt);
+                    if (target.X != 0f || target.Y != 0f)
+                        break;
+                }
+            }
+
             var nearestRedPointToTarget = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(target)).FirstOrDefault();
             var nearestLinePoint = linesPointsList.OrderBy(p => p.DistanceSq(nearestRedPointToTarget)).FirstOrDefault();
 
@@ -259,7 +270,7 @@ namespace SmartFourFingersDeploy
                     if (unit?.Count > 0)
                     {
                         var count = unit.Count / i;
-                        var fingers = count % 4 <= 1 ? count : 4;
+                        var fingers = count < 8 ? count : 4;
                         foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, fingers, 0, waveDelay))
                             yield return t;
                     }
@@ -303,19 +314,20 @@ namespace SmartFourFingersDeploy
 
                 foreach (var t in SmartZapping.SmartZap(minDEAmount, minDEDrillLevel, spells))
                     yield return t;
-            }
 
-            // start Use EarthQuake spell on drills
-            if (GetCurrentSetting("Use EarthQuake spell on drills") == 1)
-            {
-                foreach (var t in SmartZapping.UseEQOnDrills(minDEDrillLevel, spells))
+
+                // start Use EarthQuake spell on drills
+                if (GetCurrentSetting("Use EarthQuake spell on drills") == 1)
+                {
+                    foreach (var t in SmartZapping.UseEQOnDrills(minDEDrillLevel, spells))
+                        yield return t;
+                }
+
+                // end battle
+                var endBattleTime = GetCurrentSetting("End Battle after zap ?(sec)");
+                foreach (var t in SmartZapping.EndBattle(endBattleTime))
                     yield return t;
             }
-
-            // end battle
-            var endBattleTime = GetCurrentSetting("End Battle after zap ?(sec)");
-            foreach (var t in SmartZapping.EndBattle(endBattleTime))
-                yield return t;
         }
 
         public override double ShouldAccept()
