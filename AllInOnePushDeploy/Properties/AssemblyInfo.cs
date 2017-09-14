@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("allInOnePushDeploy")]
-[assembly: AssemblyDescription("Push for all TH levels")]
+[assembly: AssemblyTitle("AllInOnePushDeploy")]
+[assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("allInOnePushDeploy")]
+[assembly: AssemblyProduct("AllInOnePushDeploy")]
 [assembly: AssemblyCopyright("Copyright © Cobratst 2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("2.0.7.402")]
-[assembly: AssemblyFileVersion("2.0.7.402")]
+[assembly: AssemblyVersion("2.0.7.403")]
+[assembly: AssemblyFileVersion("2.0.7.403")]
