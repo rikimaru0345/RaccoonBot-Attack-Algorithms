@@ -457,12 +457,14 @@ namespace AllInOnePushDeploy
         public static IEnumerable<int> ZapAirDefense()
         {
             // Todo: use 3 lighting if th7.
+            
             var airDefenses = AirDefense.Find(CacheBehavior.ForceScan);
-            var targetAirDefense = airDefenses.OrderBy(a => a.Location.GetCenter().DistanceSq(AllInOnePushDeploy.Origin)).ElementAtOrDefault(2);
-            if (targetAirDefense == null)
-                targetAirDefense = airDefenses.OrderBy(a => a.Location.GetCenter().DistanceSq(AllInOnePushDeploy.Origin)).ElementAtOrDefault(1);
-            if (targetAirDefense == null)
-                targetAirDefense = airDefenses.FirstOrDefault();
+            var targetAirDefense = airDefenses
+                .OrderBy(a => a.Location.GetCenter().DistanceSq(AllInOnePushDeploy.Origin))
+                .ElementAtOrDefault(2) ?? airDefenses
+                .OrderBy(a => a.Location.GetCenter().DistanceSq(AllInOnePushDeploy.Origin))
+                .ElementAtOrDefault(1) ?? airDefenses
+                .FirstOrDefault();
 
             var zapPoint = targetAirDefense.Location.GetCenter();
 
@@ -519,20 +521,20 @@ namespace AllInOnePushDeploy
         {
             if (dragon?.Count > 0)
             {
-                foreach (var t in Deploy.AtPoint(dragon, AllInOnePushDeploy.FirstFunnellingPoint))
+                foreach (var t in Deploy.AtPoint(dragon, AllInOnePushDeploy.AttackLine.Item1))
                     yield return t;
 
-                foreach (var t in Deploy.AtPoint(dragon, AllInOnePushDeploy.SecondFunnellingPoint))
+                foreach (var t in Deploy.AtPoint(dragon, AllInOnePushDeploy.AttackLine.Item2))
                     yield return t;
 
                 yield return new Random().Next(8000, 9000);
             }
             else if (babyDragon?.Count > 0)
             {
-                foreach (var t in Deploy.AtPoint(babyDragon, AllInOnePushDeploy.FirstFunnellingPoint))
+                foreach (var t in Deploy.AtPoint(babyDragon, AllInOnePushDeploy.AttackLine.Item1))
                     yield return t;
 
-                foreach (var t in Deploy.AtPoint(babyDragon, AllInOnePushDeploy.SecondFunnellingPoint))
+                foreach (var t in Deploy.AtPoint(babyDragon, AllInOnePushDeploy.AttackLine.Item2))
                     yield return t;
 
                 yield return new Random().Next(5000, 6500);
@@ -564,7 +566,7 @@ namespace AllInOnePushDeploy
             {
                 if (!dragonAttack)
                 {
-                    foreach (var t in Deploy.AlongLine(balloon, AllInOnePushDeploy.AttackLine.Item1, AllInOnePushDeploy.AttackLine.Item2, balloon.Count, 4))
+                    foreach (var t in Deploy.AlongLine(balloon, AllInOnePushDeploy.AttackLine.Item1, AllInOnePushDeploy.AttackLine.Item2, balloon.Count, 2))
                         yield return t;
                 }
                 else

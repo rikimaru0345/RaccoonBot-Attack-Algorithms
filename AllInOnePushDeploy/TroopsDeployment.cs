@@ -232,11 +232,17 @@ namespace AllInOnePushDeploy
                 }
                 else if (DeploymentMethods.lavaloonion)
                 {
+                    foreach (var t in DeploymentMethods.DeployBalloons())
+                        yield return t;
+
                     foreach (var t in DeploymentMethods.DeployLava())
                         yield return t;
 
-                    foreach (var t in DeploymentMethods.DeployBalloons())
-                        yield return t;
+                    if (DeploymentMethods.clanCastle?.Count > 0)
+                    {
+                        foreach (var t in Deploy.AtPoint(DeploymentMethods.clanCastle, AllInOnePushDeploy.Origin))
+                            yield return t;
+                    }
 
                     foreach (var t in DeploymentMethods.DeployDragons())
                         yield return t;
@@ -277,7 +283,7 @@ namespace AllInOnePushDeploy
             if (firstSpellUnit?.Count > 0)
             {
                 var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
-                foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 100))
+                foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 250))
                     yield return t;
 
                 line = AllInOnePushDeploy.FirstRageLine;
@@ -291,7 +297,7 @@ namespace AllInOnePushDeploy
             if (secondSpellUnit?.Count > 0)
             {
                 var count = secondSpellUnit.Count >= 3 ? 3 : secondSpellUnit.Count;
-                foreach (var t in Deploy.AlongLine(secondSpellUnit, line.Item1, line.Item2, count, count, 100))
+                foreach (var t in Deploy.AlongLine(secondSpellUnit, line.Item1, line.Item2, count, count, 250))
                     yield return t;
 
                 line = AllInOnePushDeploy.SecondHasteLine;
@@ -302,7 +308,7 @@ namespace AllInOnePushDeploy
                 {
                     firstSpellUnit = firstSpell.FirstOrDefault().Count > 0 ? firstSpell.FirstOrDefault() : firstSpell.LastOrDefault();
                     var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
-                    foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 100))
+                    foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 250))
                         yield return t;
 
                     line = AllInOnePushDeploy.SecondHasteLine;
@@ -337,7 +343,7 @@ namespace AllInOnePushDeploy
                 foreach (var unit in firstSpell)
                 {
                     var count = unit.Count >= 3 ? 3 : unit.Count;
-                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count, 50))
+                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count, 250))
                         yield return t;
                 }
 
@@ -350,7 +356,7 @@ namespace AllInOnePushDeploy
                 foreach (var unit in secondSpell)
                 {
                     var count = unit.Count >= 3 ? 3 : unit.Count;
-                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count, 50))
+                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count, 250))
                         yield return t;
                 }
 
@@ -359,7 +365,7 @@ namespace AllInOnePushDeploy
             foreach (var t in DeploymentMethods.DeployWB())
                 yield return t;
 
-            yield return 1500;
+            yield return 4000;
 
             if (DeploymentMethods.heroes.Any())
             {
