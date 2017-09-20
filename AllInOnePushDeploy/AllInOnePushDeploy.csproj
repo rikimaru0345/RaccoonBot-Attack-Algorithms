@@ -7,8 +7,8 @@
     <ProjectGuid>{174C9196-667E-48BF-A363-790899DF9A55}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>AllInOnePushDeploy</RootNamespace>
-    <AssemblyName>AllInOnePushDeploy</AssemblyName>
+    <RootNamespace>allInOnePushDeploy</RootNamespace>
+    <AssemblyName>allInOnePushDeploy</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
