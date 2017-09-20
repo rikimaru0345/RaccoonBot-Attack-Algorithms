@@ -300,6 +300,7 @@ namespace SmartFourFingersDeploy
                 Deploy.WatchHeroes(heroes, 5000);
             }
 
+
             var minDEDrillLevel = GetCurrentSetting("Min Drill Level");
 
             // start smart zap
@@ -310,7 +311,7 @@ namespace SmartFourFingersDeploy
 
 
                 yield return waitBeforeSmartZap;
-                
+
                 foreach (var t in SmartZapping.SmartZap(minDEAmount, minDEDrillLevel, spells))
                     yield return t;
 
@@ -328,7 +329,7 @@ namespace SmartFourFingersDeploy
                     yield return t;
             }
         }
-        
+
         public override double ShouldAccept()
         {
             if (!Opponent.MeetsRequirements(BaseRequirements.All))
