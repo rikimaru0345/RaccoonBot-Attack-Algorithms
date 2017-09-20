@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SnipeDeploy", "SnipeDeploy\SnipeDeploy.csproj", "{9A17BA73-C96F-422D-B1DC-ADBF6338984C}"
 EndProject
@@ -33,7 +33,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartAirDeploy", "SmartAirD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GoblinKnifeDeploy", "GoblinKnifeDeploy\GoblinKnifeDeploy.csproj", "{CE82A761-F9FE-4B67-944B-78438D2100DB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartFourFingersDeploy", "Smart4Fingers\SmartFourFingersDeploy.csproj", "{62A1F567-A804-400F-8A0A-F9E6D2F14803}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartFourFingersDeploy", "SmartFourFingersDeploy\SmartFourFingersDeploy.csproj", "{62A1F567-A804-400F-8A0A-F9E6D2F14803}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -146,5 +146,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4ABC0560-D430-4925-BBE1-4B8C47DEB23C}
 	EndGlobalSection
 EndGlobal
