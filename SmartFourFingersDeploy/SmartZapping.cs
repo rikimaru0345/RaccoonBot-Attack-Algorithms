@@ -2,6 +2,7 @@
 using System.Linq;
 using CoC_Bot.API;
 using CoC_Bot.API.Buildings;
+using System.Threading;
 
 namespace SmartFourFingersDeploy
 {
@@ -17,7 +18,7 @@ namespace SmartFourFingersDeploy
         /// <param name="drillLevel">minimum drill level to zap (user defined)</param>
         /// <param name="spells">available spells in unitsbar</param>
         /// <returns>deploy lighting on drills</returns>
-        public static IEnumerable<int> SmartZap(int deAmount, int drillLevel, List<DeployElement> spells)
+        public static IEnumerable<int> SmartZap(int deAmount, int drillLevel, List<DeployElement> spells, int useEqOnDrills)
         {
             Log.Info($"{SmartFourFingersDeploy.AttackName} Smart Zap Drills module");
             bool zapDrill = true;
@@ -43,79 +44,95 @@ namespace SmartFourFingersDeploy
 
             if (zapDrill)
             {
-                var opponent = new Opponent(0);
-                var availableDE = opponent.GetAvailableLoot(false).DarkElixir;
-                var availableDEAfterZap = 0;
+                try
+                {
+                    var opponent = new Opponent(0);
+                    var availableDE = opponent.GetAvailableLoot(false).DarkElixir;
+                    var availableDEAfterZap = 0;
 
-                if (availableDE < deAmount)
-                {
-                    Log.Warning($"{SmartFourFingersDeploy.AttackName} Smart Zap Drills this base only has {availableDE} DE .. it doesn't match the requirements ({deAmount})");
-                }
-                else
-                {
-                    // Zap each drill only twice beacuse (level 4 lighting will got 90% DE from max drill level)
-                    for (var j = 1; j <= 2; j++)
+                    if (availableDE < deAmount)
                     {
-                        var drills = availableDrills;
-                        for (var i = 0; i < drills.Count(); i++)
+                        Log.Warning($"{SmartFourFingersDeploy.AttackName} Smart Zap Drills this base only has {availableDE} DE .. it doesn't match the requirements ({deAmount})");
+                    }
+                    else
+                    {
+                        // Zap each drill only twice beacuse (level 4 lighting will got 90% DE from max drill level)
+                        for (var j = 1; j <= 2; j++)
                         {
-                            if (drills[i] != null && zapCount > 0)
+                            var drills = availableDrills;
+                            for (var i = 0; i < drills.Count(); i++)
                             {
-                                // Get location of each drill
-                                var point = drills[i].Location.GetCenter();
-
-                                // If we have our own lighting we will drop it first .. if we don't, use CC "beacuse IsClanSpell not working if only CC spell"
-                                var lighting = zap.FirstOrDefault().Count > 0 ? zap.FirstOrDefault() : zap.LastOrDefault();
-
-                                foreach (var t in Deploy.AtPoint(lighting, point, 1))
-                                    yield return t;
-
-                                yield return 8000;
-
-                                zapCount--;
-                                if (zapCount > 0)
+                                if (drills[i] != null && zapCount > 0)
                                 {
-                                    availableDEAfterZap = opponent.GetAvailableLoot(false).DarkElixir;
-                                    if (availableDE - availableDEAfterZap < deAmount)
-                                    {
-                                        Log.Warning($"[Smart Zap] gain only {availableDE - availableDEAfterZap} DE from this drill .");
-                                        Log.Warning("[Smart Zap] you set the minimum to {deAmount} .. will not zap this drill again.");
+                                    // Get location of each drill
+                                    var point = drills[i].Location.GetCenter();
 
-                                        drills[i] = null;
+                                    // If we have our own lighting we will drop it first .. if we don't, use CC "beacuse IsClanSpell not working if only CC spell"
+                                    var lighting = zap.FirstOrDefault().Count > 0 ? zap.FirstOrDefault() : zap.LastOrDefault();
+
+                                    foreach (var t in Deploy.AtPoint(lighting, point, 1))
+                                        Thread.Sleep(t);
+
+                                    Thread.Sleep(8000);
+
+                                    zapCount--;
+                                    if (zapCount > 0)
+                                    {
+                                        availableDEAfterZap = opponent.GetAvailableLoot(false).DarkElixir;
+                                        if (availableDE - availableDEAfterZap < deAmount)
+                                        {
+                                            Log.Warning($"[Smart Zap] gain only {availableDE - availableDEAfterZap} DE from this drill .");
+                                            Log.Warning("[Smart Zap] you set the minimum to {deAmount} .. will not zap this drill again.");
+
+                                            drills[i] = null;
+                                        }
+                                        else
+                                        {
+                                            Log.Info($"[Smart Zap] gain {availableDE - availableDEAfterZap} DE from this drill");
+                                            availableDE = availableDEAfterZap;
+                                        }
+
+                                        // Check if drill was destroyed
+                                        // And we ar on the first cycle
+                                        if (j == 1 && drills[i] != null)
+                                        {
+                                            foreach (var t in getDestroyedDrills(point))
+                                                Thread.Sleep(t);
+
+                                            if (isDestroyed)
+                                                drills[i] = null;
+                                        }
                                     }
                                     else
-                                    {
-                                        Log.Info($"[Smart Zap] gain {availableDE - availableDEAfterZap} DE from this drill");
-                                        availableDE = availableDEAfterZap;
-                                    }
-
-                                    // Check if drill was destroyed
-                                    // And we ar on the first cycle
-                                    if (j == 1 && drills[i] != null) 
-                                    {
-                                        foreach (var t in getDestroyedDrills(point))
-                                            yield return t;
-
-                                        if (isDestroyed)
-                                            drills[i] = null;
-                                    }
+                                        break;
                                 }
-                                else
-                                    break;
                             }
-                        }
-                        // End if you don't have lighting spells
-                        if (zapCount <= 0)
-                            break;
-                        // End if all drills is null
-                        if (drills.Count() == drills.Where(d => d == null).Count())
-                        {
-                            Log.Warning($"[Smart Zap] no other drills to zap");
-                            break;
+                            // End if you don't have lighting spells
+                            if (zapCount <= 0)
+                                break;
+                            // End if all drills is null
+                            if (drills.Count() == drills.Where(d => d == null).Count())
+                            {
+                                Log.Warning($"[Smart Zap] no other drills to zap");
+                                break;
+                            }
                         }
                     }
                 }
+                catch
+                {
+                    Log.Error("[Smart Zap] Can't read oppoent current loot");
+                    Log.Warning("[Smart Zap] Will end battle and return home.");
+                    yield break;
+                }
             }
+
+            // Use EQ on Drills
+            if (useEqOnDrills == 1)
+                foreach (var t in UseEQOnDrills(drillLevel, spells))
+                    yield return t;
+
+            yield break;
         }
 
         /// <summary>
@@ -143,7 +160,7 @@ namespace SmartFourFingersDeploy
             isDestroyed = false;
             Log.Info($"[Smart Zap] Check if this drill is destroyed ...");
             var drills = DarkElixirDrill.Find(CacheBehavior.ForceScan).Where(d => d.Location.GetCenter().DistanceSq(point) <= 1);
-            for (var i = 1; i <= 3; i++)
+            for (var i = 1; i <= 4; i++)
             {
                 yield return 1000;
                 var reCountDrills = DarkElixirDrill.Find(CacheBehavior.ForceScan).Where(d => d.Location.GetCenter().DistanceSq(point) <= 1);
@@ -172,10 +189,11 @@ namespace SmartFourFingersDeploy
             if (EQCount > 0)
             {
                 Log.Info($"{SmartFourFingersDeploy.AttackName} start use EQ on drills");
-                var drills = DarkElixirDrill.Find(CacheBehavior.ForceScan, drillLevel);
-                if (drills.Any())
+                getDrills(drillLevel);
+                
+                if (availableDrills.Any())
                 {
-                    foreach (var d in drills)
+                    foreach (var d in availableDrills)
                     {
                         var eq = EQSpell.FirstOrDefault()?.Count > 0 ? EQSpell.FirstOrDefault() : EQSpell.LastOrDefault();
                         if (eq.Count > 0)
@@ -190,26 +208,6 @@ namespace SmartFourFingersDeploy
             }
             else
                 Log.Warning($"{SmartFourFingersDeploy.AttackName} no EarthQuake spells found to use on drills");
-        }
-
-        /// <summary>
-        /// End battle after user defined secs
-        /// </summary>
-        /// <param name="endBattleTime">secs to end battle after .. NOTE: 0 = don't end battle</param>
-        /// <returns></returns>
-        public static IEnumerable<int> EndBattle(int endBattleTime)
-        {
-            if (endBattleTime == 0)
-                yield break;
-
-            Log.Info($"end battle after {endBattleTime} sec");
-
-            for (var i = endBattleTime; i > 0; i--)
-            {
-                Log.Info($"{SmartFourFingersDeploy.AttackName} end battle after {i} sec");
-                yield return 1000;
-            }
-            Attack.Surrender();
         }
     }
 }
