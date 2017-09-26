@@ -4,7 +4,6 @@ using System.Linq;
 using CoC_Bot.API;
 using CustomAlgorithmSettings;
 using System.Reflection;
-using CoC_Bot.Modules.AttackAlgorithms;
 using CoC_Bot.Modules.Helpers;
 
 [assembly: Addon("SmartFourFingersDeploy", "Four Fingers Deploy with advanced settings", "CobraTST")]
@@ -162,7 +161,7 @@ namespace SmartFourFingersDeploy
         {
             // Set start battle time.
             startTime = DateTime.Now;
-
+            
             int waveLimit = UserSettings.WaveSize;
             int waveDelay = (int)(UserSettings.WaveDelay * 1000);
             int heroesIndex = -1;
@@ -279,9 +278,32 @@ namespace SmartFourFingersDeploy
                 Deploy.WatchHeroes(heroes, 5000);
             }
 
-            // Call both finalize attack and force zap.
-            foreach (var entry in this.FinalizeAttack(units).Zip(ForceZap(), (a, b) => Math.Min(a, b)))
-                yield return entry;
+            // Call FinalizeAttack and ForceZap at the same time
+            var finalize = this.FinalizeAttack(units).GetEnumerator();
+            var force = ForceZap().GetEnumerator();
+
+            var firstEnumMoreItems = finalize.MoveNext();
+            var secondEnumMoreItems = force.MoveNext();
+
+            // Start both FinalizeAttack and ForceZap
+            while (firstEnumMoreItems && secondEnumMoreItems)
+            {
+                firstEnumMoreItems = finalize.MoveNext();
+                secondEnumMoreItems = force.MoveNext();
+                yield return 200;
+            }
+            // Complete ForceZap if FinalizeAttack finished
+            while (!firstEnumMoreItems && secondEnumMoreItems)
+            {
+                secondEnumMoreItems = force.MoveNext();
+                yield return 200;
+            }
+            // Complete FinalizeAttack if ForceZap finished
+            while (!secondEnumMoreItems && firstEnumMoreItems)
+            {
+                firstEnumMoreItems = finalize.MoveNext();
+                yield return 200;
+            }
         }
 
         /// <summary>
@@ -293,6 +315,8 @@ namespace SmartFourFingersDeploy
             if (UserSettings.ZapDarkElixirDrills)
             {
                 Log.Info("[Force Zap] Waiting for Lightning drills to be finished");
+                Log.Debug($"[Force Zap] Start time is {startTime.Hour}:{startTime.Minute}:{startTime.Second}");
+                
                 while (isZapped == false)
                 {
                     var timeDiff = DateTime.Now.Subtract(startTime);
@@ -300,35 +324,43 @@ namespace SmartFourFingersDeploy
                     // Call ZapDarkElixirDrills if timeDiff > 2 mins and half (150 secs).
                     if (timeDiff.TotalSeconds > 140)
                     {
-                        Log.Warning("[Force Zap] battle will ended before zapping drills ..");
-                        Log.Info("[Force Zap] Force zap dark drills");
+                        Log.Warning("[Force Zap] Force zap dark drills befor battle ended !!");
                         foreach (var t in ZapDarkElixirDrills())
                             yield return (t);
                     }
                     else
-                    {
-                        yield return 200;
-                    }
+                        yield return 800;
                 }
             }
         }
+
+        /// <summary>
+        /// Override default ZapDarlElixirDrills with SmartZap if user select that.
+        /// </summary>
+        /// <returns></returns>
         public override IEnumerable<int> ZapDarkElixirDrills()
         {
-            isZapped = true;
-            if (GetCurrentSetting("Smart Zap Drills") == 1)
+            if(!isZapped)
             {
-                var minDEAmount = GetCurrentSetting("Min Dark Elixir per Zap");
-                var minDEDrillLevel = UserSettings.MinDarkElixirDrillLevel;
-                var spells = Deploy.GetTroops().Extract(u => u.ElementType == DeployElementType.Spell);
+                if (GetCurrentSetting("Smart Zap Drills") == 1)
+                {
+                    // Call Smart zap method
+                    var minDEAmount = GetCurrentSetting("Min Dark Elixir per Zap");
+                    var minDEDrillLevel = UserSettings.MinDarkElixirDrillLevel;
+                    var spells = Deploy.GetTroops().Extract(u => u.ElementType == DeployElementType.Spell);
 
-                foreach (var t in SmartZapping.SmartZap(minDEAmount, minDEDrillLevel, spells, GetCurrentSetting("Use EarthQuake spell on drills"))) 
-                    yield return t;
+                    foreach (var t in SmartZapping.SmartZap(minDEAmount, minDEDrillLevel, spells, GetCurrentSetting("Use EarthQuake spell on drills")))
+                        yield return t;
+                }
+                else
+                {
+                    // Call the default Zap drills method.
+                    foreach (var t in base.ZapDarkElixirDrills())
+                        yield return (t);
+                }
             }
-            else
-            {
-                foreach (var t in base.ZapDarkElixirDrills())
-                    yield return (t);
-            }
+            
+            isZapped = true;
         }
 
         public override double ShouldAccept()
