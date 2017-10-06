@@ -262,7 +262,8 @@ namespace AllInOnePushDeploy
                 );
 
                 AllInOnePushDeploy.QWHealer = new PointFT(GameGrid.DeployExtents.MaxX, AllInOnePushDeploy.FirstFunnellingPoint.Y);
-                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 2, AllInOnePushDeploy.FirstFunnellingPoint.Y);
+                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 3, AllInOnePushDeploy.FirstFunnellingPoint.Y - 1);
+                AllInOnePushDeploy.SecondFunnellingRagePoint = new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 3, AllInOnePushDeploy.SecondFunnellingPoint.Y + 1);
             }
 
             else if (AllInOnePushDeploy.Origin.X < AllInOnePushDeploy.Core.X)
@@ -344,7 +345,8 @@ namespace AllInOnePushDeploy
                 );
 
                 AllInOnePushDeploy.QWHealer = new PointFT(GameGrid.DeployExtents.MinX, AllInOnePushDeploy.FirstFunnellingPoint.Y);
-                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 2, AllInOnePushDeploy.FirstFunnellingPoint.Y);
+                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 3, AllInOnePushDeploy.FirstFunnellingPoint.Y - 1);
+                AllInOnePushDeploy.SecondFunnellingRagePoint = new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 3, AllInOnePushDeploy.SecondFunnellingPoint.Y + 1);
             }
 
             else if (AllInOnePushDeploy.Origin.Y > AllInOnePushDeploy.Core.Y)
@@ -428,7 +430,8 @@ namespace AllInOnePushDeploy
                 );
 
                 AllInOnePushDeploy.QWHealer = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, GameGrid.DeployExtents.MaxY);
-                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y - 2);
+                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 1, AllInOnePushDeploy.FirstFunnellingPoint.Y - 3);
+                AllInOnePushDeploy.SecondFunnellingRagePoint = new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 1, AllInOnePushDeploy.SecondFunnellingPoint.Y - 3);
             }
 
             else // (orgin.Y < core.Y)
@@ -527,9 +530,11 @@ namespace AllInOnePushDeploy
                     );
 
                     AllInOnePushDeploy.QWHealer = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, GameGrid.DeployExtents.MinY);
-                    AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y + 1);
+                    AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 1, AllInOnePushDeploy.FirstFunnellingPoint.Y + 3);
+                    AllInOnePushDeploy.SecondFunnellingRagePoint = new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 1, AllInOnePushDeploy.SecondFunnellingPoint.Y + 3);
                 }
             }
+            AllInOnePushDeploy.SecondJumpPoint = AllInOnePushDeploy.EqPoint;
         }
 
         /// <summary>

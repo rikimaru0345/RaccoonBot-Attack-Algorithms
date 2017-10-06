@@ -32,6 +32,7 @@ namespace AllInOnePushDeploy
         public static PointFT EqPoint { get; set; }
         public static PointFT QWHealer { get; set; }
         public static PointFT QWRagePoint { get; set; }
+        public static PointFT SecondFunnellingRagePoint { get; set; }
 
         public static Tuple<PointFT, PointFT> AttackLine { get; set; }
         public static Tuple<PointFT, PointFT> FirstHasteLine { get; set; }
@@ -44,6 +45,7 @@ namespace AllInOnePushDeploy
         public static int HealerOnQWSettings { get; set; }
         public static int RageOnQWSettings { get; set; }
         public static int ShiftSpells { get; set; }
+        public static int RageFunnelling { get; set; }
 
         public static bool IsAirAttack { get; set; }
         public static List<int> CustomOrderList { get; set; }
@@ -152,12 +154,19 @@ namespace AllInOnePushDeploy
             useCCAs.PossibleValues.Add(new SettingOption("Giants (deploy before normal troops)", 2));
             settings.DefineSetting(useCCAs);
 
+            // Shift spell location from(-5 to 5) tiles.
             var ShiftSpells = new AlgorithmSetting("Shift Spells In(+) and Out(-)", "Shift spells to inward or upward", 0, SettingType.ActiveAndDead)
             {
                 MinValue = -5,
                 MaxValue = 5
             };
             settings.DefineSetting(ShiftSpells);
+            
+            // Use Rage on funnelling troops.
+            var UseRageOnFunnelling = new AlgorithmSetting("Use Rage On Funnelling Troops", "Drop Rage on the funnelling troops To help fast funnelling", 0, SettingType.ActiveAndDead);
+            UseRageOnFunnelling.PossibleValues.Add(new SettingOption("Off", 0));
+            UseRageOnFunnelling.PossibleValues.Add(new SettingOption("On", 1));
+            settings.DefineSetting(UseRageOnFunnelling);
 
             var customDeployOrder = new AlgorithmSetting("use custom deploy order", "Change the deploying troops order, the default order is: 1-Golems if more than 1, 2- funnling, 3-giants or one golem, 4-heroes, 5-wallBreakers, 6-Normal troops", 0, SettingType.Global);
             customDeployOrder.PossibleValues.Add(new SettingOption("Off", 0));
@@ -271,6 +280,7 @@ namespace AllInOnePushDeploy
             HealerOnQWSettings = GetCurrentSetting("Number of healers to use on Queen");
             RageOnQWSettings = GetCurrentSetting("Drop 1 rage in the first of the QW");
             ShiftSpells = GetCurrentSetting("Shift Spells In(+) and Out(-)");
+            RageFunnelling = GetCurrentSetting("Use Rage On Funnelling Troops");
             int customOrder = GetCurrentSetting("use custom deploy order");
             Debug = GetCurrentSetting("Debug Mode") == 1 ? true : false;
 

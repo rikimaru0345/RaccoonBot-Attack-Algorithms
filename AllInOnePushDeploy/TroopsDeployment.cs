@@ -68,6 +68,7 @@ namespace AllInOnePushDeploy
                     yield return s;
                 foreach (var s in DeploymentMethods.DeployWB())
                     yield return s;
+
                 foreach (var s in DeploymentMethods.DeployNormalTroops())
                     yield return s;
             }
@@ -80,8 +81,6 @@ namespace AllInOnePushDeploy
             }
 
             // Deploy spells
-            foreach (var s in DeploymentMethods.DeployJump())
-                yield return s;
 
             foreach (var s in DeploymentMethods.DeploySpell(DeploymentMethods.rageSpell, AllInOnePushDeploy.FirstRagePoint))
                 yield return s;
@@ -92,9 +91,15 @@ namespace AllInOnePushDeploy
             {
                 foreach (var s in DeploymentMethods.DeploySpell(DeploymentMethods.hasteSpell, AllInOnePushDeploy.FirstHealPoint))
                     yield return s;
-            }else
+            }
+            else if(DeploymentMethods.healSpell.Sum(u => u.Count) > 0)
             {
                 foreach (var s in DeploymentMethods.DeploySpell(DeploymentMethods.healSpell, AllInOnePushDeploy.FirstHealPoint))
+                    yield return s;
+            }
+            else
+            {
+                foreach (var s in DeploymentMethods.DeploySpell(DeploymentMethods.rageSpell, AllInOnePushDeploy.FirstHealPoint))
                     yield return s;
             }
 
@@ -171,6 +176,7 @@ namespace AllInOnePushDeploy
             DeploymentMethods.hasteSpell = DeploymentMethods.spells.Extract(u => u.Id == DeployId.Haste);
             DeploymentMethods.rageSpell = DeploymentMethods.spells.Extract(u => u.Id == DeployId.Rage);
             DeploymentMethods.freezeSpell = DeploymentMethods.spells.ExtractOne(DeployId.Freeze);
+            DeploymentMethods.cloneSpell = DeploymentMethods.spells.ExtractOne(DeployId.Clone);
 
             DeploymentMethods.clanCastle = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.ClanCastle);
 
@@ -279,39 +285,49 @@ namespace AllInOnePushDeploy
             var line = AllInOnePushDeploy.FirstHasteLine;
 
             // Todo: deploy rages for TH8, 2 on the first line then 1 on the second line.
-
-            if (firstSpellUnit?.Count > 0)
+            if(DeploymentMethods.dragonAttack)
             {
+                yield return 4500;
+
                 var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
-                foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 250))
+                foreach (var t in Deploy.AlongLine(firstSpellUnit, AllInOnePushDeploy.FirstRageLine.Item1, line.Item2, count, count, 250))
                     yield return t;
-
-                line = AllInOnePushDeploy.FirstRageLine;
-            }
-
-            foreach (var t in DeploymentMethods.DeployMinions())
-                yield return t;
-
-            yield return 4500;
-
-            if (secondSpellUnit?.Count > 0)
-            {
-                var count = secondSpellUnit.Count >= 3 ? 3 : secondSpellUnit.Count;
-                foreach (var t in Deploy.AlongLine(secondSpellUnit, line.Item1, line.Item2, count, count, 250))
-                    yield return t;
-
-                line = AllInOnePushDeploy.SecondHasteLine;
             }
             else
             {
-                if (firstSpell?.Sum(u => u.Count) > 0)
+                if (firstSpellUnit?.Count > 0)
                 {
-                    firstSpellUnit = firstSpell.FirstOrDefault().Count > 0 ? firstSpell.FirstOrDefault() : firstSpell.LastOrDefault();
                     var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
                     foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 250))
                         yield return t;
 
+                    line = AllInOnePushDeploy.FirstRageLine;
+                }
+
+                foreach (var t in DeploymentMethods.DeployMinions())
+                    yield return t;
+
+                yield return 4500;
+
+                if (secondSpellUnit?.Count > 0)
+                {
+                    var count = secondSpellUnit.Count >= 3 ? 3 : secondSpellUnit.Count;
+                    foreach (var t in Deploy.AlongLine(secondSpellUnit, line.Item1, line.Item2, count, count, 250))
+                        yield return t;
+
                     line = AllInOnePushDeploy.SecondHasteLine;
+                }
+                else
+                {
+                    if (firstSpell?.Sum(u => u.Count) > 0)
+                    {
+                        firstSpellUnit = firstSpell.FirstOrDefault().Count > 0 ? firstSpell.FirstOrDefault() : firstSpell.LastOrDefault();
+                        var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
+                        foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 250))
+                            yield return t;
+
+                        line = AllInOnePushDeploy.SecondHasteLine;
+                    }
                 }
             }
 
@@ -336,6 +352,8 @@ namespace AllInOnePushDeploy
                 DeploymentMethods.warden.Select();
             }
 
+            foreach (var t in Deploy.AlongLine(DeploymentMethods.cloneSpell, AllInOnePushDeploy.FirstRageLine.Item1, AllInOnePushDeploy.FirstRageLine.Item2, 1, 1)) 
+                yield return t;
             yield return 4000;
 
             if (firstSpell?.Sum(u => u.Count) > 0)
