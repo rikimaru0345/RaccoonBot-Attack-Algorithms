@@ -5,6 +5,8 @@ using CoC_Bot.API;
 using CustomAlgorithmSettings;
 using System.Reflection;
 using CoC_Bot.Modules.Helpers;
+using System.Drawing;
+using CoC_Bot.API.Buildings;
 
 [assembly: Addon("SmartFourFingersDeploy", "Four Fingers Deploy with advanced settings", "CobraTST")]
 namespace SmartFourFingersDeploy
@@ -16,6 +18,10 @@ namespace SmartFourFingersDeploy
         public const string AttackName = "[Smart 4 Fingers Deploy]";
         DateTime startTime;
         bool isZapped = false;
+        public static List<Tuple<PointFT, PointFT>> AttackLines;
+        public static List<int> TargetsAtLine;
+        public static int TotalTargetsCount;
+        public static PointFT Core;
 
         public SmartFourFingersDeploy(Opponent opponent) : base(opponent)
         {
@@ -127,6 +133,12 @@ namespace SmartFourFingersDeploy
             deployHeroesAt.PossibleValues.Add(new SettingOption("DE Storage Side", 2));
             settings.DefineSetting(deployHeroesAt);
 
+            var DeployMode = new AlgorithmSetting("Set Troops Deployment", "Select how to deploy troops around the base.", 0, SettingType.Global);
+            DeployMode.PossibleValues.Add(new SettingOption("Equal Deployment (25% on 4 side)", 0));
+            DeployMode.PossibleValues.Add(new SettingOption("Collectors Side (target% on each side)", 1));
+            DeployMode.PossibleValues.Add(new SettingOption("Loot + Damage (deploy some on empty sides)", 2));
+            settings.DefineSetting(DeployMode);
+
             return settings;
         }
 
@@ -161,12 +173,15 @@ namespace SmartFourFingersDeploy
         {
             // Set start battle time.
             startTime = DateTime.Now;
-            
+
             int waveLimit = UserSettings.WaveSize;
             int waveDelay = (int)(UserSettings.WaveDelay * 1000);
             int heroesIndex = -1;
 
-            var core = new PointFT(-0.01f, 0.01f);
+            // Set the core point of the base
+            SmartFourFingersHelper.SetCore();
+
+            
 
             // Points to draw lines in deploy extends area.
             var topLeft = new PointFT((float)GameGrid.MaxX - 2, (float)GameGrid.DeployExtents.MaxY);
@@ -197,13 +212,15 @@ namespace SmartFourFingersDeploy
             var topLeftLine = new Tuple<PointFT, PointFT>(topLeft, leftTop);
 
             // List of the four attack lines in clocwise order
-            var attackLines = new List<Tuple<PointFT, PointFT>>
+            AttackLines = new List<Tuple<PointFT, PointFT>>
             {
-                topLeftLine,
                 topRightLine,
                 bottomRightLine,
-                bottomLeftLine
+                bottomLeftLine,
+                topLeftLine
             };
+
+            
 
             var deployHeroesAt = GetCurrentSetting("Deploy Heroes At");
 
@@ -225,7 +242,7 @@ namespace SmartFourFingersDeploy
             var nearestRedPointToTarget = GameGrid.RedPoints.OrderBy(p => p.DistanceSq(target)).FirstOrDefault();
             var nearestLinePoint = linesPointsList.OrderBy(p => p.DistanceSq(nearestRedPointToTarget)).FirstOrDefault();
 
-            heroesIndex = attackLines.FindIndex(u => (u.Item1.X == nearestLinePoint.X && u.Item1.Y == nearestLinePoint.Y) || (u.Item2.X == nearestLinePoint.X && u.Item2.Y == nearestLinePoint.Y));
+            heroesIndex = AttackLines.FindIndex(u => (u.Item1.X == nearestLinePoint.X && u.Item1.Y == nearestLinePoint.Y) || (u.Item2.X == nearestLinePoint.X && u.Item2.Y == nearestLinePoint.Y));
 
             var units = Deploy.GetTroops();
             var heroes = units.Extract(x => x.IsHero);
@@ -236,27 +253,42 @@ namespace SmartFourFingersDeploy
 
             // Set first attack line 
             // Start from the next line to user defined to end with user defined line
-            var line = attackLines.NextOf(attackLines[heroesIndex]);
-            var index = attackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
+            var line = AttackLines.NextOf(AttackLines[heroesIndex]);
+            var index = AttackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
+
+            var deploymentMode = GetCurrentSetting("Set Troops Deployment");
+
+            if (deploymentMode == 2)
+                AddFakeTargets();
+
+            var targetsCount = TargetsAtLine[index];
 
             Log.Info($"{AttackName} {Version} starts");
             // Start troops deployment on four sides.
             for (var i = 4; i >= 1; i--)
             {
+                Log.Info($"Targets at this side = {targetsCount} targets from total {TotalTargetsCount} targets");
                 foreach (var unit in units)
                 {
                     if (unit?.Count > 0)
                     {
-                        var count = unit.Count / i;
-                        var fingers = count < 8 ? count : 4;
+                        var count = deploymentMode == 0 ? unit.Count / i : (TotalTargetsCount > 0 ? unit.Count * targetsCount / TotalTargetsCount : 0);
+                        var housing = unit.UnitData.HousingSpace;
+                        var fingers = housing < 4 ? (count < 8 ? count : 4) : 1;
+                        
+                        Log.Info($"{AttackName} Deploy {count}x {unit.PrettyName}");
                         foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, fingers, 0, waveDelay))
                             yield return t;
                     }
                 }
-                if(i != 1)
+
+                if (i != 1) 
                 {
-                    line = attackLines.NextOf(attackLines[index]);
-                    index = attackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
+                    line = AttackLines.NextOf(AttackLines[index]);
+                    index = AttackLines.FindIndex(u => u.Item1.X == line.Item1.X && u.Item1.Y == line.Item1.Y);
+
+                    TotalTargetsCount -= targetsCount;
+                    targetsCount = TargetsAtLine[index];
                 }
             }
 
@@ -279,30 +311,52 @@ namespace SmartFourFingersDeploy
             }
 
             // Call FinalizeAttack and ForceZap at the same time
-            var finalize = this.FinalizeAttack(units).GetEnumerator();
-            var force = ForceZap().GetEnumerator();
+            var zapSpells = Deploy.GetTroops().Extract(u => u.ElementType == DeployElementType.Spell);
+            if (spells.Extract(u => u.Id == DeployId.Lightning).Sum(u => u.Count) > 0 ||
+                spells.Extract(u => u.Id == DeployId.Earthquake).Sum(u => u.Count) > 0)
+            {
+                var finalize = this.FinalizeAttack(units).GetEnumerator();
+                var force = ForceZap().GetEnumerator();
 
-            var firstEnumMoreItems = finalize.MoveNext();
-            var secondEnumMoreItems = force.MoveNext();
+                var firstEnumMoreItems = finalize.MoveNext();
+                var secondEnumMoreItems = force.MoveNext();
 
-            // Start both FinalizeAttack and ForceZap
-            while (firstEnumMoreItems && secondEnumMoreItems)
-            {
-                firstEnumMoreItems = finalize.MoveNext();
-                secondEnumMoreItems = force.MoveNext();
-                yield return 200;
+                // Start both FinalizeAttack and ForceZap
+                while (firstEnumMoreItems && secondEnumMoreItems)
+                {
+                    firstEnumMoreItems = finalize.MoveNext();
+                    secondEnumMoreItems = force.MoveNext();
+                    yield return 200;
+                }
+                // Complete ForceZap if FinalizeAttack finished
+                while (!firstEnumMoreItems && secondEnumMoreItems)
+                {
+                    secondEnumMoreItems = force.MoveNext();
+                    yield return 200;
+                }
+                // Complete FinalizeAttack if ForceZap finished
+                while (!secondEnumMoreItems && firstEnumMoreItems)
+                {
+                    firstEnumMoreItems = finalize.MoveNext();
+                    yield return 200;
+                }
             }
-            // Complete ForceZap if FinalizeAttack finished
-            while (!firstEnumMoreItems && secondEnumMoreItems)
+            else
+                yield break;
+        }
+
+        /// <summary>
+        /// Add fake targets on empty or low target sides to drop som troops on
+        /// </summary>
+        void AddFakeTargets()
+        {
+            for (var i = 0; i < TargetsAtLine.Count; i++)
             {
-                secondEnumMoreItems = force.MoveNext();
-                yield return 200;
-            }
-            // Complete FinalizeAttack if ForceZap finished
-            while (!secondEnumMoreItems && firstEnumMoreItems)
-            {
-                firstEnumMoreItems = finalize.MoveNext();
-                yield return 200;
+                if(TargetsAtLine[i] < 2)
+                {
+                    TotalTargetsCount += 2 - TargetsAtLine[i];
+                    TargetsAtLine[i] = 2;
+                }
             }
         }
 
@@ -364,10 +418,10 @@ namespace SmartFourFingersDeploy
         }
 
         public override double ShouldAccept()
-        {
+        {            
             if (!Opponent.MeetsRequirements(BaseRequirements.All))
                 return 0;
-            if (!Opponent.IsForcedAttack && GetCurrentSetting("Set Exposed Collecotors & Mines") == 1)
+            if (GetCurrentSetting("Set Exposed Collecotors & Mines") == 1)
             {
                 if (!SmartFourFingersHelper.IsBaseMinCollectorsAndMinesOutside(GetCurrentSetting("Acceptable Target Range"), GetCurrentSetting("Minimum Exposed Colloctors"), GetCurrentSetting("Minimum Exposed Mines"), AttackName, GetCurrentSetting("Debug Mode"))) 
                     return 0;
