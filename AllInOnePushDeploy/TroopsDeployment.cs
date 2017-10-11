@@ -87,14 +87,14 @@ namespace AllInOnePushDeploy
 
             yield return 2000;
 
-            if (DeploymentMethods.hasteSpell.Sum(u => u.Count) > 0)
-            {
-                foreach (var s in DeploymentMethods.DeploySpell(DeploymentMethods.hasteSpell, AllInOnePushDeploy.FirstHealPoint))
-                    yield return s;
-            }
-            else if(DeploymentMethods.healSpell.Sum(u => u.Count) > 0)
+            if (DeploymentMethods.healSpell.Sum(u => u.Count) > 0)
             {
                 foreach (var s in DeploymentMethods.DeploySpell(DeploymentMethods.healSpell, AllInOnePushDeploy.FirstHealPoint))
+                    yield return s;
+            }
+            else if(DeploymentMethods.hasteSpell.Sum(u => u.Count) > 0)
+            {
+                foreach (var s in DeploymentMethods.DeploySpell(DeploymentMethods.hasteSpell, AllInOnePushDeploy.FirstHealPoint))
                     yield return s;
             }
             else

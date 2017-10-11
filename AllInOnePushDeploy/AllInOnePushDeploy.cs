@@ -46,6 +46,7 @@ namespace AllInOnePushDeploy
         public static int RageOnQWSettings { get; set; }
         public static int ShiftSpells { get; set; }
         public static int RageFunnelling { get; set; }
+        public static int AvoidBottomRight { get; set; }
 
         public static bool IsAirAttack { get; set; }
         public static List<int> CustomOrderList { get; set; }
@@ -121,6 +122,11 @@ namespace AllInOnePushDeploy
             debugMode.PossibleValues.Add(new SettingOption("Off", 0));
             debugMode.PossibleValues.Add(new SettingOption("On", 1));
             settings.DefineSetting(debugMode);
+
+            var avoidBRSide = new AlgorithmSetting("Avoid Bottom Right Side", "Force algorithm to attack from next closest side to target instead of bottom right side", 0, SettingType.Global);
+            avoidBRSide.PossibleValues.Add(new SettingOption("Off", 0));
+            avoidBRSide.PossibleValues.Add(new SettingOption("On", 1));
+            settings.DefineSetting(avoidBRSide);
 
             var setTargetTo = new AlgorithmSetting("Select Your Target", "", 0, SettingType.ActiveAndDead);
             setTargetTo.PossibleValues.Add(new SettingOption("TownHall", 0));
@@ -281,6 +287,7 @@ namespace AllInOnePushDeploy
             RageOnQWSettings = GetCurrentSetting("Drop 1 rage in the first of the QW");
             ShiftSpells = GetCurrentSetting("Shift Spells In(+) and Out(-)");
             RageFunnelling = GetCurrentSetting("Use Rage On Funnelling Troops");
+            AvoidBottomRight = GetCurrentSetting("Avoid Bottom Right Side");
             int customOrder = GetCurrentSetting("use custom deploy order");
             Debug = GetCurrentSetting("Debug Mode") == 1 ? true : false;
 
@@ -300,8 +307,8 @@ namespace AllInOnePushDeploy
                 new PointFT(Core.X, GameGrid.DeployExtents.MaxY),
                 new PointFT(Core.X, GameGrid.DeployExtents.MinY)
             };
-            Origin = originPoints.OrderBy(point => point.DistanceSq(Target)).First();
 
+            Origin = originPoints.OrderBy(point => point.DistanceSq(Target)).First();
 
             // Set deploy elements
             deployElements = Deploy.GetTroops(useCache: false);

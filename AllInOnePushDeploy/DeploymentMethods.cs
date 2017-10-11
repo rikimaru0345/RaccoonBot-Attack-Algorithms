@@ -181,6 +181,11 @@ namespace AllInOnePushDeploy
                     foreach (var t in DeploySpell(rageSpell, AllInOnePushDeploy.SecondFunnellingRagePoint))
                         yield return t;
                 }
+                if (wizard?.Count > 0)
+                {
+                    foreach (var t in Deploy.AtPoint(wizard, AllInOnePushDeploy.SecondFunnellingPoint))
+                        yield return t;
+                }
                 yield return 5000;
             }
             else
@@ -203,7 +208,7 @@ namespace AllInOnePushDeploy
 
                     if (healer?.Count >= 2)
                     {
-                        healerFunnlCount = healer.Count / 3;
+                        healerFunnlCount = healer.Count / 2;
                         foreach (var t in Deploy.AtPoint(healer, AllInOnePushDeploy.FirstFunnellingPoint, healerFunnlCount))
                             yield return t;
                     }
@@ -231,6 +236,13 @@ namespace AllInOnePushDeploy
                             yield return t;
 
                         foreach (var t in DeploySpell(rageSpell, AllInOnePushDeploy.SecondFunnellingRagePoint))
+                            yield return t;
+                    }
+                    if (wizard?.Count > 0)
+                    {
+                        foreach (var t in Deploy.AtPoint(wizard, AllInOnePushDeploy.FirstFunnellingPoint))
+                            yield return t;
+                        foreach (var t in Deploy.AtPoint(wizard, AllInOnePushDeploy.SecondFunnellingPoint))
                             yield return t;
                     }
                     yield return new Random().Next(10000, 13000);
@@ -296,8 +308,13 @@ namespace AllInOnePushDeploy
             if (wizard?.Count > 0)
             {
                 var count = wizard.Count / waves;
-                foreach (var t in Deploy.AlongLine(wizard, AllInOnePushDeploy.FirstFunnellingPoint, AllInOnePushDeploy.SecondFunnellingPoint, count, 4))
-                    yield return t;
+
+                if(bowlerFunnelCount > 0)
+                    foreach (var t in Deploy.AtPoint(wizard, AllInOnePushDeploy.Origin, count))
+                        yield return t;
+                else
+                    foreach (var t in Deploy.AlongLine(wizard, AllInOnePushDeploy.FirstFunnellingPoint, AllInOnePushDeploy.SecondFunnellingPoint, count, 4))
+                        yield return t;
             }
         }
 
@@ -324,7 +341,8 @@ namespace AllInOnePushDeploy
 
         public static IEnumerable<int> DeployHeroes()
         {
-            yield return new Random().Next(600, 1000);
+            foreach (var s in DeployJump())
+                yield return s;
 
             Log.Info($"[{AllInOnePushDeploy.AttackName}] droping heroes");
             if (heroes.Any())
@@ -355,9 +373,6 @@ namespace AllInOnePushDeploy
 
         public static IEnumerable<int> DeployNormalTroops()
         {
-            foreach (var s in DeployJump())
-                yield return s;
-
             Log.Info($"[{AllInOnePushDeploy.AttackName}] deploy rest of troops");
 
             if (witch?.Count > 4)
@@ -463,13 +478,10 @@ namespace AllInOnePushDeploy
             if (useJump && jumpSpell.Sum(u => u.Count) > 0)
             {
                 Log.Info($"[{AllInOnePushDeploy.AttackName}] deploy jump next to Townhall");
-                foreach (var unit in jumpSpell)
-                {
-                    unit.Select();
-                    foreach (var t in Deploy.AtPoint(unit, AllInOnePushDeploy.SecondJumpPoint))
-                        yield return t;
-                    break;
-                }
+
+                var unit = jumpSpell.FirstOrDefault().Count > 0 ? jumpSpell.FirstOrDefault() : jumpSpell.LastOrDefault();
+                foreach (var t in Deploy.AtPoint(unit, AllInOnePushDeploy.SecondJumpPoint))
+                    yield return t;
             }
         }
 
