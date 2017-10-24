@@ -9,7 +9,7 @@ namespace AllInOnePushDeploy
     class DeploymentMethods
     {
         public static bool useJump, watchHeroes = false, watchQueen = false, isWarden = false, dragonAttack, babyLoon, lavaloonion;
-        public static DeployElement golem, giant, queen, bowler, witch, wizard, wallbreaker, healer, freezeSpell, clanCastle, warden, balloon, dragon, babyDragon, lava, minion, lightingSpell;
+        public static DeployElement golem, giant, queen, bowler, witch, wizard, wallbreaker, healer, freezeSpell, cloneSpell, clanCastle, warden, balloon, dragon, babyDragon, lava, minion, lightingSpell;
         public static List<DeployElement> rageSpell, healSpell, hasteSpell, jumpSpell, poison, eq, heroes, spells;
         static int bowlerFunnelCount, healerFunnlCount, witchFunnelCount;
 
@@ -18,6 +18,7 @@ namespace AllInOnePushDeploy
             var EQCount = eq?.Sum(u => u.Count);
             if (EQCount >= 4)
             {
+                useJump = false;
                 Log.Info($"[{AllInOnePushDeploy.AttackName}] Use earthquakes spells to open walls near target."); ;
                 foreach (var unit in eq)
                 {
@@ -105,6 +106,9 @@ namespace AllInOnePushDeploy
             }
             else
             {
+                if(golem?.Count > 0 && healer?.Count == null)
+                    foreach (var t in Deploy.AtPoint(golem, AllInOnePushDeploy.Origin))
+                        yield return t;
                 if (AllInOnePushDeploy.ClanCastleSettings == 1)
                 {
                     if(clanCastle?.Count > 0)
@@ -118,6 +122,7 @@ namespace AllInOnePushDeploy
 
         public static IEnumerable<int> DeployFunnlling()
         {
+            var totalRageCount = rageSpell.Sum(u => u.Count);
             Log.Info($"[{AllInOnePushDeploy.AttackName}] deploy funnelling troops on sides");
 
             var QW = AllInOnePushDeploy.QWSettings == 1 && queen?.Count > 0 && healer?.Count >= AllInOnePushDeploy.HealerOnQWSettings ? true : false;
@@ -170,7 +175,17 @@ namespace AllInOnePushDeploy
                     foreach (var t in Deploy.AtPoint(healer, AllInOnePushDeploy.SecondFunnellingPoint, healer.Count))
                         yield return t;
                 }
-
+                yield return 1000;
+                if (AllInOnePushDeploy.RageFunnelling == 1 && totalRageCount >= 3)
+                {
+                    foreach (var t in DeploySpell(rageSpell, AllInOnePushDeploy.SecondFunnellingRagePoint))
+                        yield return t;
+                }
+                if (wizard?.Count > 0)
+                {
+                    foreach (var t in Deploy.AtPoint(wizard, AllInOnePushDeploy.SecondFunnellingPoint))
+                        yield return t;
+                }
                 yield return 5000;
             }
             else
@@ -193,7 +208,7 @@ namespace AllInOnePushDeploy
 
                     if (healer?.Count >= 2)
                     {
-                        healerFunnlCount = healer.Count <= 4 ? healer.Count / 2 : healer.Count / 3;
+                        healerFunnlCount = healer.Count / 2;
                         foreach (var t in Deploy.AtPoint(healer, AllInOnePushDeploy.FirstFunnellingPoint, healerFunnlCount))
                             yield return t;
                     }
@@ -215,15 +230,38 @@ namespace AllInOnePushDeploy
                             yield return t;
                     }
 
+                    if (AllInOnePushDeploy.RageFunnelling == 1 && totalRageCount >= 3)
+                    {
+                        foreach (var t in DeploySpell(rageSpell, AllInOnePushDeploy.QWRagePoint))
+                            yield return t;
+
+                        foreach (var t in DeploySpell(rageSpell, AllInOnePushDeploy.SecondFunnellingRagePoint))
+                            yield return t;
+                    }
+                    if (wizard?.Count > 0)
+                    {
+                        foreach (var t in Deploy.AtPoint(wizard, AllInOnePushDeploy.FirstFunnellingPoint))
+                            yield return t;
+                        foreach (var t in Deploy.AtPoint(wizard, AllInOnePushDeploy.SecondFunnellingPoint))
+                            yield return t;
+                    }
                     yield return new Random().Next(10000, 13000);
+                }
+                else
+                {
+                    if(wizard?.Count > 0 )
+                    {
+                        var waves = wizard.Count > 12 ? 2 : 1;
+                        foreach (var t in DeployWizard(waves))
+                            yield return t;
+                    }
                 }
             }
         }
 
         public static IEnumerable<int> DeployGiants()
         {
-
-            var jumpSpellCount = jumpSpell?.Sum(u => u.Count) > 0 ? jumpSpell.Sum(u => u.Count) : 0;
+            var jumpSpellCount = jumpSpell?.Sum(u => u.Count);
             if ((useJump && jumpSpellCount >= 2) || (!useJump && jumpSpellCount >= 1))
             {
                 foreach (var unit in jumpSpell)
@@ -270,8 +308,13 @@ namespace AllInOnePushDeploy
             if (wizard?.Count > 0)
             {
                 var count = wizard.Count / waves;
-                foreach (var t in Deploy.AlongLine(wizard, AllInOnePushDeploy.FirstFunnellingPoint, AllInOnePushDeploy.SecondFunnellingPoint, count, 4))
-                    yield return t;
+
+                if(bowlerFunnelCount > 0)
+                    foreach (var t in Deploy.AtPoint(wizard, AllInOnePushDeploy.Origin, count))
+                        yield return t;
+                else
+                    foreach (var t in Deploy.AlongLine(wizard, AllInOnePushDeploy.FirstFunnellingPoint, AllInOnePushDeploy.SecondFunnellingPoint, count, 4))
+                        yield return t;
             }
         }
 
@@ -298,7 +341,8 @@ namespace AllInOnePushDeploy
 
         public static IEnumerable<int> DeployHeroes()
         {
-            yield return new Random().Next(600, 1000);
+            foreach (var s in DeployJump())
+                yield return s;
 
             Log.Info($"[{AllInOnePushDeploy.AttackName}] droping heroes");
             if (heroes.Any())
@@ -364,6 +408,7 @@ namespace AllInOnePushDeploy
                     yield return t;
             }
 
+            AllInOnePushDeploy.deployElements.OrderForDeploy();
             foreach (var unit in AllInOnePushDeploy.deployElements)
             {
                 Log.Info($"[{AllInOnePushDeploy.AttackName}] deploy any remaining troops");
@@ -397,6 +442,7 @@ namespace AllInOnePushDeploy
             var spell = unusedTroops.Extract(DeployElementType.Spell);
             if (unusedTroops.Sum(u => u.Count) > 0)
             {
+                unusedTroops.OrderForDeploy();
                 foreach (var u in unusedTroops)
                 {
                     if (u?.Count > 0)
@@ -432,13 +478,10 @@ namespace AllInOnePushDeploy
             if (useJump && jumpSpell.Sum(u => u.Count) > 0)
             {
                 Log.Info($"[{AllInOnePushDeploy.AttackName}] deploy jump next to Townhall");
-                foreach (var unit in jumpSpell)
-                {
-                    unit.Select();
-                    foreach (var t in Deploy.AtPoint(unit, AllInOnePushDeploy.SecondJumpPoint))
-                        yield return t;
-                    break;
-                }
+
+                var unit = jumpSpell.FirstOrDefault().Count > 0 ? jumpSpell.FirstOrDefault() : jumpSpell.LastOrDefault();
+                foreach (var t in Deploy.AtPoint(unit, AllInOnePushDeploy.SecondJumpPoint))
+                    yield return t;
             }
         }
 
@@ -564,7 +607,7 @@ namespace AllInOnePushDeploy
             yield return dragonAttack ? 2000 : (babyLoon ? 500 : 0);
             if (balloon?.Count > 0)
             {
-                if (!dragonAttack)
+                if (!dragonAttack || balloon.Count > 10)
                 {
                     foreach (var t in Deploy.AlongLine(balloon, AllInOnePushDeploy.AttackLine.Item1, AllInOnePushDeploy.AttackLine.Item2, balloon.Count, 2))
                         yield return t;
@@ -602,7 +645,7 @@ namespace AllInOnePushDeploy
                         yield return t;
                 }
             }
-            else
+            else if(lava?.Count == 1)
             {
                 if (clanCastle?.Count > 0 && AllInOnePushDeploy.ClanCastleSettings > 0)
                 {

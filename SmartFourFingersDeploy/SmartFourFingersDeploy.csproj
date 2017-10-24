@@ -17,7 +17,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\..\sources\android\RaccoonBot_1.20.7.2604\RaccoonBot v1.20.7.2604\Addons\</OutputPath>
+    <OutputPath>..\..\..\sources\android\RaccoonBot_1.20.7.2627\RaccoonBot v1.20.7.2627\Addons\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
