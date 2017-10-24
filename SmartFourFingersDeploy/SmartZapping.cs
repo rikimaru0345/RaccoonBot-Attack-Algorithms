@@ -82,7 +82,7 @@ namespace SmartFourFingersDeploy
                                         if (availableDE - availableDEAfterZap < deAmount)
                                         {
                                             Log.Warning($"[Smart Zap] gain only {availableDE - availableDEAfterZap} DE from this drill .");
-                                            Log.Warning("[Smart Zap] you set the minimum to {deAmount} .. will not zap this drill again.");
+                                            Log.Warning($"[Smart Zap] you set the minimum to {deAmount} .. will not zap this drill again.");
 
                                             drills[i] = null;
                                         }
