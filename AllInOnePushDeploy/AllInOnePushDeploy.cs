@@ -353,6 +353,12 @@ namespace AllInOnePushDeploy
 
         public override double ShouldAccept()
         {
+            var avoidExposedAirDefense = 0;
+            if (avoidExposedAirDefense == 1)
+            {
+                if (AllInOnePushHelper.IsAirDefenseExposed())
+                    return 0;
+            }
             if (Opponent.MeetsRequirements(BaseRequirements.All))
                     return 1;
             return 0;

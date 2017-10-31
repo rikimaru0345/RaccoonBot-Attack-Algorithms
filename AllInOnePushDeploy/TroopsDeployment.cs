@@ -212,7 +212,7 @@ namespace AllInOnePushDeploy
                 {
                     foreach (var t in DeploymentMethods.AirFunnelling())
                         yield return t;
-
+                    
                     foreach (var t in DeploymentMethods.DeployBabyDragons())
                         yield return t;
 
@@ -221,6 +221,11 @@ namespace AllInOnePushDeploy
 
                     foreach (var t in DeploymentMethods.DeployLava())
                         yield return t;
+                    if (DeploymentMethods.clanCastle?.Count > 0)
+                    {
+                        foreach (var t in Deploy.AtPoint(DeploymentMethods.clanCastle, AllInOnePushDeploy.Origin))
+                            yield return t;
+                    }
                 }
                 else if(DeploymentMethods.dragonAttack)
                 {
@@ -249,12 +254,6 @@ namespace AllInOnePushDeploy
                         foreach (var t in Deploy.AtPoint(DeploymentMethods.clanCastle, AllInOnePushDeploy.Origin))
                             yield return t;
                     }
-
-                    foreach (var t in DeploymentMethods.DeployDragons())
-                        yield return t;
-
-                    foreach (var t in DeploymentMethods.DeployBabyDragons())
-                        yield return t;    
                 }  
             }
 
@@ -285,7 +284,7 @@ namespace AllInOnePushDeploy
             var line = AllInOnePushDeploy.FirstHasteLine;
 
             // Todo: deploy rages for TH8, 2 on the first line then 1 on the second line.
-            if(DeploymentMethods.dragonAttack)
+            if(DeploymentMethods.dragonAttack && DeploymentMethods.cloneSpell?.Count > 0)
             {
                 yield return 4500;
 
@@ -295,9 +294,12 @@ namespace AllInOnePushDeploy
             }
             else
             {
+                var BabySpells = DeploymentMethods.babyLoon && DeploymentMethods.hasteSpell?.Count < 3 && DeploymentMethods.cloneSpell?.Count > 0;
+
                 if (firstSpellUnit?.Count > 0)
                 {
                     var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
+                    count = BabySpells ? (count > 2 ? 2 : count) : count;
                     foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 250))
                         yield return t;
 
@@ -307,11 +309,36 @@ namespace AllInOnePushDeploy
                 foreach (var t in DeploymentMethods.DeployMinions())
                     yield return t;
 
-                yield return 4500;
+                yield return 3500;
+
+                if(DeploymentMethods.lavaloonion)
+                    foreach (var t in DeploymentMethods.AirFunnelling())
+                        yield return t;
+
+                yield return 1000;
+                if(BabySpells)
+                {
+                    if (DeploymentMethods.heroes.Any() && DeploymentMethods.queen?.Count > 0)
+                    {
+                        foreach (var hero in DeploymentMethods.heroes.Where(u => u.Count > 0))
+                        {
+                            foreach (var t in Deploy.AtPoint(hero, AllInOnePushDeploy.AttackLine.Item2))
+                                yield return t;
+                        }
+
+                        foreach (var t in Deploy.AtPoint(DeploymentMethods.queen, AllInOnePushDeploy.AttackLine.Item1))
+                            yield return t;
+                        DeploymentMethods.watchQueen = true;
+                        DeploymentMethods.watchHeroes = true;
+                    }
+                    foreach (var t in Deploy.AlongLine(DeploymentMethods.cloneSpell, AllInOnePushDeploy.FirstRageLine.Item1, AllInOnePushDeploy.FirstRageLine.Item2, 1, 1))
+                        yield return t;
+                }
 
                 if (secondSpellUnit?.Count > 0)
                 {
                     var count = secondSpellUnit.Count >= 3 ? 3 : secondSpellUnit.Count;
+                    count = BabySpells ? (count > 2 ? 2 : count) : count;
                     foreach (var t in Deploy.AlongLine(secondSpellUnit, line.Item1, line.Item2, count, count, 250))
                         yield return t;
 
@@ -323,6 +350,7 @@ namespace AllInOnePushDeploy
                     {
                         firstSpellUnit = firstSpell.FirstOrDefault().Count > 0 ? firstSpell.FirstOrDefault() : firstSpell.LastOrDefault();
                         var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
+                        count = BabySpells ? 2 : count;
                         foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 250))
                             yield return t;
 
@@ -352,17 +380,33 @@ namespace AllInOnePushDeploy
                 DeploymentMethods.warden.Select();
             }
 
-            foreach (var t in Deploy.AlongLine(DeploymentMethods.cloneSpell, AllInOnePushDeploy.FirstRageLine.Item1, AllInOnePushDeploy.FirstRageLine.Item2, 1, 1)) 
-                yield return t;
+            if (DeploymentMethods.cloneSpell?.Count > 0)
+                foreach (var t in Deploy.AlongLine(DeploymentMethods.cloneSpell, AllInOnePushDeploy.FirstRageLine.Item1, AllInOnePushDeploy.FirstRageLine.Item2, 1, 1)) 
+                    yield return t;
+
             yield return 4000;
 
             if (firstSpell?.Sum(u => u.Count) > 0)
             {
+                var changeLine = 0;
                 foreach (var unit in firstSpell)
                 {
                     var count = unit.Count >= 3 ? 3 : unit.Count;
-                    foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count, 250))
-                        yield return t;
+                    if(count == 1 && firstSpell?.Sum(u => u.Count) == 2)
+                    {
+                        if(changeLine == 0)
+                            foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, 2, 150))
+                                yield return t;
+                        if(changeLine == 1)
+                            foreach (var t in Deploy.AlongLine(unit, line.Item2, line.Item1, count, 2, 150))
+                                yield return t;
+                        changeLine = 1;
+                    }
+                    else
+                    {
+                        foreach (var t in Deploy.AlongLine(unit, line.Item1, line.Item2, count, count, 250))
+                            yield return t;
+                    }
                 }
 
                 line = AllInOnePushDeploy.SecondRageLine;
@@ -380,10 +424,18 @@ namespace AllInOnePushDeploy
 
             }
 
-            foreach (var t in DeploymentMethods.DeployWB())
-                yield return t;
 
             yield return 4000;
+
+            if (DeploymentMethods.lavaloonion)
+            {
+                foreach (var t in DeploymentMethods.DeployBabyDragons())
+                    yield return t;
+
+                foreach (var t in DeploymentMethods.DeployDragons())
+                    yield return t;
+            }
+                
 
             if (DeploymentMethods.heroes.Any())
             {
@@ -395,6 +447,11 @@ namespace AllInOnePushDeploy
                 Deploy.WatchHeroes(DeploymentMethods.heroes);
             }
 
+            if (DeploymentMethods.watchHeroes)
+                Deploy.WatchHeroes(DeploymentMethods.heroes);
+
+            foreach (var t in DeploymentMethods.DeployWB())
+                yield return t;
 
             if (DeploymentMethods.queen?.Count > 0)
             {
@@ -403,6 +460,8 @@ namespace AllInOnePushDeploy
                 Deploy.WatchHeroes(new List<DeployElement> { DeploymentMethods.queen });
             }
 
+            if(DeploymentMethods.watchQueen)
+                Deploy.WatchHeroes(new List<DeployElement> { DeploymentMethods.queen });
             foreach (var w in DeploymentMethods.DeployUnusedTroops())
                 yield return w;
         }

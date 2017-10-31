@@ -323,6 +323,12 @@ namespace AllInOnePushDeploy
             if (wallbreaker?.Count > 0)
             {
                 Log.Info($"[{AllInOnePushDeploy.AttackName}] droping wallBreakers");
+
+                foreach (var t in Deploy.AtPoint(wallbreaker, AllInOnePushDeploy.Origin, 1))
+                    yield return t;
+
+                yield return 800;
+
                 while (wallbreaker?.Count > 0)
                 {
                     var count = wallbreaker.Count;
@@ -569,8 +575,8 @@ namespace AllInOnePushDeploy
 
                 foreach (var t in Deploy.AtPoint(dragon, AllInOnePushDeploy.AttackLine.Item2))
                     yield return t;
-
-                yield return new Random().Next(8000, 9000);
+                if (!lavaloonion)
+                    yield return new Random().Next(8000, 9000);
             }
             else if (babyDragon?.Count > 0)
             {
@@ -579,8 +585,8 @@ namespace AllInOnePushDeploy
 
                 foreach (var t in Deploy.AtPoint(babyDragon, AllInOnePushDeploy.AttackLine.Item2))
                     yield return t;
-
-                yield return new Random().Next(5000, 6500);
+                if (!lavaloonion)
+                    yield return new Random().Next(5000, 6500);
             }
         }
 

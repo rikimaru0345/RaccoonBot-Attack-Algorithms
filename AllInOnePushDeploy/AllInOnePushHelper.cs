@@ -12,6 +12,29 @@ namespace AllInOnePushDeploy
         static bool targetIsSet = false;
         static PointFT[] AllPoints;
 
+        public static bool IsAirDefenseExposed(int distance = 7)
+        {
+            var redPoints = GameGrid.RedPoints.Where(
+                point =>
+                !(point.X > 18 && point.Y > 18 || point.X > 18 && point.Y < -18 || point.X < -18 && point.Y > 18 ||
+                point.X < -18 && point.Y < -18));
+
+            var ADs = AirDefense.Find().Where(c => c.Location.GetCenter()
+                .DistanceSq(redPoints.OrderBy(p => p.DistanceSq(c.Location.GetCenter()))
+                .FirstOrDefault()) <= distance);
+
+            if (ADs.Count() > 2)
+            {
+                using (Bitmap bmp = Screenshot.Capture())
+                {
+                    var d = DateTime.UtcNow;
+                    Screenshot.Save(bmp, "Exposed Air Defense {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
+                }
+                Log.Warning("This base hase exposed air defenses, we will skip that base.");
+                return true;
+            }
+            return false;
+        }
         /// <summary>
         /// Count how meny walls in the spell area 
         /// </summary>
