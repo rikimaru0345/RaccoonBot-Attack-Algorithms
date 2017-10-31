@@ -22,6 +22,7 @@ namespace SmartFourFingersDeploy
         public static List<int> TargetsAtLine;
         public static int TotalTargetsCount;
         public static PointFT Core;
+        public static bool IsTargetsCalculated = false;
 
         public SmartFourFingersDeploy(Opponent opponent) : base(opponent)
         {
@@ -181,7 +182,9 @@ namespace SmartFourFingersDeploy
             // Set the core point of the base
             SmartFourFingersHelper.SetCore();
 
-            
+            if (!IsTargetsCalculated)
+                SmartFourFingersHelper.CalculateTargets();
+
 
             // Points to draw lines in deploy extends area.
             var topLeft = new PointFT((float)GameGrid.MaxX - 2, (float)GameGrid.DeployExtents.MaxY);
@@ -423,6 +426,7 @@ namespace SmartFourFingersDeploy
                 return 0;
             if (GetCurrentSetting("Set Exposed Collecotors & Mines") == 1)
             {
+                IsTargetsCalculated = true;
                 if (!SmartFourFingersHelper.IsBaseMinCollectorsAndMinesOutside(GetCurrentSetting("Acceptable Target Range"), GetCurrentSetting("Minimum Exposed Colloctors"), GetCurrentSetting("Minimum Exposed Mines"), AttackName, GetCurrentSetting("Debug Mode"))) 
                     return 0;
             }

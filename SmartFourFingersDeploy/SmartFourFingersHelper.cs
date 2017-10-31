@@ -80,6 +80,54 @@ namespace SmartFourFingersDeploy
             SmartFourFingersDeploy.Core = border.GetCenter();
         }
 
+        public static void CalculateTargets()
+        {
+            collectors = ElixirCollector.Find();
+
+            mines = GoldMine.Find();
+
+            drills = DarkElixirDrill.Find();
+
+            int collectorsCount = collectors != null ? collectors.Count() : 0;
+            int minesCount = mines != null ? mines.Count() : 0;
+            int drillsCount = drills != null ? drills.Count() : 0;
+
+            // Set total count of targets
+            SmartFourFingersDeploy.TotalTargetsCount = collectorsCount + minesCount + drillsCount;
+
+            // four corners
+            var top = new PointFT((float)GameGrid.DeployExtents.MaxX + 1, GameGrid.DeployExtents.MaxY + 4);
+            var right = new PointFT((float)GameGrid.DeployExtents.MaxX + 1, GameGrid.DeployExtents.MinY - 4);
+            var bottom = new PointFT((float)GameGrid.DeployExtents.MinX - 1, GameGrid.DeployExtents.MinY - 4);
+            var left = new PointFT((float)GameGrid.DeployExtents.MinX - 1, GameGrid.DeployExtents.MaxY + 4);
+
+            SetCore();
+
+            var corners = new List<Tuple<PointFT, PointFT>>
+            {
+                new Tuple<PointFT, PointFT>(top, right),
+                new Tuple<PointFT, PointFT>(bottom, right),
+                new Tuple<PointFT, PointFT>(bottom, left),
+                new Tuple<PointFT, PointFT>(top, left)
+            };
+
+            // loop throw the 4 sides and count targets on each side
+            var targetsAtLine = new List<int>();
+            foreach (var l in corners)
+            {
+                var colCount = collectors.Where(t => t.Location.GetCenter().
+                        IsInTri(SmartFourFingersDeploy.Core, l.Item1, l.Item2))?.Count() ?? 0;
+                var minCount = mines.Where(t => t.Location.GetCenter().
+                        IsInTri(SmartFourFingersDeploy.Core, l.Item1, l.Item2))?.Count() ?? 0;
+                var drillCount = drills.Where(t => t.Location.GetCenter().
+                        IsInTri(SmartFourFingersDeploy.Core, l.Item1, l.Item2))?.Count() ?? 0;
+                var total = colCount + minCount + drillCount;
+
+                targetsAtLine.Add(total);
+            }
+
+            SmartFourFingersDeploy.TargetsAtLine = targetsAtLine;
+        }
         /// <summary>
         /// Check to see how many collector and mine near to the redline by user defined distance
         /// </summary>
