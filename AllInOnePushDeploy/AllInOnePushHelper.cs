@@ -528,15 +528,8 @@ namespace AllInOnePushDeploy
                     AllInOnePushDeploy.FirstHealPoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 17f + shiftSpells);
                     AllInOnePushDeploy.SecondRagePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 22f + shiftSpells);
                     AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 26f + shiftSpells);
-
-                    //try to find better funneling points
-                    var frac = 0.75f;
-
-                    //AllInOnePushDeploy.FirstFunnellingPoint = new PointFT(AllInOnePushDeploy.Origin.X + frac *
-                    //    (AllInOnePushDeploy.AttackLine.Item1.X - AllInOnePushDeploy.Origin.X),
-                    //    AllInOnePushDeploy.Origin.Y + frac *
-                    //    (AllInOnePushDeploy.AttackLine.Item1.Y - AllInOnePushDeploy.Origin.Y));
-
+                    
+                    // Set Funneling point
                     AllInOnePushDeploy.FirstFunnellingPoint = rightBottom;
                     AllInOnePushDeploy.SecondFunnellingPoint = bottomRight;
 

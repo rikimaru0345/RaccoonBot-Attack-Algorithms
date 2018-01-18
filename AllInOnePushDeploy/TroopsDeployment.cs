@@ -300,6 +300,7 @@ namespace AllInOnePushDeploy
                 {
                     var count = firstSpellUnit.Count >= 3 ? 3 : firstSpellUnit.Count;
                     count = BabySpells ? (count > 2 ? 2 : count) : count;
+                    
                     foreach (var t in Deploy.AlongLine(firstSpellUnit, line.Item1, line.Item2, count, count, 250))
                         yield return t;
 

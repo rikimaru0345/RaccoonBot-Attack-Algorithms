@@ -146,12 +146,10 @@ namespace AllInOnePushDeploy
                     var rageCount = rageSpell?.Sum(u => u.Count);
                     if (rageCount > 0)
                     {
-                        foreach (var unit in rageSpell)
-                        {
-                            unit.Select();
-                            foreach (var t in Deploy.AtPoint(unit, AllInOnePushDeploy.QWRagePoint))
-                                yield return t;
-                        }
+                        var unit = rageSpell.FirstOrDefault();
+
+                        foreach (var t in Deploy.AtPoint(unit, AllInOnePushDeploy.QWRagePoint))
+                            yield return t;
                     }
                 }
 
