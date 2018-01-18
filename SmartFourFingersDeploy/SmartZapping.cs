@@ -33,7 +33,7 @@ namespace SmartFourFingersDeploy
             }
 
             // Looking for drills
-            foreach (var t in getDrills(drillLevel))
+            foreach (var t in GetDrills(drillLevel))
                 yield return t;
 
             if (!availableDrills.Any()) 
@@ -62,7 +62,7 @@ namespace SmartFourFingersDeploy
                             var drills = availableDrills;
                             for (var i = 0; i < drills.Count(); i++)
                             {
-                                if (drills[i] != null && zapCount > 0)
+                                if (drills[i] != null && zapCount > 0 && availableDE >= deAmount)
                                 {
                                     // Get location of each drill
                                     var point = drills[i].Location.GetCenter();
@@ -82,7 +82,7 @@ namespace SmartFourFingersDeploy
                                         if (availableDE - availableDEAfterZap < deAmount)
                                         {
                                             Log.Warning($"[Smart Zap] gain only {availableDE - availableDEAfterZap} DE from this drill .");
-                                            Log.Warning("[Smart Zap] you set the minimum to {deAmount} .. will not zap this drill again.");
+                                            Log.Warning($"[Smart Zap] you set the minimum to {deAmount} .. will not zap this drill again.");
 
                                             drills[i] = null;
                                         }
@@ -96,7 +96,7 @@ namespace SmartFourFingersDeploy
                                         // And we ar on the first cycle
                                         if (j == 1 && drills[i] != null)
                                         {
-                                            foreach (var t in getDestroyedDrills(point))
+                                            foreach (var t in GetDestroyedDrills(point))
                                                 Thread.Sleep(t);
 
                                             if (isDestroyed)
@@ -140,7 +140,7 @@ namespace SmartFourFingersDeploy
         /// </summary>
         /// <param name="drillLevel">minimum drill level</param>
         /// <returns></returns>
-        static IEnumerable<int> getDrills(int drillLevel)
+        static IEnumerable<int> GetDrills(int drillLevel)
         {
             Log.Info($"[Smart Zap] looking for dark elixir drills ...");
             availableDrills = DarkElixirDrill.Find(CacheBehavior.ForceScan, drillLevel);
@@ -155,7 +155,7 @@ namespace SmartFourFingersDeploy
             Log.Info($"[Smart Zap] found {availableDrills.Count()} drills");
         }
 
-        static IEnumerable<int> getDestroyedDrills(PointFT point)
+        static IEnumerable<int> GetDestroyedDrills(PointFT point)
         {
             isDestroyed = false;
             Log.Info($"[Smart Zap] Check if this drill is destroyed ...");
@@ -189,7 +189,7 @@ namespace SmartFourFingersDeploy
             if (EQCount > 0)
             {
                 Log.Info($"{SmartFourFingersDeploy.AttackName} start use EQ on drills");
-                getDrills(drillLevel);
+                GetDrills(drillLevel);
                 
                 if (availableDrills.Any())
                 {

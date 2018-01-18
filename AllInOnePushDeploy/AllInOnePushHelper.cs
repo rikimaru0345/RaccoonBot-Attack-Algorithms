@@ -10,7 +10,31 @@ namespace AllInOnePushDeploy
     static class AllInOnePushHelper
     {
         static bool targetIsSet = false;
+        static PointFT[] AllPoints;
 
+        public static bool IsAirDefenseExposed(int distance = 7)
+        {
+            var redPoints = GameGrid.RedPoints.Where(
+                point =>
+                !(point.X > 18 && point.Y > 18 || point.X > 18 && point.Y < -18 || point.X < -18 && point.Y > 18 ||
+                point.X < -18 && point.Y < -18));
+
+            var ADs = AirDefense.Find().Where(c => c.Location.GetCenter()
+                .DistanceSq(redPoints.OrderBy(p => p.DistanceSq(c.Location.GetCenter()))
+                .FirstOrDefault()) <= distance);
+
+            if (ADs.Count() > 2)
+            {
+                using (Bitmap bmp = Screenshot.Capture())
+                {
+                    var d = DateTime.UtcNow;
+                    Screenshot.Save(bmp, "Exposed Air Defense {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
+                }
+                Log.Warning("This base hase exposed air defenses, we will skip that base.");
+                return true;
+            }
+            return false;
+        }
         /// <summary>
         /// Count how meny walls in the spell area 
         /// </summary>
@@ -163,22 +187,32 @@ namespace AllInOnePushDeploy
         /// </summary>
         public static void SetDeployPoints()
         {
+            var GreenPoints = AllInOnePushHelper.GenerateGreenPoints();
+            var redPoints = GameGrid.RedPoints
+                .Where(
+                    point =>
+                        !(point.X > 18 && point.Y > 18 || point.X > 18 && point.Y < -18 || point.X < -18 && point.Y > 18 ||
+                        point.X < -18 && point.Y < -18))
+                .OrderBy(point => Math.Atan2(point.X, point.Y)).ToArray();
+
+            AllPoints = GreenPoints.Concat(redPoints).ToArray();
+
             // Top right side
-            var topRight = new PointFT((float)GameGrid.DeployExtents.MaxX, (float)GameGrid.MaxY - 2);
-            var rightTop = new PointFT((float)GameGrid.DeployExtents.MaxX, (float)GameGrid.MinY + 2);
+            var topRight = AllPoints.OrderBy(p => p.DistanceSq(new PointFT((float)GameGrid.DeployExtents.MaxX, (float)GameGrid.MaxY - 2))).First();
+            var rightTop = AllPoints.OrderBy(p => p.DistanceSq(new PointFT((float)GameGrid.DeployExtents.MaxX, (float)GameGrid.MinY + 2))).First(); 
 
             // Bottom right side
-            var rightBottom = new PointFT((float)GameGrid.MaxX - 5, (float)GameGrid.DeployExtents.MinY);
-            var bottomRight = new PointFT((float)GameGrid.MinX + 10, (float)GameGrid.DeployExtents.MinY);
+            var rightBottom = AllPoints.OrderBy(p => p.DistanceSq(new PointFT((float)GameGrid.MaxX - 5, (float)GameGrid.DeployExtents.MinY-2))).First();
+            var bottomRight = AllPoints.OrderBy(p => p.DistanceSq(new PointFT((float)GameGrid.MinX + 10, (float)GameGrid.DeployExtents.MinY-2))).First();
 
             // Bottom left side
             // Move 8 tiles from bottom corner due to unitsbar.
-            var bottomLeft = new PointFT((float)GameGrid.DeployExtents.MinX, (float)GameGrid.MinY + 8);
-            var leftBottom = new PointFT((float)GameGrid.DeployExtents.MinX, (float)GameGrid.MaxY - 2);
+            var bottomLeft = AllPoints.OrderBy(p => p.DistanceSq(new PointFT((float)GameGrid.DeployExtents.MinX, (float)GameGrid.MinY + 8))).First();
+            var leftBottom = AllPoints.OrderBy(p => p.DistanceSq(new PointFT((float)GameGrid.DeployExtents.MinX, (float)GameGrid.MaxY - 2))).First();
 
             // Top Left side
-            var leftTop = new PointFT((float)GameGrid.MinX + 2, (float)GameGrid.DeployExtents.MaxY);
-            var topLeft = new PointFT((float)GameGrid.MaxX - 2, (float)GameGrid.DeployExtents.MaxY);
+            var leftTop = AllPoints.OrderBy(p => p.DistanceSq(new PointFT((float)GameGrid.MinX + 2, (float)GameGrid.DeployExtents.MaxY))).First();
+            var topLeft = AllPoints.OrderBy(p => p.DistanceSq(new PointFT((float)GameGrid.MaxX - 2, (float)GameGrid.DeployExtents.MaxY))).First();
 
             var isJumpSpell = Deploy.GetTroops().ExtractOne(DeployId.Jump)?.Count > 0 ? true : false;
             
@@ -227,7 +261,7 @@ namespace AllInOnePushDeploy
                 AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Origin.X - 26f - shiftSpells, AllInOnePushDeploy.Core.Y);
 
                 //try to find better funneling points
-                var frac = 0.65f;
+                var frac = 0.75f;
 
                 AllInOnePushDeploy.FirstFunnellingPoint = new PointFT(AllInOnePushDeploy.Origin.X + frac *
                     (AllInOnePushDeploy.AttackLine.Item1.X - AllInOnePushDeploy.Origin.X),
@@ -262,7 +296,8 @@ namespace AllInOnePushDeploy
                 );
 
                 AllInOnePushDeploy.QWHealer = new PointFT(GameGrid.DeployExtents.MaxX, AllInOnePushDeploy.FirstFunnellingPoint.Y);
-                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 2, AllInOnePushDeploy.FirstFunnellingPoint.Y);
+                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 3, AllInOnePushDeploy.FirstFunnellingPoint.Y - 1);
+                AllInOnePushDeploy.SecondFunnellingRagePoint = new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 3, AllInOnePushDeploy.SecondFunnellingPoint.Y + 1);
             }
 
             else if (AllInOnePushDeploy.Origin.X < AllInOnePushDeploy.Core.X)
@@ -310,7 +345,7 @@ namespace AllInOnePushDeploy
                 AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Origin.X + 26f + shiftSpells, AllInOnePushDeploy.Core.Y);
 
                 //try to find better funneling points
-                var frac = 0.65f;
+                var frac = 0.75f;
 
                 AllInOnePushDeploy.FirstFunnellingPoint = new PointFT(AllInOnePushDeploy.Origin.X + frac *
                     (AllInOnePushDeploy.AttackLine.Item1.X - AllInOnePushDeploy.Origin.X),
@@ -344,7 +379,8 @@ namespace AllInOnePushDeploy
                 );
 
                 AllInOnePushDeploy.QWHealer = new PointFT(GameGrid.DeployExtents.MinX, AllInOnePushDeploy.FirstFunnellingPoint.Y);
-                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 2, AllInOnePushDeploy.FirstFunnellingPoint.Y);
+                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 3, AllInOnePushDeploy.FirstFunnellingPoint.Y - 1);
+                AllInOnePushDeploy.SecondFunnellingRagePoint = new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 3, AllInOnePushDeploy.SecondFunnellingPoint.Y + 1);
             }
 
             else if (AllInOnePushDeploy.Origin.Y > AllInOnePushDeploy.Core.Y)
@@ -391,7 +427,7 @@ namespace AllInOnePushDeploy
                 AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y - 26f - shiftSpells);
 
                 //try to find better funneling points
-                var frac = 0.65f;
+                var frac = 0.75f;
 
                 AllInOnePushDeploy.FirstFunnellingPoint = new PointFT(AllInOnePushDeploy.Origin.X + frac *
                     (AllInOnePushDeploy.AttackLine.Item1.X - AllInOnePushDeploy.Origin.X),
@@ -428,7 +464,8 @@ namespace AllInOnePushDeploy
                 );
 
                 AllInOnePushDeploy.QWHealer = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, GameGrid.DeployExtents.MaxY);
-                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y - 2);
+                AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X + 1, AllInOnePushDeploy.FirstFunnellingPoint.Y - 3);
+                AllInOnePushDeploy.SecondFunnellingRagePoint = new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X - 1, AllInOnePushDeploy.SecondFunnellingPoint.Y - 3);
             }
 
             else // (orgin.Y < core.Y)
@@ -436,8 +473,8 @@ namespace AllInOnePushDeploy
                 Log.Info($"[{AllInOnePushDeploy.AttackName}] Attacking from the bottom right");
 
                 // Avoid bottom right side until fix zoom out on attack progress issue
-                var avoidBottomRight = true;
-                if (avoidBottomRight)
+                var avoidBottomRight = AllInOnePushDeploy.AvoidBottomRight;
+                if (avoidBottomRight == 1)
                 {
                     var originPoints = new[]
                     {
@@ -491,15 +528,9 @@ namespace AllInOnePushDeploy
                     AllInOnePushDeploy.FirstHealPoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 17f + shiftSpells);
                     AllInOnePushDeploy.SecondRagePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 22f + shiftSpells);
                     AllInOnePushDeploy.FirstHastePoint = new PointFT(AllInOnePushDeploy.Core.X, AllInOnePushDeploy.Origin.Y + 26f + shiftSpells);
-
-                    //try to find better funneling points
-                    var frac = 0.65f;
-
-                    AllInOnePushDeploy.FirstFunnellingPoint = new PointFT(AllInOnePushDeploy.Origin.X + frac *
-                        (AllInOnePushDeploy.AttackLine.Item1.X - AllInOnePushDeploy.Origin.X),
-                        AllInOnePushDeploy.Origin.Y + frac *
-                        (AllInOnePushDeploy.AttackLine.Item1.Y - AllInOnePushDeploy.Origin.Y));
-
+                    
+                    // Set Funneling point
+                    AllInOnePushDeploy.FirstFunnellingPoint = rightBottom;
                     AllInOnePushDeploy.SecondFunnellingPoint = bottomRight;
 
                     AllInOnePushDeploy.FirstHasteLine = new Tuple<PointFT, PointFT>
@@ -527,9 +558,17 @@ namespace AllInOnePushDeploy
                     );
 
                     AllInOnePushDeploy.QWHealer = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, GameGrid.DeployExtents.MinY);
-                    AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X, AllInOnePushDeploy.FirstFunnellingPoint.Y + 1);
+                    AllInOnePushDeploy.QWRagePoint = new PointFT(AllInOnePushDeploy.FirstFunnellingPoint.X - 1, AllInOnePushDeploy.FirstFunnellingPoint.Y + 3);
+                    AllInOnePushDeploy.SecondFunnellingRagePoint = new PointFT(AllInOnePushDeploy.SecondFunnellingPoint.X + 1, AllInOnePushDeploy.SecondFunnellingPoint.Y + 3);
                 }
             }
+            AllInOnePushDeploy.SecondJumpPoint = AllInOnePushDeploy.EqPoint;
+
+            AllInOnePushDeploy.FirstFunnellingPoint = AllPoints.OrderBy(p => p.DistanceSq(AllInOnePushDeploy.FirstFunnellingPoint)).First();
+            AllInOnePushDeploy.SecondFunnellingPoint = AllPoints.OrderBy(p => p.DistanceSq(AllInOnePushDeploy.SecondFunnellingPoint)).First();
+            AllInOnePushDeploy.Origin = AllPoints.OrderBy(p => p.DistanceSq(AllInOnePushDeploy.Origin)).First();
+
+            DebugBottomRightSidePoints();
         }
 
         /// <summary>
@@ -546,6 +585,99 @@ namespace AllInOnePushDeploy
             var minion = deployElements.ExtractOne(DeployId.Minion);
 
             AllInOnePushDeploy.IsAirAttack = (Lava?.Count > 0 || balloon?.Count > 5 || dragon?.Count > 5 || babyDragon?.Count > 5 || minion?.Count >= 10) ? true : false;
+        }
+
+        /// <summary>
+        /// Draws a Point on the canvas
+        /// </summary>
+        /// <param name="canvas"></param>
+        /// <param name="color"></param>
+        /// <param name="point"></param>
+        public static void DrawPoint(Bitmap canvas, Color color, PointFT point)
+        {
+            using (var g = Graphics.FromImage(canvas))
+            {
+                var pen = new Pen(color, 2);
+                g.DrawEllipse(pen, point.ToScreenAbsolute().X, point.ToScreenAbsolute().Y, 3, 3);
+            }
+        }
+
+        /// <summary>
+        /// Create points over the dark grass
+        /// </summary>
+        /// <returns>Array of points</returns>
+        public static PointFT[] GenerateGreenPoints()
+        {
+            var points = new HashSet<PointFT>();
+
+            for (int i = (int)PointFT.MinDeployAreaX; i <= (int)PointFT.MaxDeployAreaX; i++)
+            {
+                float max = PointFT.MaxDeployAreaX + 0.5f;
+                if (i >= (int)PointFT.MinDeployAreaX + 5) //Skip Points off the Right Hand side of Screen.
+                    points.Add(new PointFT(max, i)); //Top Right
+
+                points.Add(new PointFT(i, max)); //Top Left
+
+                if (i >= (int)PointFT.MinDeployAreaX + 11) //Skip points that are on the bottom cuttoff.
+                    points.Add(new PointFT(-max, i)); //Bottom Left
+
+                if (i >= (int)PointFT.MinDeployAreaX + 12 && i <= (int)PointFT.MaxDeployAreaX - 6) //Skip points that are on the bottom cuttoff. & Righthand side of screen.
+                    points.Add(new PointFT(i, -(max + 1))); //Bottom Right //Make bottom right more outside Because of incorrect Y shift in the bot.
+            }
+            return points.ToArray();
+        }
+
+        /// <summary>
+        /// See if point is inside a triangle or not
+        /// </summary>
+        /// <param name="pt">the point</param>
+        /// <param name="v1">triangle point1</param>
+        /// <param name="v2">triangle point2</param>
+        /// <param name="v3">triangle point3</param>
+        /// <returns>true if inside</returns>
+        public static bool IsInTri(this PointFT pt, PointFT v1, PointFT v2, PointFT v3)
+        {
+            var TotalArea = CalcTriArea(v1, v2, v3);
+            var Area1 = CalcTriArea(pt, v2, v3);
+            var Area2 = CalcTriArea(pt, v1, v3);
+            var Area3 = CalcTriArea(pt, v1, v2);
+
+            if ((Area1 + Area2 + Area3) > TotalArea)
+                return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Find the area of a triangle. This function uses the 1/2 determinant
+        /// </summary>
+        /// <param name="v1">triangle point1</param>
+        /// <param name="v2">triangle point2</param>
+        /// <param name="v3">triangle point3</param>
+        /// <returns>triangle area</returns>
+        public static float CalcTriArea(PointFT v1, PointFT v2, PointFT v3)
+        {
+            return Math.Abs((v1.X * (v2.Y - v3.Y) + v2.X * (v3.Y - v1.Y) + v3.X * (v1.Y - v2.Y)) / 2f);
+        }
+
+
+        public static PointFT GetClosestPointToLine(this Tuple<PointFT, PointFT> line, PointFT P)
+        {
+            PointFT a_to_p = new PointFT
+            (
+                P.X - line.Item1.X,
+                P.Y - line.Item1.Y
+            ), 
+            a_to_b = new PointFT
+            (
+                line.Item2.X - line.Item1.X,
+                line.Item2.Y - line.Item1.Y //     # Storing vector A->B
+            );
+
+            float atb2 = a_to_b.X * a_to_b.X + a_to_b.Y * a_to_b.Y;
+            float atp_dot_atb = a_to_p.X * a_to_b.X + a_to_p.Y * a_to_b.Y; // The dot product of a_to_p and a_to_b
+            float t = atp_dot_atb / atb2;  //  # The normalized "distance" from a to the closest point
+            return new PointFT(line.Item1.X + a_to_b.X * t, line.Item1.Y + a_to_b.Y * t);
         }
 
         public static void DebugEQpells()
@@ -598,18 +730,18 @@ namespace AllInOnePushDeploy
         
         public static void DebugBottomRightSidePoints()
         {
+
             using (var bmp = Screenshot.Capture())
             {
-                using (var g = Graphics.FromImage(bmp))
-                {
-                    var y = GameGrid.DeployExtents.MinY;
-                    var x = 18;
-                    while (x >= -15)
-                    {
-                        Visualize.RectangleT(bmp, new RectangleT(x, y, 1, 1), new Pen(Color.Blue));
-                        x--;
-                    }
-                }
+                foreach (var g in AllPoints)
+                    DrawPoint(bmp, Color.GreenYellow, g);
+
+
+                DrawPoint(bmp, Color.Red, AllInOnePushDeploy.Origin);
+
+                DrawPoint(bmp, Color.Blue,  AllInOnePushDeploy.FirstFunnellingPoint);
+                DrawPoint(bmp, Color.Blue, AllInOnePushDeploy.SecondFunnellingPoint);
+
                 var d = DateTime.UtcNow;
                 Screenshot.Save(bmp, $"BottomRightPoints {d.Year}-{d.Month}-{d.Day} {d.Hour}-{d.Minute}-{d.Second}-{d.Millisecond}");
             }
