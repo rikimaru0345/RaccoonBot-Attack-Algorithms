@@ -17,7 +17,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\..\..\..\sources\android\RaccoonBot_1.20.7.2593\RaccoonBot v1.20.7.2593\Addons\</OutputPath>
+    <OutputPath>..\..\..\..\..\sources\android\RaccoonBot_1.20.7.2605\RaccoonBot v1.20.7.2605\Addons\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -33,16 +33,16 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CoC Bot.Core">
-      <HintPath>..\..\..\..\..\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\CoC Bot.Core.dll</HintPath>
+      <HintPath>..\..\..\..\..\sources\android\RaccoonBot v1.20.7.2632\CoC Bot.Core.dll</HintPath>
     </Reference>
     <Reference Include="CustomAlgorithmSettings">
-      <HintPath>..\..\..\..\..\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\CustomAlgorithmSettings.dll</HintPath>
+      <HintPath>..\..\..\..\..\sources\android\RaccoonBot v1.20.7.2632\CustomAlgorithmSettings.dll</HintPath>
     </Reference>
     <Reference Include="Raccoon Bot">
-      <HintPath>..\..\..\..\..\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\Raccoon Bot.exe</HintPath>
+      <HintPath>..\..\..\..\..\sources\android\RaccoonBot v1.20.7.2632\Raccoon Bot.exe</HintPath>
     </Reference>
     <Reference Include="Shared">
-      <HintPath>..\..\..\..\..\sources\android\RaccoonBot_1.20.7.2585\RaccoonBot v1.20.7.2585 - MEmu1\Shared.dll</HintPath>
+      <HintPath>..\..\..\..\..\sources\android\RaccoonBot v1.20.7.2632\Shared.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
