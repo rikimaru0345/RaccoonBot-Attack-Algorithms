@@ -187,7 +187,7 @@ namespace AllInOnePushDeploy
         /// </summary>
         public static void SetDeployPoints()
         {
-            var GreenPoints = AllInOnePushHelper.GenerateGreenPoints();
+            var GreenPoints = GenerateGreenPoints();
             var redPoints = GameGrid.RedPoints
                 .Where(
                     point =>
@@ -579,6 +579,7 @@ namespace AllInOnePushDeploy
             var deployElements = Deploy.GetTroops();
 
             var dragon = deployElements.ExtractOne(DeployId.Dragon);
+            var Edragon = deployElements.ExtractOne(DeployId.ElectroDragon);
             var babyDragon = deployElements.ExtractOne(DeployId.BabyDragon);
             var balloon = deployElements.ExtractOne(DeployId.Balloon);
             var Lava = deployElements.ExtractOne(DeployId.LavaHound);

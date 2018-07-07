@@ -4,6 +4,7 @@ using System.Linq;
 using CoC_Bot.API;
 using CustomAlgorithmSettings;
 using System.Reflection;
+using System.Threading;
 
 [assembly: Addon("AllInOnePushDeploy", "Push tropies using all types of troops", "CobraTST")]
 namespace AllInOnePushDeploy
@@ -278,6 +279,14 @@ namespace AllInOnePushDeploy
 
         public override IEnumerable<int> AttackRoutine()
         {
+            // Zooming out 
+            Log.Info($"[{AttackName}] Force Zooming Out");
+            foreach (var t in AllAPI.ZoomOutOnce(false))
+                yield return t;
+
+            foreach (var t in AllAPI.ZoomOutOnce(false))
+                yield return t;
+
             Log.Info($"[{AttackName}] V{Version} Deploy start");
 
             // Get user settings
@@ -354,6 +363,7 @@ namespace AllInOnePushDeploy
         public override double ShouldAccept()
         {
             var avoidExposedAirDefense = 0;
+            
             if (avoidExposedAirDefense == 1)
             {
                 if (AllInOnePushHelper.IsAirDefenseExposed())

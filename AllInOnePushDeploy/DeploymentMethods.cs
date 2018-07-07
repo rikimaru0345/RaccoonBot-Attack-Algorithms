@@ -9,7 +9,7 @@ namespace AllInOnePushDeploy
     class DeploymentMethods
     {
         public static bool useJump, watchHeroes = false, watchQueen = false, isWarden = false, dragonAttack, babyLoon, lavaloonion;
-        public static DeployElement golem, giant, queen, bowler, witch, wizard, wallbreaker, healer, freezeSpell, cloneSpell, clanCastle, warden, balloon, dragon, babyDragon, lava, minion, lightingSpell;
+        public static DeployElement golem, giant, queen, bowler, witch, wizard, wallbreaker, healer, freezeSpell, cloneSpell, clanCastle, warden, balloon, dragon, Edragon, babyDragon, lava, minion, lightingSpell;
         public static List<DeployElement> rageSpell, healSpell, hasteSpell, jumpSpell, poison, eq, heroes, spells;
         static int bowlerFunnelCount, healerFunnlCount, witchFunnelCount;
 
@@ -568,11 +568,20 @@ namespace AllInOnePushDeploy
         {
             if (dragon?.Count > 0)
             {
+                // Deploy funnling Dragons
                 foreach (var t in Deploy.AtPoint(dragon, AllInOnePushDeploy.AttackLine.Item1))
                     yield return t;
 
                 foreach (var t in Deploy.AtPoint(dragon, AllInOnePushDeploy.AttackLine.Item2))
                     yield return t;
+
+                // Deploy funnling Electric Dragons
+                foreach (var t in Deploy.AtPoint(Edragon, AllInOnePushDeploy.AttackLine.Item1))
+                    yield return t;
+
+                foreach (var t in Deploy.AtPoint(Edragon, AllInOnePushDeploy.AttackLine.Item2))
+                    yield return t;
+
                 if (!lavaloonion)
                     yield return new Random().Next(8000, 9000);
             }
@@ -593,6 +602,12 @@ namespace AllInOnePushDeploy
             if (dragon?.Count > 0)
             {
                 foreach (var t in Deploy.AlongLine(dragon, AllInOnePushDeploy.FirstFunnellingPoint, AllInOnePushDeploy.SecondFunnellingPoint, dragon.Count, 4))
+                    yield return t;
+            }
+
+            if(Edragon?.Count>0)
+            {
+                foreach (var t in Deploy.AlongLine(Edragon, AllInOnePushDeploy.FirstFunnellingPoint, AllInOnePushDeploy.SecondFunnellingPoint, Edragon.Count, 4))
                     yield return t;
             }
         }

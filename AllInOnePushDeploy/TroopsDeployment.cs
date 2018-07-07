@@ -167,6 +167,7 @@ namespace AllInOnePushDeploy
             DeploymentMethods.minion = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Minion);
             DeploymentMethods.babyDragon = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.BabyDragon);
             DeploymentMethods.dragon = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.Dragon);
+            DeploymentMethods.Edragon = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.ElectroDragon);
             DeploymentMethods.lava = AllInOnePushDeploy.deployElements.ExtractOne(DeployId.LavaHound);
 
             DeploymentMethods.spells = AllInOnePushDeploy.deployElements.Extract(DeployElementType.Spell);
@@ -185,7 +186,7 @@ namespace AllInOnePushDeploy
             DeploymentMethods.warden = DeploymentMethods.heroes.ExtractOne(u => u.ElementType == DeployElementType.HeroWarden);
             DeploymentMethods.queen = DeploymentMethods.heroes.ExtractOne(DeployId.Queen);
             
-            DeploymentMethods.dragonAttack = DeploymentMethods.dragon?.Count >= 5 ? true : false;
+            DeploymentMethods.dragonAttack = DeploymentMethods.dragon?.Count > 5 || DeploymentMethods.Edragon?.Count >= 5 ? true : false;
             DeploymentMethods.babyLoon = DeploymentMethods.babyDragon?.Count >= 7 ? true : false;
             DeploymentMethods.lavaloonion = DeploymentMethods.balloon?.Count >= 15 ? true : false;
 
